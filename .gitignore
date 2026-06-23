@@ -9,8 +9,10 @@ __pycache__/
 venv/
 env/
 ENV/
-.env/
 venv310/
+
+# Environment configurations
+.env
 
 # Django Run Assets & Output Visualizations
 db.sqlite3
