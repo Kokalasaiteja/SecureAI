@@ -1,0 +1,43 @@
+{% extends 'users/user_base.html' %}
+{% block content %}
+
+{% block bg_color %}bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-500 gradient-bg{% endblock %}
+<div class="flex justify-center items-center min-h-screen">
+  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-8 rounded-2xl shadow-2xl animate-slide-up">
+    <div class="text-center mb-6">
+      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="Anomaly icon" class="w-20 h-20 mx-auto mb-4">
+      <h2 class="text-3xl font-bold">Predict User Behavior Anomaly</h2>
+      <p class="text-sm text-gray-100">Use AI to detect suspicious login patterns.</p>
+    </div>
+
+    <form method="POST" class="space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block mb-1 font-semibold text-white">Login Hour (0 - 23):</label>
+        <input type="number" name="login_hour" required min="0" max="23"
+          class="w-full p-3 rounded border border-gray-300 text-gray-800">
+      </div>
+
+      <div>
+        <label class="block mb-1 font-semibold text-white">IP Score (0.0 - 1.0):</label>
+        <input type="text" name="ip_score" required pattern="^0(\.\d+)?|1(\.0+)?$"
+          class="w-full p-3 rounded border border-gray-300 text-gray-800">
+      </div>
+
+      <div class="text-center">
+        <button type="submit"
+          class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300">
+          Predict
+        </button>
+      </div>
+    </form>
+
+    {% if prediction %}
+    <div class="mt-6 bg-white bg-opacity-20 p-4 rounded text-white">
+      <h3 class="text-xl font-semibold">🔍 Predicted Behavior: <span class="text-yellow-300">{{ prediction }}</span></h3>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

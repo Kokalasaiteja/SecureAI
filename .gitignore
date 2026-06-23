@@ -1,0 +1,26 @@
+# System Compiled Modules
+__pycache__/
+*.py[cod]
+*$py.class
+*.manifest
+*.spec
+
+# Target Virtual Environments (Filters old environments out safely)
+venv/
+env/
+ENV/
+.env/
+venv310/
+
+# Django Run Assets & Output Visualizations
+db.sqlite3
+db.sqlite3-journal
+media/
+static_root/
+*.log
+
+# Workspace Preferences
+.vscode/
+.idea/
+*.suo
+*.ntvs*

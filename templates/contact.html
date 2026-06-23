@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us - SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 max-w-lg mt-10">
+    <section class="bg-gray-800 bg-opacity-80 rounded-lg p-8 shadow-lg animate-slide-up border-t-4 border-indigo-500">
+        <h2 class="text-3xl font-bold mb-8 text-center flex items-center justify-center space-x-2">
+            <i class="fas fa-address-card text-indigo-400"></i>
+            <span>Contact Us</span>
+        </h2>
+        
+        <p class="text-gray-300 text-center mb-8">
+            Have questions or need support? Reach out to the SecureAI development team below.
+        </p>
+
+        <div class="space-y-6 text-center">
+            <!-- Name Card -->
+            <div class="flex flex-col items-center justify-center p-6 bg-gray-900 rounded-lg shadow-md transform hover:-translate-y-1 transition-all duration-300 border-b-2 border-teal-500">
+                <i class="fas fa-user-circle text-5xl text-teal-400 mb-4"></i>
+                <h3 class="text-2xl font-bold text-white mb-1">Kokala Sai Teja</h3>
+                <p class="text-gray-400 font-medium">Lead Developer & Security Analyst</p>
+            </div>
+            
+            <!-- Email Card -->
+            <a href="mailto:kokalasaiteja@gmail.com" class="flex flex-col items-center justify-center p-6 bg-gray-900 rounded-lg shadow-md transform hover:-translate-y-1 transition-all duration-300 border-b-2 border-blue-500 hover:bg-gray-800">
+                <i class="fas fa-envelope text-4xl text-blue-400 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-1">Email Support</h3>
+                <p class="text-blue-300 hover:underline">kokalasaiteja@gmail.com</p>
+            </a>
+            
+            <!-- Phone Card -->
+            <a href="tel:7013120537" class="flex flex-col items-center justify-center p-6 bg-gray-900 rounded-lg shadow-md transform hover:-translate-y-1 transition-all duration-300 border-b-2 border-green-500 hover:bg-gray-800">
+                <i class="fas fa-phone-alt text-4xl text-green-400 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-1">Phone Number</h3>
+                <p class="text-green-300 hover:underline">+91 7013120537</p>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}

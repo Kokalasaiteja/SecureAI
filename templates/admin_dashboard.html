@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - SecureAI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        .animate-fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+        .animate-slide-up {
+            animation: slideUp 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+
+<div class="container mx-auto p-6">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8 animate-slide-up">
+        <h2 class="text-3xl font-bold flex items-center space-x-3 text-indigo-400">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Admin Dashboard</span>
+        </h2>
+        <div class="space-x-4">
+            {% comment %} <a href="/admin_home" class="bg-purple-600 hover:bg-purple-700 px-5 py-2 rounded-lg shadow-md text-white font-semibold transition-all">
+                <i class="fas fa-home mr-1"></i> Home
+            </a> {% endcomment %}
+            <a href="/" class="bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg shadow-md text-white font-semibold transition-all">
+                <i class="fas fa-sign-out-alt mr-1"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-gray-900 bg-opacity-80 p-6 rounded-lg shadow-lg animate-fade-in overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-700 text-sm text-white">
+            <thead class="bg-gray-800 text-indigo-300 uppercase font-semibold text-xs">
+                <tr>
+                    <th class="px-4 py-3 text-left">Name</th>
+                    <th class="px-4 py-3 text-left">Email</th>
+                    <th class="px-4 py-3 text-left">Mobile</th>
+                    <th class="px-4 py-3 text-left">Image</th>
+                    <th class="px-4 py-3 text-left">Active</th>
+                    <th class="px-4 py-3 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+                {% for user in users %}
+                <tr class="hover:bg-gray-800 transition duration-300">
+                    <td class="px-4 py-3">{{ user.name }}</td>
+                    <td class="px-4 py-3">{{ user.email }}</td>
+                    <td class="px-4 py-3">{{ user.mobile }}</td>
+                    <td class="px-4 py-3">
+                        <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-14 h-14 rounded-full object-cover border border-gray-500 shadow">
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {% if user.is_active %}bg-green-600{% else %}bg-red-600{% endif %}">
+                            <i class="fas {% if user.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
+                            {{ user.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-center space-x-3">
+                        {% if not user.is_active %}
+                        <a href="{% url 'activate_user' user.id %}" class="text-green-400 hover:text-green-300 font-medium">
+                            <i class="fas fa-user-check mr-1"></i> Activate
+                        </a>
+                        {% else %}
+                        <a href="{% url 'deactivate_user' user.id %}" class="text-yellow-400 hover:text-yellow-300 font-medium">
+                            <i class="fas fa-user-slash mr-1"></i> Deactivate
+                        </a>
+                        {% endif %}
+                        <span class="text-gray-500">|</span>
+                        <a href="{% url 'delete_user' user.id %}" class="text-red-400 hover:text-red-300 font-medium">
+                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-5 text-center text-gray-300">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

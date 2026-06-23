@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}User Login - SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 max-w-lg">
+    <!-- Login Form Section -->
+    <section class="bg-gray-800 bg-opacity-80 rounded-lg p-8 shadow-lg animate-slide-up">
+        <h2 class="text-3xl font-bold mb-6 text-center flex items-center justify-center space-x-2">
+            <i class="fas fa-sign-in-alt text-indigo-400"></i>
+            <span>User Login</span>
+        </h2>
+        {% if msg %}
+        <div class="mb-6 p-4 bg-red-600 bg-opacity-80 rounded-lg text-white text-center animate-fade-in">
+            <i class="fas fa-exclamation-circle mr-2"></i>{{ msg }}
+        </div>
+        {% endif %}
+        <!-- Form -->
+        <div class="form-container">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                <!-- Name Field -->
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-user text-purple-400"></i>
+                    <div class="flex-1">
+                        <label for="name" class="block text-sm font-medium text-gray-300">Name</label>
+                        <input type="text" name="name" id="name" class="w-full p-3 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                    </div>
+                </div>
+                <!-- Password Field -->
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-lock text-purple-400"></i>
+                    <div class="flex-1 form-group" style="position: relative;">
+                        <label for="id_password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="id_password" name="password" class="form-control w-full p-3 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" style="padding-right: 45px;" required>
+                            <span id="txtToggleBtn" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #9ca3af; z-index: 5;">
+                                <i class="fa-solid fa-eye" id="txtEyeIndicator"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button type="submit" class="btn-3d bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold flex items-center justify-center mx-auto space-x-2 transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </button>
+                </div>
+                <!-- Forgot Password Link -->
+                <div class="text-center">
+                    <a href="{% url 'forgot_password' %}" class="text-indigo-400 hover:text-indigo-300 transition-all duration-300 flex items-center justify-center space-x-2">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Forgot Password?</span>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<!-- Custom CSS for animations -->
+<style>
+    .animate-fade-in {
+        animation: fadeIn 1s ease-in-out;
+    }
+    .animate-slide-up {
+        animation: slideUp 1s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<!-- JavaScript for form input animations -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.querySelector('i').classList.add('text-indigo-400');
+                input.parentElement.querySelector('i').classList.remove('text-purple-400');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.querySelector('i').classList.add('text-purple-400');
+                input.parentElement.querySelector('i').classList.remove('text-indigo-400');
+            });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const passElement = document.getElementById('id_password');
+        const toggleBtn = document.getElementById('txtToggleBtn');
+        const indicatorIcon = document.getElementById('txtEyeIndicator');
+
+        if (toggleBtn && passElement) {
+            toggleBtn.addEventListener('click', function () {
+                // Read current visualization standard
+                const isHidden = passElement.getAttribute('type') === 'password';
+                passElement.setAttribute('type', isHidden ? 'text' : 'password');
+                
+                // Swap iconography layers smoothly
+                if (isHidden) {
+                    indicatorIcon.classList.remove('fa-eye');
+                    indicatorIcon.classList.add('fa-eye-slash');
+                } else {
+                    indicatorIcon.classList.remove('fa-eye-slash');
+                    indicatorIcon.classList.add('fa-eye');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

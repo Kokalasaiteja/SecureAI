@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-12">
+    <!-- Hero Section -->
+    <section class="text-center py-12">
+        <h1 class="text-5xl font-bold mb-4 animate-fade-in">Welcome to SecureAI</h1>
+        <p class="text-xl text-gray-300 mb-6 animate-slide-up">Harnessing AI to Prevent Social Engineering Attacks</p>
+        <div class="flex justify-center space-x-4">
+            <a href="{% url 'register' %}" class="btn-3d bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transform hover:scale-105 transition-all duration-300">
+                <i class="fas fa-user-plus"></i>
+                <span>Join Now</span>
+            </a>
+            <a href="{% url 'user_login' %}" class="btn-3d bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold flex items-center space-x-2 transform hover:scale-105 transition-all duration-300">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Login</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="bg-gray-800 bg-opacity-80 rounded-lg p-8 shadow-lg animate-slide-up">
+        <h2 class="text-3xl font-bold mb-4 flex items-center space-x-2">
+            <i class="fas fa-shield-alt text-indigo-400"></i>
+            <span>About SecureAI</span>
+        </h2>
+        <p class="text-lg text-gray-300">
+            SecureAI is dedicated to leveraging Artificial Intelligence to counter social engineering attacks. Our platform addresses both traditional and AI-enabled threats, including phishing, vishing, smishing, and whaling, using advanced AI-based defense mechanisms like AI Sentry to protect users and organizations.
+        </p>
+    </section>
+
+    <!-- Social Engineering Attacks Section -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-800 bg-opacity-80 rounded-lg p-6 shadow-lg transform hover:-translate-y-2 transition-all duration-300">
+            <h3 class="text-2xl font-semibold mb-3 flex items-center space-x-2">
+                <i class="fas fa-fish text-purple-400"></i>
+                <span>Phishing & Vishing</span>
+            </h3>
+            <p class="text-gray-300">
+                Phishing and vishing attacks use deceptive emails and voice calls to steal sensitive information. Our AI-powered detection systems identify and block these malicious attempts in real-time.
+            </p>
+        </div>
+        <div class="bg-gray-800 bg-opacity-80 rounded-lg p-6 shadow-lg transform hover:-translate-y-2 transition-all duration-300">
+            <h3 class="text-2xl font-semibold mb-3 flex items-center space-x-2">
+                <i class="fas fa-mobile-alt text-indigo-400"></i>
+                <span>Smishing & Quishing</span>
+            </h3>
+            <p class="text-gray-300">
+                Smishing and quishing exploit SMS and QR codes to deceive users. SecureAI’s solutions analyze patterns and flag suspicious messages to protect against these modern threats.
+            </p>
+        </div>
+        <div class="bg-gray-800 bg-opacity-80 rounded-lg p-6 shadow-lg transform hover:-translate-y-2 transition-all duration-300">
+            <h3 class="text-2xl font-semibold mb-3 flex items-center space-x-2">
+                <i class="fas fa-briefcase text-purple-400"></i>
+                <span>Whaling & Baiting</span>
+            </h3>
+            <p class="text-gray-300">
+                Whaling targets high-profile individuals, while baiting lures users with false promises. Our AI Sentry technology uses behavioral analysis to detect and prevent these sophisticated attacks.
+            </p>
+        </div>
+        <div class="bg-gray-800 bg-opacity-80 rounded-lg p-6 shadow-lg transform hover:-translate-y-2 transition-all duration-300">
+            <h3 class="text-2xl font-semibold mb-3 flex items-center space-x-2">
+                <i class="fas fa-handshake text-indigo-400"></i>
+                <span>Quid Pro Quo</span>
+            </h3>
+            <p class="text-gray-300">
+                Quid Pro Quo attacks offer benefits in exchange for information. SecureAI uses machine learning to identify deceptive tactics and provide real-time alerts to users.
+            </p>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="text-center py-12">
+        <h2 class="text-3xl font-bold mb-4 animate-fade-in">Join the Fight Against Social Engineering</h2>
+        <p class="text-lg text-gray-300 mb-6">Sign up today to explore our AI-powered tools and stay one step ahead of cybercriminals.</p>
+        <a href="{% url 'register' %}" class="btn-3d bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center mx-auto space-x-2 transform hover:scale-110 transition-all duration-300">
+            <i class="fas fa-rocket"></i>
+            <span>Start Protecting Now</span>
+        </a>
+    </section>
+</div>
+
+<!-- Custom CSS for animations -->
+<style>
+    .animate-fade-in {
+        animation: fadeIn 1s ease-in-out;
+    }
+    .animate-slide-up {
+        animation: slideUp 1s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

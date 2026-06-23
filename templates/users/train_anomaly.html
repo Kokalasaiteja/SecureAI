@@ -1,0 +1,122 @@
+{% extends 'users/user_base.html' %}
+{% block content %}
+
+{% block bg_color %}bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 gradient-bg{% endblock %}
+
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+    }
+    
+    .model-block {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .model-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+    
+    h2 {
+        color: #fff;
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    h3 {
+        color: #14b8a6;
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    pre {
+        background-color: rgba(0, 0, 0, 0.3);
+        color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    img {
+        max-width: 100%;
+        height: auto;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        margin-top: 20px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+    }
+    
+    img:hover {
+        transform: scale(1.05);
+    }
+    
+    .container-custom {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .icon-model {
+        font-size: 1.5rem;
+        color: #14b8a6;
+    }
+    
+    .back-button {
+        display: inline-block;
+        margin-bottom: 30px;
+        padding: 12px 24px;
+        background: rgba(20, 184, 166, 0.2);
+        color: #14b8a6;
+        border: 2px solid #14b8a6;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .back-button:hover {
+        background: #14b8a6;
+        color: white;
+        transform: translateX(-5px);
+    }
+</style>
+
+<div class="container-custom">
+    <a href="{% url 'user_homepage' %}" class="back-button">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+    
+    <h2><i class="fas fa-chart-line"></i> Behavior Anomaly Detection - Training Results</h2>
+
+    {% for item in combined_data %}
+        <div class="model-block">
+            <h3>
+                <i class="fas fa-brain icon-model"></i>
+                {{ item.name }}
+            </h3>
+            <pre>{{ item.report }}</pre>
+            <div class="text-center">
+                <img src="/media/{{ item.graph }}" alt="{{ item.name }} Confusion Matrix">
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

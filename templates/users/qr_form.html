@@ -1,0 +1,31 @@
+{% extends 'users/user_base.html' %}
+{% block content %}
+
+{% block bg_color %}bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 gradient-bg{% endblock %}
+<!-- Main Layout -->
+<div class="flex justify-center items-center min-h-screen">
+  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-8 rounded-2xl shadow-2xl animate-slide-up">
+    <div class="text-center mb-6">
+      <img src="https://cdn-icons-png.flaticon.com/512/888/888879.png" alt="QR icon" class="w-20 h-20 mx-auto mb-4">
+      <h2 class="text-3xl font-bold">📸 QR Code Classifier</h2>
+      <p class="text-sm text-gray-100">Powered by Gemini + LangChain for threat detection</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block mb-2 font-semibold text-white">Upload QR Code Image:</label>
+        <input type="file" name="qr_image" accept="image/*" required class="w-full bg-white text-black rounded p-2">
+      </div>
+
+      <div class="text-center">
+        <button type="submit"
+          class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300">
+          Scan & Classify
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

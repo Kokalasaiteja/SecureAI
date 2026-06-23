@@ -1,0 +1,55 @@
+<!-- users/user_home.html -->
+{% extends "users/user_base.html" %}
+
+{% block title %}User Home - SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+  <section class="bg-gray-800 bg-opacity-80 rounded-lg p-8 shadow-lg animate-slide-up text-center">
+    <h1 class="text-4xl font-bold mb-4 flex items-center justify-center space-x-3">
+      <i class="fas fa-user-shield text-teal-400"></i>
+      <span>Welcome, {{ user_name }}!</span>
+    </h1>
+
+    <div class="mb-6">
+      <img src="{{ user_image }}" alt="{{ user_name }}'s Photo" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-teal-400 shadow-lg transform hover:scale-105 transition duration-300">
+    </div>
+
+    <p class="text-lg text-gray-300 mb-6 flex items-center justify-center space-x-2">
+      <i class="fas fa-clock text-teal-400"></i>
+      <span>Login time: {{ login_time }}</span>
+    </p>
+
+    <p class="text-xl text-gray-300 mb-8">
+      Explore SecureAI’s intelligent tools to combat social engineering and cyber threats.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+      <a href="{% url 'detect_spam' %}" class="btn-3d bg-green-600 hover:bg-green-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-sms text-2xl"></i>
+        <span>SMS Spam Detection</span>
+      </a>
+      <a href="{% url 'qr-scan' %}" class="btn-3d bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-qrcode text-2xl"></i>
+        <span>QR Code Scanner</span>
+      </a>
+      <a href="{% url 'predict_anomaly' %}" class="btn-3d bg-indigo-600 hover:bg-indigo-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-user-secret text-2xl"></i>
+        <span>Behavior Analysis</span>
+      </a>
+      <a href="{% url 'train_anomaly_model' %}" class="btn-3d bg-pink-600 hover:bg-pink-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-brain text-2xl"></i>
+        <span>Train ML Models</span>
+      </a>
+      <a href="{% url 'password_analyzer' %}" class="btn-3d bg-yellow-600 hover:bg-yellow-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-shield-alt text-2xl"></i>
+        <span>Password Analyzer</span>
+      </a>
+      <a href="{% url 'email_phishing_analyzer' %}" class="btn-3d bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-lg font-semibold flex items-center justify-center space-x-2 transition duration-300 transform hover:scale-105">
+        <i class="fas fa-envelope-open-text text-2xl"></i>
+        <span>Email Phishing</span>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

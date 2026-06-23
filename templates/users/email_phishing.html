@@ -1,0 +1,73 @@
+{% extends "users/user_base.html" %}
+
+{% block title %}Email Phishing Analyzer - SecureAI{% endblock %}
+
+{% block bg_color %}bg-gradient-to-br from-blue-500 via-sky-500 to-cyan-500 gradient-bg{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 max-w-3xl">
+    <section class="bg-gray-800 bg-opacity-80 rounded-lg p-8 shadow-lg animate-slide-up">
+        <h2 class="text-3xl font-bold mb-6 text-center flex items-center justify-center space-x-2">
+            <i class="fas fa-envelope-open-text text-blue-400"></i>
+            <span>Email Phishing Analyzer</span>
+        </h2>
+        
+        <p class="text-gray-300 text-center mb-8 text-lg">
+            Paste the contents of a suspicious email below. Our AI will analyze the text for common social engineering tactics, artificial urgency, and deceptive phrasing.
+        </p>
+
+        {% if error %}
+        <div class="mb-6 p-4 bg-red-600 bg-opacity-80 rounded-lg text-white text-center shadow-md animate-fade-in">
+            <i class="fas fa-exclamation-circle mr-2"></i>{{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            <div>
+                <label for="email_text" class="block text-sm font-medium text-gray-300 mb-2">Suspicious Email Content</label>
+                <textarea name="email_text" id="email_text" rows="8" 
+                          class="w-full p-4 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-300 shadow-inner" 
+                          placeholder="Dear user, your account has been compromised. Please click the link below to verify your identity within 24 hours..." required>{{ email_text }}</textarea>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn-3d bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-lg font-bold text-lg inline-flex items-center space-x-2 shadow-lg transform hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+                    <i class="fas fa-robot text-xl"></i>
+                    <span>Analyze Email</span>
+                </button>
+            </div>
+        </form>
+
+        {% if result %}
+        <div class="mt-12 animate-fade-in border-t border-gray-700 pt-8">
+            <h3 class="text-2xl font-bold mb-6 text-center">AI Analysis Report</h3>
+            
+            <div class="bg-gray-900 rounded-lg p-8 mb-8 text-center shadow-2xl border-4 
+                {% if result == 'Phishing' %}border-red-500 shadow-red-500/20
+                {% elif result == 'Suspicious' %}border-yellow-500 shadow-yellow-500/20
+                {% else %}border-green-500 shadow-green-500/20{% endif %} 
+                transform hover:-translate-y-1 transition-all duration-300">
+                <h4 class="text-lg text-gray-400 mb-3 uppercase tracking-wider font-semibold">Classification</h4>
+                <p class="text-5xl font-extrabold tracking-tight
+                    {% if result == 'Phishing' %}text-red-500
+                    {% elif result == 'Suspicious' %}text-yellow-500
+                    {% else %}text-green-500{% endif %}">
+                    {% if result == 'Phishing' %}<i class="fas fa-skull-crossbones mr-3"></i>
+                    {% elif result == 'Suspicious' %}<i class="fas fa-exclamation-triangle mr-3"></i>
+                    {% else %}<i class="fas fa-shield-check mr-3"></i>{% endif %}
+                    {{ result }}
+                </p>
+            </div>
+
+            <div class="bg-gray-900 rounded-lg p-8 shadow-xl border-l-4 border-blue-500 transform hover:-translate-y-1 transition-all duration-300">
+                <h4 class="text-xl font-bold text-blue-400 mb-4 flex items-center">
+                    <i class="fas fa-search-dollar mr-3 text-2xl"></i> Explanation & Red Flags
+                </h4>
+                <div class="prose prose-invert max-w-none text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">{{ explanation }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

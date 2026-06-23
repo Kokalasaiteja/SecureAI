@@ -1,0 +1,46 @@
+{% extends 'users/user_base.html' %}
+{% block content %}
+
+<!-- Background + Styling -->
+<style>
+  body {
+    background-image: url('https://images.unsplash.com/photo-1607871142344-c3c679e0c9d3?auto=format&fit=crop&w=1950&q=80');
+    background-size: cover;
+    background-position: center;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  .rescan-button:hover {
+    background-color: #0d9488;
+  }
+</style>
+
+<div class="flex justify-center items-center min-h-screen">
+  <div class="glass-card w-full max-w-xl text-white text-center">
+    <img src="https://cdn-icons-png.flaticon.com/512/2910/2910791.png" alt="QR Result" class="w-20 h-20 mx-auto mb-4">
+
+    <h2 class="text-3xl font-bold mb-4">✅ QR Code Scan Result</h2>
+
+    <p class="text-lg mb-3"><strong>🔗 URL:</strong> <span class="text-yellow-300">{{ qr_data }}</span></p>
+    <p class="text-lg mb-6"><strong>🔎 Classification:</strong> 
+      <span class="{% if classification == 'Safe' %}text-green-400{% elif classification == 'Suspicious' %}text-yellow-400{% else %}text-red-400{% endif %}">
+        {{ classification }}
+      </span>
+    </p>
+
+    <a href="{% url 'qr-scan' %}" class="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300 rescan-button">
+      🔁 Scan Another
+    </a>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Introduction - SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 max-w-5xl mt-8">
+    <section class="bg-gray-800 bg-opacity-80 rounded-xl p-10 shadow-2xl animate-slide-up border border-gray-700">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold mb-4 text-white flex items-center justify-center">
+                <i class="fas fa-shield-alt text-indigo-500 mr-4 animate-pulse"></i> 
+                Welcome to SecureAI
+            </h1>
+            <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-4">
+                The <strong>Usage of AI in prevention of Social Engineering Attacks</strong> project is an advanced, comprehensive cybersecurity platform designed to identify, analyze, and thwart various forms of human-targeted cyber threats. By leveraging cutting-edge Artificial Intelligence and Machine Learning techniques, this system proactively defends against the psychological manipulation tactics commonly employed by modern cybercriminals.
+            </p>
+            <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                In today's digital landscape, social engineering attacks such as phishing, smishing, and quishing exploit human vulnerability rather than technical flaws. Our project aims to bridge this security gap by providing a multi-layered defense mechanism. It evaluates communications and user behaviors in real-time, serving as a vigilant digital guardian that empowers users to navigate the web safely and securely.
+            </p>
+        </div>
+
+        <div class="space-y-10">
+            <!-- Feature 1 -->
+            <div class="bg-gray-900 rounded-xl p-8 shadow-lg transform hover:-translate-y-2 transition-all duration-300 border-l-4 border-teal-500 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 opacity-5">
+                    <i class="fas fa-sms text-9xl"></i>
+                </div>
+                <div class="w-full md:w-1/4 flex justify-center z-10">
+                    <div class="p-6 bg-gray-800 rounded-full shadow-inner">
+                        <i class="fas fa-sms text-6xl text-teal-500"></i>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/4 z-10">
+                    <h3 class="text-3xl font-bold text-teal-400 mb-3">1. SMS Spam Detector</h3>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Logic:</strong> NLP tokenization and contextual sequence analysis.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Model:</strong> Google Gemini 2.5 Flash AI model.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Training Data:</strong> Pre-trained on vast datasets of global SMS communications, both legitimate and spam.</p>
+                    <p class="text-gray-300 mb-4 text-lg"><strong>Functionality:</strong> Real-time classification of SMS messages to determine if they are malicious phishing attempts or safe ('ham').</p>
+                    <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 text-sm text-gray-300">
+                        <div class="mb-2"><strong class="text-red-400"><i class="fas fa-times-circle mr-1"></i> Example (Spam):</strong> "Congratulations! You won a free gift. Click to claim now"</div>
+                        <div><strong class="text-green-400"><i class="fas fa-check-circle mr-1"></i> Example (Ham):</strong> "Hi! Are we still meeting for dinner tonight?"</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="bg-gray-900 rounded-xl p-8 shadow-lg transform hover:-translate-y-2 transition-all duration-300 border-r-4 border-purple-500 flex flex-col md:flex-row-reverse items-center gap-8 relative overflow-hidden">
+                <div class="absolute -left-10 -top-10 opacity-5">
+                    <i class="fas fa-qrcode text-9xl"></i>
+                </div>
+                <div class="w-full md:w-1/4 flex justify-center z-10">
+                    <div class="p-6 bg-gray-800 rounded-full shadow-inner">
+                        <i class="fas fa-qrcode text-6xl text-purple-500"></i>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/4 z-10 text-right md:text-left">
+                    <h3 class="text-3xl font-bold text-purple-400 mb-3">2. QR Code Threat Scanner</h3>
+                    <div class="text-right md:text-left">
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Logic:</strong> Image processing to decode QR matrices followed by rigorous URL threat extraction and analysis.</p>
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Algorithm & Models:</strong> OpenCV for robust QR decoding; LangChain combined with Google Gemini 2.5 Flash for URL threat classification.</p>
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Training Data:</strong> Analyzes patterns derived from known phishing URLs, safe domain registries, and malicious link structures.</p>
+                        <p class="text-gray-300 mb-4 text-lg"><strong>Functionality:</strong> Scans QR codes and classifies the hidden URL as Safe, Phishing, or Malicious.</p>
+                        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 text-sm text-gray-300">
+                            <div class="mb-2"><strong class="text-green-400"><i class="fas fa-check-circle mr-1"></i> Example (Safe):</strong> A restaurant's digital menu URL.</div>
+                            <div><strong class="text-red-400"><i class="fas fa-times-circle mr-1"></i> Example (Phishing):</strong> A QR code routing to a deceptive banking login page.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="bg-gray-900 rounded-xl p-8 shadow-lg transform hover:-translate-y-2 transition-all duration-300 border-l-4 border-blue-500 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 opacity-5">
+                    <i class="fas fa-envelope-open-text text-9xl"></i>
+                </div>
+                <div class="w-full md:w-1/4 flex justify-center z-10">
+                    <div class="p-6 bg-gray-800 rounded-full shadow-inner">
+                        <i class="fas fa-envelope-open-text text-6xl text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/4 z-10">
+                    <h3 class="text-3xl font-bold text-blue-400 mb-3">3. Email Phishing Analyzer</h3>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Logic:</strong> Textual analysis focusing on psychological triggers like urgency, authority, and deceptive phrasing.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Model:</strong> Google Gemini 2.5 Flash.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Training Data:</strong> Generalized knowledge base encompassing historical phishing templates and standard corporate/personal communications.</p>
+                    <p class="text-gray-300 mb-4 text-lg"><strong>Functionality:</strong> Evaluates email contents and returns a strict classification (Safe, Suspicious, Phishing) along with bulleted explanations.</p>
+                    <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 text-sm text-gray-300">
+                        <div class="mb-2"><strong class="text-red-400"><i class="fas fa-exclamation-triangle mr-1"></i> Example (Phishing):</strong> "Dear customer, your account will be locked in 24 hours. Click here to verify."</div>
+                        <div><strong class="text-green-400"><i class="fas fa-check-circle mr-1"></i> Example (Safe):</strong> "Hi team, please find attached the meeting notes from yesterday's sync."</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="bg-gray-900 rounded-xl p-8 shadow-lg transform hover:-translate-y-2 transition-all duration-300 border-r-4 border-yellow-500 flex flex-col md:flex-row-reverse items-center gap-8 relative overflow-hidden">
+                <div class="absolute -left-10 -top-10 opacity-5">
+                    <i class="fas fa-shield-alt text-9xl"></i>
+                </div>
+                <div class="w-full md:w-1/4 flex justify-center z-10">
+                    <div class="p-6 bg-gray-800 rounded-full shadow-inner">
+                        <i class="fas fa-shield-alt text-6xl text-yellow-500"></i>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/4 z-10 text-right md:text-left">
+                    <h3 class="text-3xl font-bold text-yellow-400 mb-3">4. Password Strength & Breach Analyzer</h3>
+                    <div class="text-right md:text-left">
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Logic:</strong> Combines heuristic complexity checking with secure, zero-knowledge breach verification.</p>
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Algorithm:</strong> SHA-1 hashing algorithm for k-Anonymity (prefix matching).</p>
+                        <p class="text-gray-300 mb-2 text-lg"><strong>Data Source:</strong> Integrates with the "Have I Been Pwned" API database.</p>
+                        <p class="text-gray-300 mb-4 text-lg"><strong>Functionality:</strong> Evaluates password strength and checks for exposure in known data breaches without ever transmitting plain text.</p>
+                        <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 text-sm text-gray-300">
+                            <div class="mb-2"><strong class="text-red-400"><i class="fas fa-times-circle mr-1"></i> Example (Weak/Breached):</strong> password123</div>
+                            <div><strong class="text-green-400"><i class="fas fa-check-circle mr-1"></i> Example (Strong/Safe):</strong> Tr0ub4dor&3!Secure</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="bg-gray-900 rounded-xl p-8 shadow-lg transform hover:-translate-y-2 transition-all duration-300 border-l-4 border-indigo-500 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 opacity-5">
+                    <i class="fas fa-user-secret text-9xl"></i>
+                </div>
+                <div class="w-full md:w-1/4 flex justify-center z-10">
+                    <div class="p-6 bg-gray-800 rounded-full shadow-inner">
+                        <i class="fas fa-user-secret text-6xl text-indigo-500"></i>
+                    </div>
+                </div>
+                <div class="w-full md:w-3/4 z-10">
+                    <h3 class="text-3xl font-bold text-indigo-400 mb-3">5. User Behavior Anomaly Detection</h3>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Logic:</strong> Statistical profiling and machine learning classification to detect atypical session parameters.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Algorithms & Models:</strong> Logistic Regression, Random Forest, and XGBoost classifiers.</p>
+                    <p class="text-gray-300 mb-2 text-lg"><strong>Training Data:</strong> Trained locally on behavior_anomaly_dataset.csv, learning from historical login hours and IP risk scores.</p>
+                    <p class="text-gray-300 mb-4 text-lg"><strong>Classification Details:</strong> The models evaluate <code>login_hour</code> (time of day) and <code>ip_score</code> (probabilistic risk score). High risk IPs combined with atypical login hours (e.g., 3:00 AM) are flagged as an <strong>Anomaly</strong>. Standard business hours with low IP scores are classified as <strong>Normal</strong>.</p>
+                    <div class="bg-gray-800 p-5 rounded-lg border border-gray-700 text-sm text-gray-300 flex flex-col md:flex-row gap-6">
+                        <div class="flex-1"><strong class="text-green-400"><i class="fas fa-user mr-1"></i> Normal Behavior:</strong><br>login_hour = 10<br>ip_score = 0.20</div>
+                        <div class="flex-1"><strong class="text-red-400"><i class="fas fa-user-ninja mr-1"></i> Anomaly Detected:</strong><br>login_hour = 2<br>ip_score = 0.95</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-16 text-center">
+            <h3 class="text-2xl font-bold text-white mb-6">Ready to secure your digital life?</h3>
+            <a href="{% url 'register' %}" class="btn-3d bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-12 py-5 rounded-full font-bold text-2xl inline-flex items-center space-x-3 shadow-xl transform transition-all duration-300 hover:scale-110">
+                <i class="fas fa-rocket"></i>
+                <span>Get Started Now</span>
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}
