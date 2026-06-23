@@ -118,6 +118,7 @@ python manage.py runserver
   - XGBoost
 - **Computer Vision**: OpenCV
 - **Database**: SQLite (default)
+  > *Deployment Note*: When deploying to Render on a free tier without a Persistent Disk, the SQLite database (`db.sqlite3`) and any user-uploaded files are ephemeral. They will reset to the repository's default state on every new code push or server restart. For persistent production data, attach a Render Persistent Disk or switch to PostgreSQL.
 
 ## 📋 Prerequisites
 
@@ -159,12 +160,7 @@ pip install TTS==0.22.0
 *(Note: `yolov5` is a repository and should be cloned manually if needed)*
 
 ### 4. Configure environment variables
-Create a `.env` file in the `code` directory:
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your credentials:
+Create a `.env` file in the root project directory and add your credentials:
 ```env
 SECRET_KEY=your-django-secret-key
 DEBUG=True
@@ -213,13 +209,17 @@ Visit `http://127.0.0.1:8000/` in your browser.
 ```
 code/
 ├── manage.py
-├── db.sqlite3
-├── Req.txt
-├── .env.example
-├── README.md
-├── media/                          # User uploads and ML models
-│   ├── models/                     # Trained ML models
-│   └── behavior_anomaly_dataset.csv
+├── db.sqlite3                       # SQLite Database (Default)
+├── Req.txt                          # Local development requirements (full dependencies)
+├── requirements-render.txt          # Render deployment requirements (optimized, no matplotlib/seaborn)
+├── .env                             # Local environment configuration file (ignored in git)
+├── .gitignore                       # Git ignore configurations
+├── README.md                        # Project documentation
+├── setup.bat                        # Auto-setup script for Windows
+├── setup.sh                         # Auto-setup script for macOS/Linux
+├── media/                           # User uploads and ML models
+│   ├── models/                      # Trained ML model binaries (.pkl)
+│   └── behavior_anomaly_dataset.csv # CSV file for behavioral anomaly training
 ├── templates/                      # HTML templates
 │   ├── base.html
 │   ├── home.html
@@ -238,16 +238,17 @@ code/
 │       ├── qr_result.html
 │       ├── predict_anomaly.html
 │       └── train_anomaly.html
-├── users/                          # Main app
+├── users/                          # Main app codebase
 │   ├── models.py
 │   ├── views.py
 │   ├── admin.py
 │   └── migrations/
-└── Usage_of_AI_in_Prevention_of_Social_Engineering_Attack/
-    ├── settings.py
-    ├── urls.py
-    ├── wsgi.py
-    └── asgi.py
+├── Usage_of_AI_in_Prevention_of_Social_Engineering_Attack/ # Main project configurations
+│   ├── settings.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+└── yolov5/                          # Local YOLOv5 model configurations
 ```
 
 ## 🎯 Usage
@@ -352,7 +353,7 @@ This project is licensed under the MIT License.
 
 ## 👥 Authors
 
-- Project Team - AI in Prevention of Social Engineering Attacks
+- Project Team - Usage of AI in Prevention of Social Engineering Attacks
 
 ## 🙏 Acknowledgments
 - Google Gemini AI for natural language processing
