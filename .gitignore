@@ -17,7 +17,10 @@ venv310/
 # Django Run Assets & Output Visualizations
 db.sqlite3
 db.sqlite3-journal
-media/
+media/*
+!media/behavior_anomaly_dataset.csv
+!media/models/
+!media/models/*.pkl
 static_root/
 *.log
 
