@@ -12,7 +12,7 @@
     </h1>
 
     <div class="mb-6">
-      <img src="{{ user_image }}" alt="{{ user_name }}'s Photo" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-teal-400 shadow-lg transform hover:scale-105 transition duration-300">
+      <img src="{{ user_image }}" alt="{{ user_name }}'s Photo" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-teal-400 shadow-lg transform hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_name|urlencode }}&background=0d9488&color=fff&size=128&bold=true';">
     </div>
 
     <p class="text-lg text-gray-300 mb-6 flex items-center justify-center space-x-2">

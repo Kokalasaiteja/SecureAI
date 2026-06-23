@@ -68,7 +68,7 @@
                     <td class="px-4 py-3">{{ user.email }}</td>
                     <td class="px-4 py-3">{{ user.mobile }}</td>
                     <td class="px-4 py-3">
-                        <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-14 h-14 rounded-full object-cover border border-gray-500 shadow">
+                        <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-14 h-14 rounded-full object-cover border border-gray-500 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
                     </td>
                     <td class="px-4 py-3">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {% if user.is_active %}bg-green-600{% else %}bg-red-600{% endif %}">
