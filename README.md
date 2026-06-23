@@ -1,5 +1,7 @@
 # Social Engineering Attack Prevention System using AI
 
+### 🌐 Live Demo: [https://secureai-7wgj.onrender.com](https://secureai-7wgj.onrender.com)
+
 An intelligent Django-based security analytics platform designed to analyze social engineering vectors, execute anomaly tracking models, detect malicious communication patterns, and manage interactive admin controls.
 
 ## Critical Dependency Warning
@@ -86,7 +88,7 @@ python manage.py runserver
 - **Classification Details**: 
   - The models evaluate two primary features: `login_hour` (the time of day the login occurs) and `ip_score` (a probabilistic risk score from 0.0 to 1.0 assigned to the user's IP based on geolocation and reputation).
   - The algorithms create a decision boundary. Combinations of a high `ip_score` (e.g., unknown or risky IP) and an atypical `login_hour` (e.g., 3:00 AM) are flagged as an **Anomaly**. Conversely, standard business hours combined with low IP scores are classified as **Normal**.
-- **Functionality**: Real-time prediction of user behavior anomalies and visual generation of confusion matrices for model performance.
+- **Functionality**: Real-time prediction of user behavior anomalies. Displays a beautiful HTML/CSS-based confusion matrix heatmap (True Positives, True Negatives, False Positives, False Negatives) for model evaluation, optimized to run without memory-heavy image rendering.
 
 **How to test (examples):**
 1. (Optional) Train models first via: **`/train-anomaly-model/`**
@@ -217,7 +219,6 @@ code/
 ├── README.md
 ├── media/                          # User uploads and ML models
 │   ├── models/                     # Trained ML models
-│   ├── graphs/                     # Confusion matrices
 │   └── behavior_anomaly_dataset.csv
 ├── templates/                      # HTML templates
 │   ├── base.html

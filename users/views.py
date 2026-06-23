@@ -16,18 +16,13 @@ def register_view(request):
         if not (name and email and mobile and password and image):
             msg = "All fields are required."
         else:
-            # Save image manually
-            fs = FileSystemStorage()
-            filename = fs.save(image.name, image)
-            img_url = fs.url(filename)
-
-            # Save user with is_active=False
+            # Save user with is_active=False. Let Django handle the image saving.
             RegisteredUser.objects.create(
                 name=name,
                 email=email,
                 mobile=mobile,
                 password=password,
-                image=filename,
+                image=image,
                 is_active=False
             )
             msg = "Registered successfully! Wait for admin approval."
