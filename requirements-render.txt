@@ -9,8 +9,8 @@ requests==2.32.3
 Pillow==10.4.0
 
 # Protocol Buffers (Critical Fix Versions)
-proto-plus==1.28.0
-protobuf==7.35.1
+proto-plus==1.26.1
+protobuf==4.25.3
 
 # AI & LLM Integration (Spam, Phishing, QR Text Analysis)
 google-generativeai
