@@ -296,10 +296,6 @@ def train_anomaly_model(request):
     import joblib
     import pandas as pd
     import numpy as np
-    import seaborn as sns
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
     from django.conf import settings
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, confusion_matrix
@@ -334,25 +330,18 @@ def train_anomaly_model(request):
         # Classification Report
         report_text = classification_report(y_test, y_pred, target_names=['Normal', 'Anomaly'])
 
-        # Confusion Matrix Plot
+        # Confusion Matrix
         cm = confusion_matrix(y_test, y_pred)
-        plt.figure(figsize=(5, 4))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Normal', 'Anomaly'], yticklabels=['Normal', 'Anomaly'])
-        plt.title(f"{name} - Confusion Matrix")
-        plt.xlabel("Predicted")
-        plt.ylabel("Actual")
+        tn, fp, fn, tp = cm.ravel()
 
-        graph_filename = f"{name.replace(' ', '_').lower()}_cm.png"
-        graph_path = os.path.join('graphs', graph_filename)
-        full_graph_path = os.path.join(settings.MEDIA_ROOT, graph_path)
-        plt.savefig(full_graph_path)
-        plt.close()
-
-        # Append both report and relative graph path
+        # Append both report and raw counts (rendered via HTML/CSS heatmap)
         combined_data.append({
             'name': name,
             'report': report_text,
-            'graph': graph_path  # this will be: graphs/logistic_regression_cm.png
+            'tn': int(tn),
+            'fp': int(fp),
+            'fn': int(fn),
+            'tp': int(tp),
         })
 
     return render(request, 'users/train_anomaly.html', {'combined_data': combined_data})
