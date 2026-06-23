@@ -1,0 +1,32 @@
+# Web Framework & Server Deployment
+Django==5.0.9
+gunicorn==23.0.0
+whitenoise==6.9.0
+dj-database-url==2.1.0
+psycopg2-binary==2.9.9
+python-dotenv==1.1.0
+requests==2.32.3
+Pillow==10.4.0
+
+# Protocol Buffers (Critical Fix Versions)
+proto-plus==1.28.0
+protobuf==7.35.1
+
+# AI & LLM Integration (Spam, Phishing, QR Text Analysis)
+google-generativeai
+google-ai-generativelanguage
+langchain
+langchain-core
+langchain-google-genai
+
+# Computer Vision (QR Code Threat Scanner)
+# IMPORTANT: headless is used to save memory and avoid system GUI dependencies on Render
+opencv-python-headless==4.10.0.84
+
+# Machine Learning (User Behavior Anomaly Detection)
+scikit-learn==1.6.1
+xgboost==3.0.0
+pandas==1.5.3
+numpy==1.26.4
+matplotlib==3.10.1
+seaborn==0.13.2
