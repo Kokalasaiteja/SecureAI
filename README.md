@@ -117,8 +117,8 @@ python manage.py runserver
   - Scikit-learn
   - XGBoost
 - **Computer Vision**: OpenCV
-- **Database**: SQLite (default)
-  > *Deployment Note*: When deploying to Render on a free tier without a Persistent Disk, the SQLite database (`db.sqlite3`) and any user-uploaded files are ephemeral. They will reset to the repository's default state on every new code push or server restart. For persistent production data, attach a Render Persistent Disk or switch to PostgreSQL.
+- **Database**: SQLite (Local Development) & Neon PostgreSQL (Production Deployment)
+  > *Deployment Note*: The project uses SQLite for local testing, but it is deployed using [Neon Serverless PostgreSQL](https://console.neon.tech/app/projects/wild-lab-13182754) for persistent production data on Render. Note: while the Neon database is persistent, user-uploaded files on Render's free tier are ephemeral and may reset upon container rebuilds.
 
 ## 📋 Prerequisites
 
