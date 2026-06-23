@@ -286,27 +286,28 @@ def detect_spam(request):
 
 
 # ANOMALY DETECTION
-
-import os
-import joblib
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-from django.shortcuts import render
-from django.conf import settings
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
+# NOTE: Heavy ML imports are kept inside functions (not global scope)
+# to prevent Gunicorn workers from running out of memory on startup.
 
 # Training View
-# 📌 Final View for Behavior Anomaly Detection Training
 def train_anomaly_model(request):
+    # --- lazy imports: only loaded when this view is actually called ---
+    import os
+    import joblib
+    import pandas as pd
+    import numpy as np
+    import seaborn as sns
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from django.conf import settings
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import classification_report, confusion_matrix
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import RandomForestClassifier
+    from xgboost import XGBClassifier
+    # ------------------------------------------------------------------
+
     df = pd.read_csv(os.path.join(settings.MEDIA_ROOT, 'behavior_anomaly_dataset.csv'))
     df['label_encoded'] = df['label'].map({'normal': 0, 'anomaly': 1})
 
@@ -359,6 +360,10 @@ def train_anomaly_model(request):
 
 # Prediction View
 def predict_anomaly(request):
+    import os
+    import joblib
+    from django.conf import settings
+
     prediction = None
     if request.method == 'POST':
         login_hour = int(request.POST['login_hour'])
