@@ -138,31 +138,33 @@ otp_storage = {}  # Temporary dictionary to store OTPs
 
 def send_otp(email):
     otp = random.randint(100000, 999999)  # Generate a 6-digit OTP
-    otp_storage[email] = otp
-
+    
     subject = "Password Reset OTP"
     message = f"Your OTP for password reset is: {otp}"
 
     from_email = getattr(settings, 'EMAIL_HOST_USER', None)
     if not from_email:
-        raise EnvironmentError("EMAIL_HOST_USER is missing. Set it in .env.")
+        return None, "EMAIL_HOST_USER is missing. Please check your environment variables."
 
     try:
         send_mail(subject, message, from_email, [email])
     except Exception as exc:
-        # For now, re-raise (so Django debug page shows details)
-        # You can later replace this with a user-friendly message.
-        raise
-    return otp
+        return None, f"Failed to send email. Check Render Environment Variables (EMAIL_HOST_USER, EMAIL_HOST_PASSWORD). Error: {str(exc)}"
+        
+    otp_storage[email] = otp
+    return otp, None
 
 def forgot_password(request):
     if request.method == "POST":
         email = request.POST.get("email")
 
         if RegisteredUser.objects.filter(email=email).exists():
-            send_otp(email)
-            request.session["reset_email"] = email  # Store email in session
-            return redirect("verify_otp")
+            otp, error = send_otp(email)
+            if error:
+                messages.error(request, error)
+            else:
+                request.session["reset_email"] = email  # Store email in session
+                return redirect("verify_otp")
         else:
             messages.error(request, "Email not registered!")
 
