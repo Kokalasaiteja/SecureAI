@@ -28,7 +28,7 @@ XGBClassifier(eval_metric='logloss', random_state=42)
 **Files Changed**:
 - `settings.py`: Email credentials now use environment variables
 - `users/views.py`: Google API key now uses environment variables
-- Created `.env.example` template
+- Created `.env` template
 - Added `.gitignore` to prevent committing secrets
 
 **Before**:

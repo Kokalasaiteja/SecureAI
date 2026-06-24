@@ -58,7 +58,7 @@
 - **FIXES_SUMMARY.md** - What was fixed
 
 ## ✅ The Project Will Work If:
-- Python 3.8+ is installed
+- Python 3.10.11 is installed
 - All dependencies install correctly (setup script does this)
 - You add your API keys to .env file
 - Port 8000 is not in use

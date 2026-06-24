@@ -66,8 +66,8 @@ python manage.py runserver
 **How to test (examples):**
 - **Example 1 (Phishing)**: "Dear customer, your account will be locked in 24 hours. Click here to verify."  
   Expected: **Phishing**
-- **Example 2 (Safe)**: "Hi team, please find attached the meeting notes from yesterday's sync. Let me know if you have any questions."  
-  Expected: **Safe**
+- **Example 2 (Suspicious)**: "Hi team, please find attached the meeting notes from yesterday's sync. Let me know if you have any questions."  
+  Expected: **Suspicious**
 
 ### 4. **🛡️ Password Strength & Breach Analyzer**
 - **Logic**: Combines heuristic complexity checking with secure, zero-knowledge breach verification.

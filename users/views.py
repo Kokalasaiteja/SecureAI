@@ -15,6 +15,8 @@ def register_view(request):
         # Basic validation
         if not (name and email and mobile and password and image):
             msg = "All fields are required."
+        elif RegisteredUser.objects.filter(name=name).exists():
+            msg = "already exist keep any other username."
         else:
             # Save user with is_active=False. Let Django handle the image saving.
             RegisteredUser.objects.create(
@@ -130,6 +132,7 @@ from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from django.contrib import messages
 from .models import RegisteredUser
+from django.conf import settings
 
 otp_storage = {}  # Temporary dictionary to store OTPs
 
