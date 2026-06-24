@@ -234,7 +234,7 @@ def get_google_llm(**kwargs):
     api_key = get_env_value("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable is missing")
-    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", **kwargs)
+    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", max_retries=0, timeout=10, **kwargs)
 
 
 def get_spam_chain():
@@ -320,12 +320,16 @@ def train_anomaly_model(request):
     combined_data = []
 
     for name, model in models.items():
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-
-        # Save model
         model_path = os.path.join(settings.MEDIA_ROOT, 'models', f"{name.replace(' ', '_').lower()}.pkl")
-        joblib.dump(model, model_path)
+        
+        if os.path.exists(model_path):
+            model = joblib.load(model_path)
+        else:
+            model.fit(X_train, y_train)
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            joblib.dump(model, model_path)
+            
+        y_pred = model.predict(X_test)
 
         # Classification Report
         report_text = classification_report(y_test, y_pred, target_names=['Normal', 'Anomaly'])
