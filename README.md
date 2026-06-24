@@ -68,6 +68,8 @@ python manage.py runserver
   Expected: **Phishing**
 - **Example 2 (Suspicious)**: "Hi team, please find attached the meeting notes from yesterday's sync. Let me know if you have any questions."  
   Expected: **Suspicious**
+- **Example 3 (Safe)**: "Hi John, could we reschedule our 1-on-1 meeting to tomorrow at 2 PM? Let me know if that works for you."  
+  Expected: **Safe**
 
 ### 4. **🛡️ Password Strength & Breach Analyzer**
 - **Logic**: Combines heuristic complexity checking with secure, zero-knowledge breach verification.
