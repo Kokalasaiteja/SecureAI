@@ -234,14 +234,8 @@ def get_google_llm(**kwargs):
     api_key = get_env_value("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable is missing")
-    
-    # Updated model string to use the stable 3.5 flagships
-    return ChatGoogleGenerativeAI(
-        model="gemini-3.5-flash", 
-        max_retries=0, 
-        timeout=10, 
-        **kwargs
-    )
+    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", max_retries=0, timeout=10, **kwargs)
+
 
 def get_spam_chain():
     prompt = PromptTemplate(
