@@ -46,5 +46,7 @@ urlpatterns = [
     path('email-phishing/', views.email_phishing_analyzer, name='email_phishing_analyzer'),
     path('introduction/', views.introduction, name='introduction'),
     path('contact/', views.contact, name='contact'),
+    path('dispatch-verification/', views.dispatch_verification_challenge, name='dispatch_verification_challenge'),
+    path('confirm-verification/', views.confirm_verification_challenge, name='confirm_verification_challenge'),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]

@@ -234,7 +234,7 @@ def get_google_llm(**kwargs):
     api_key = get_env_value("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable is missing")
-    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", max_retries=5, timeout=30, **kwargs)
+    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", max_retries=5, timeout=0, **kwargs)
 
 
 def get_spam_chain():
@@ -616,3 +616,74 @@ Then, provide a brief bulleted explanation of your findings and any red flags.""
         'error': error,
         'email_text': email_text,
     })
+
+# --- SECURE OTP INTEGRATION ---
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
+from .utils import generate_six_digit_otp, send_secure_otp_email
+
+@require_POST
+@csrf_protect
+def dispatch_verification_challenge(request):
+    """
+    Handles background verification initialization.
+    Saves verification state to the active session container.
+    """
+    # Capture target address securely
+    target_email = request.POST.get("email", "").strip()
+    
+    if not target_email:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Target registration parameter 'email' is required."
+        }, status=400)
+    
+    # 1. Generate token challenge
+    generated_otp = generate_six_digit_otp()
+    
+    # 2. Append token criteria to current user pipeline context
+    request.session["active_security_otp"] = generated_otp
+    # Optional: track session lifespan timestamps if handling formal timeouts
+    
+    # 3. Ship via HTTPS REST channel
+    delivery_success = send_secure_otp_email(target_email, generated_otp)
+    
+    if delivery_success:
+        return JsonResponse({
+            "status": "success", 
+            "message": "Authorization payload successfully issued via web API channel."
+        })
+    else:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Edge gateway delivery failure. Verify Render environment flags."
+        }, status=500)
+
+@require_POST
+@csrf_protect
+def confirm_verification_challenge(request):
+    """
+    Validates user entry input against cached system values.
+    """
+    user_entry = request.POST.get("otp_entry", "").strip()
+    cached_challenge = request.session.get("active_security_otp")
+    
+    if not cached_challenge:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Verification flow uninitialized or token expired."
+        }, status=400)
+        
+    if user_entry == cached_challenge:
+        # Clear token context so it can't be used again
+        del request.session["active_security_otp"]
+        return JsonResponse({
+            "status": "success", 
+            "message": "Authentication token verified. Flow clear."
+        })
+    else:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Supplied passcode does not match target profile criteria."
+        }, status=403)
