@@ -124,7 +124,7 @@ python manage.py runserver
 
 ## 📋 Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10.11
 - pip (Python package manager)
 - Virtual environment (recommended)
 
@@ -168,8 +168,7 @@ SECRET_KEY=your-django-secret-key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-gmail-app-password
+RESEND_API_KEY=your-resend-api-key
 
 GOOGLE_API_KEY=your-gemini-api-key
 ```
@@ -200,11 +199,11 @@ Visit `http://127.0.0.1:8000/` in your browser.
 3. Create a new API key
 4. Copy the key to your `.env` file
 
-### Gmail App Password (for OTP emails)
-1. Enable 2-Factor Authentication on your Google account
-2. Go to [App Passwords](https://myaccount.google.com/apppasswords)
-3. Generate a new app password for "Mail"
-4. Copy the 16-character password to your `.env` file
+### Resend API Key (for OTP emails)
+*Note: Previously, standard Gmail App Passwords were used (`EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD`). However, cloud environments like Render often block standard SMTP ports (like port 25, 465, 587) resulting in `Network is unreachable` errors. To fix this and provide beautifully formatted HTML emails, we now use the Resend API which operates securely over HTTPS port 443.*
+1. Sign up or log in at [Resend](https://resend.com)
+2. Navigate to API Keys and generate a new key
+3. Copy the key to your `.env` file as `RESEND_API_KEY`
 
 ## 📁 Project Structure
 
@@ -302,9 +301,9 @@ python manage.py collectstatic
 ```
 
 **Issue**: Email not sending
-- Verify Gmail app password is correct
-- Check 2FA is enabled on Google account
-- Ensure EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are set in .env
+- Verify your Resend API Key is correct
+- Check your Resend dashboard for delivery logs
+- Ensure RESEND_API_KEY is set in .env
 
 ## 📊 ML Model Training
 
