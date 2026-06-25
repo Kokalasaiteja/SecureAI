@@ -137,19 +137,12 @@ from django.conf import settings
 otp_storage = {}  # Temporary dictionary to store OTPs
 
 def send_otp(email):
-    otp = random.randint(100000, 999999)  # Generate a 6-digit OTP
+    from .utils import generate_six_digit_otp, send_secure_otp_email
+    otp = generate_six_digit_otp()
     
-    subject = "Password Reset OTP"
-    message = f"Your OTP for password reset is: {otp}"
-
-    from_email = getattr(settings, 'EMAIL_HOST_USER', None)
-    if not from_email:
-        return None, "EMAIL_HOST_USER is missing. Please check your environment variables."
-
-    try:
-        send_mail(subject, message, from_email, [email])
-    except Exception as exc:
-        return None, f"Failed to send email. Check Render Environment Variables (EMAIL_HOST_USER, EMAIL_HOST_PASSWORD). Error: {str(exc)}"
+    success = send_secure_otp_email(email, otp)
+    if not success:
+        return None, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY)."
         
     otp_storage[email] = otp
     return otp, None
