@@ -2,6 +2,8 @@
 
 ### 🌐 Live Demo: [https://secureai-7wgj.onrender.com](https://secureai-7wgj.onrender.com)
 
+### 📽 Demo Video Watch the complete working demo here: [SecureAI.mp4](https://www.linkedin.com/posts/sai-teja-kokala-245a12299_ai-cybersecurity-machinelearning-ugcPost-7476167691737714688-QWWw)
+
 An intelligent Django-based security analytics platform designed to analyze social engineering vectors, execute anomaly tracking models, detect malicious communication patterns, and manage interactive admin controls.
 
 ## Critical Dependency Warning
@@ -337,6 +339,86 @@ To train the behavioral anomaly detection models:
 - `/forgot-password/` - Password reset
 - `/verify-otp/` - OTP verification
 - `/reset-password/` - New password setup
+
+# 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <b>Home Page</b><br><br>
+      <img src="https://github.com/user-attachments/assets/89e4aa74-db6b-4d45-be50-f74329e3d073" width="260"/>
+    </td>
+    <td align="center">
+      <b>Introduction Page</b><br><br>
+      <img src="https://github.com/user-attachments/assets/46567a15-372e-4fff-8027-ec5c94458d51" width="260"/>
+    </td>
+    <td align="center">
+      <b>Registration Page</b><br><br>
+      <img src="https://github.com/user-attachments/assets/602ee93c-f624-4809-add5-c0fb2582c07c" width="260"/>
+    </td>
+    <td align="center">
+      <b>User Login</b><br><br>
+      <img src="https://github.com/user-attachments/assets/4e733148-1e1c-444d-be25-0445dc6ecc0a" width="260"/>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center">
+      <b>Email OTP Verification</b><br><br>
+      <img src="https://github.com/user-attachments/assets/2170618f-8a69-474e-9dc6-a390a7d61ec5" height="220"/>
+    </td>
+    <td align="center">
+      <b>Admin Login</b><br><br>
+      <img src="https://github.com/user-attachments/assets/de3a2634-2be8-4379-a08a-595f1792d838" width="260"/>
+    </td>
+    <td align="center">
+      <b>Admin Dashboard Page</b><br><br>
+      <img src="https://github.com/user-attachments/assets/6008da22-5036-4549-be07-c3216e0ca042" width="260"/>
+    </td>
+    <td align="center">
+      <b>Admin Dashboard</b><br><br>
+      <img src="https://github.com/user-attachments/assets/0f105354-041a-4325-90fb-3884aacf307b" width="260"/>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center">
+      <b>User Dashboard</b><br><br>
+      <img src="https://github.com/user-attachments/assets/27708f2a-c545-4c89-9331-1b33cf062399" width="260"/>
+    </td>
+    <td align="center">
+      <b>SMS Detector</b><br><br>
+      <img src="https://github.com/user-attachments/assets/2917c677-4f7c-418b-959a-c9ea535a0b55" width="260"/>
+    </td>
+    <td align="center">
+      <b>QR Scanner</b><br><br>
+      <img src="https://github.com/user-attachments/assets/da1bfb57-6c28-4420-89b9-2a2207a74955" width="260"/>
+    </td>
+    <td align="center">
+      <b>Behavior Analysis</b><br><br>
+      <img src="https://github.com/user-attachments/assets/d7914249-ccfa-4274-b495-619f865ad631" width="260"/>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center">
+      <b>Anomaly Detection Training Results</b><br><br>
+      <img src="https://github.com/user-attachments/assets/4276f12d-2c00-4d85-bd35-66d0226c169d" width="260"/>
+    </td>
+    <td align="center">
+      <b>Email Phishing Analyzer</b><br><br>
+      <img src="https://github.com/user-attachments/assets/608c93c5-9950-485b-b331-2b464541b1f2" width="260"/>
+    </td>
+    <td align="center">
+      <b>Phishing Analyzer Output</b><br><br>
+      <img src="https://github.com/user-attachments/assets/f53ab97a-f4da-4cc5-9fa9-84f929fca953" width="260"/>
+    </td>
+    <td align="center">
+      <b>Password Checker</b><br><br>
+      <img src="https://github.com/user-attachments/assets/ab778f6f-9d46-41e3-a5be-f0a5623dd5bd" width="260"/>
+    </td>
+  </tr>
+</table>
 
 ## 🤝 Contributing
 
