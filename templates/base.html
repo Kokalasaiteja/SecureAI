@@ -109,31 +109,31 @@
                 </a>
             </div>
 
-            <!-- Desktop Navigation Links (Large Screens) -->
-            <div class="hidden lg:flex items-center space-x-1 xl:space-x-2">
-                <a href="/" class="px-3 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 hover:bg-gray-800/80 hover:text-indigo-300 transition-all duration-200">
-                    <i class="fas fa-home text-indigo-400"></i>
-                    <span>Home</span>
+            <!-- Desktop Navigation Links (Large Screens / Laptop View - Restored Original Layout) -->
+            <div class="hidden lg:flex items-center space-x-1 xl:space-x-2 shrink-0">
+                <a href="/" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl hover:bg-gray-800/80 hover:text-indigo-300 transition-all duration-300 group">
+                    <i class="fas fa-home text-lg xl:text-xl mb-1 text-indigo-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-medium whitespace-nowrap">Home</span>
                 </a>
-                <a href="{% url 'introduction' %}" class="px-3 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 hover:bg-gray-800/80 hover:text-teal-300 transition-all duration-200">
-                    <i class="fas fa-book-open text-teal-400"></i>
-                    <span>Introduction</span>
+                <a href="{% url 'introduction' %}" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl hover:bg-gray-800/80 hover:text-teal-300 transition-all duration-300 group">
+                    <i class="fas fa-book-open text-lg xl:text-xl mb-1 text-teal-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-medium whitespace-nowrap">Introduction</span>
                 </a>
-                <a href="{% url 'contact' %}" class="px-3 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 hover:bg-gray-800/80 hover:text-blue-300 transition-all duration-200">
-                    <i class="fas fa-envelope text-blue-400"></i>
-                    <span>Contact Us</span>
+                <a href="{% url 'contact' %}" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl hover:bg-gray-800/80 hover:text-blue-300 transition-all duration-300 group">
+                    <i class="fas fa-envelope text-lg xl:text-xl mb-1 text-blue-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-medium whitespace-nowrap">Contact Us</span>
                 </a>
-                <a href="{% url 'register' %}" class="px-3 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 hover:bg-gray-800/80 hover:text-purple-300 transition-all duration-200">
-                    <i class="fas fa-user-plus text-purple-400"></i>
-                    <span>Register</span>
+                <a href="{% url 'register' %}" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl hover:bg-gray-800/80 hover:text-purple-300 transition-all duration-300 group">
+                    <i class="fas fa-user-plus text-lg xl:text-xl mb-1 text-purple-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-medium whitespace-nowrap">Register</span>
                 </a>
-                <a href="{% url 'user_login' %}" class="px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 bg-indigo-600/40 hover:bg-indigo-600 border border-indigo-500/50 text-white transition-all duration-200 shadow-md">
-                    <i class="fas fa-sign-in-alt text-green-400"></i>
-                    <span>User Login</span>
+                <a href="{% url 'user_login' %}" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-white transition-all duration-300 shadow-md group">
+                    <i class="fas fa-sign-in-alt text-lg xl:text-xl mb-1 text-green-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">User Login</span>
                 </a>
-                <a href="{% url 'admin_login' %}" class="px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center space-x-2 bg-pink-600/30 hover:bg-pink-600 border border-pink-500/50 text-white transition-all duration-200 shadow-md">
-                    <i class="fas fa-lock text-pink-400"></i>
-                    <span>Admin Login</span>
+                <a href="{% url 'admin_login' %}" class="w-24 xl:w-28 flex flex-col items-center justify-center text-center p-2 rounded-xl bg-pink-600/30 hover:bg-pink-600 border border-pink-500/40 text-white transition-all duration-300 shadow-md group">
+                    <i class="fas fa-lock text-lg xl:text-xl mb-1 text-pink-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">Admin Login</span>
                 </a>
             </div>
         </div>
