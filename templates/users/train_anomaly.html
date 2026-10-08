@@ -11,83 +11,108 @@
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        padding: 25px;
-        margin-bottom: 30px;
+        padding: 16px;
+        margin-bottom: 24px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.18);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
+    @media (min-width: 640px) {
+        .model-block {
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+    }
     
     .model-block:hover {
-        transform: translateY(-5px);
+        transform: translateY(-4px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
     
-    h2 {
+    h2.page-title {
         color: #fff;
         text-align: center;
-        font-size: 2.5rem;
-        margin-bottom: 40px;
+        font-size: 1.5rem;
+        margin-bottom: 24px;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        font-weight: 700;
+    }
+
+    @media (min-width: 640px) {
+        h2.page-title {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+        }
     }
     
-    h3 {
+    .model-title {
         color: #14b8a6;
-        font-size: 1.8rem;
-        margin-bottom: 20px;
+        font-size: 1.3rem;
+        margin-bottom: 16px;
         display: flex;
         align-items: center;
         gap: 10px;
+        font-weight: 700;
+    }
+
+    @media (min-width: 640px) {
+        .model-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
     }
     
     pre {
-        background-color: rgba(0, 0, 0, 0.3);
+        background-color: rgba(0, 0, 0, 0.4);
         color: #fff;
-        padding: 15px;
+        padding: 12px;
         border-radius: 8px;
         overflow-x: auto;
-        font-size: 0.9rem;
-        line-height: 1.6;
+        font-size: 0.75rem;
+        line-height: 1.5;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        white-space: pre-wrap;
+        word-break: break-word;
     }
-    
-    img {
-        max-width: 100%;
-        height: auto;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        margin-top: 20px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        transition: transform 0.3s ease;
-    }
-    
-    img:hover {
-        transform: scale(1.05);
+
+    @media (min-width: 640px) {
+        pre {
+            padding: 15px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre;
+            word-break: normal;
+        }
     }
     
     .container-custom {
         max-width: 1200px;
         margin: 0 auto;
-        padding: 20px;
-    }
-    
-    .icon-model {
-        font-size: 1.5rem;
-        color: #14b8a6;
+        padding: 12px sm:20px;
     }
     
     .back-button {
         display: inline-block;
-        margin-bottom: 30px;
-        padding: 12px 24px;
+        margin-bottom: 20px;
+        padding: 10px 18px;
         background: rgba(20, 184, 166, 0.2);
         color: #14b8a6;
         border: 2px solid #14b8a6;
         border-radius: 8px;
         text-decoration: none;
         font-weight: 600;
+        font-size: 0.875rem;
         transition: all 0.3s ease;
+    }
+
+    @media (min-width: 640px) {
+        .back-button {
+            margin-bottom: 30px;
+            padding: 12px 24px;
+            font-size: 1rem;
+        }
     }
     
     .back-button:hover {
@@ -102,12 +127,12 @@
         <i class="fas fa-arrow-left"></i> Back to Dashboard
     </a>
     
-    <h2><i class="fas fa-chart-line"></i> Behavior Anomaly Detection - Training Results</h2>
+    <h2 class="page-title"><i class="fas fa-chart-line"></i> Behavior Anomaly Detection - Training Results</h2>
 
     {% for item in combined_data %}
         <div class="model-block">
-            <h3>
-                <i class="fas fa-brain icon-model"></i>
+            <h3 class="model-title">
+                <i class="fas fa-brain text-teal-400"></i>
                 {{ item.name }}
             </h3>
             <pre>{{ item.report }}</pre>

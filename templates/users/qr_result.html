@@ -24,20 +24,20 @@
   }
 </style>
 
-<div class="flex justify-center items-center min-h-screen">
-  <div class="glass-card w-full max-w-xl text-white text-center">
-    <img src="https://cdn-icons-png.flaticon.com/512/2910/2910791.png" alt="QR Result" class="w-20 h-20 mx-auto mb-4">
+<div class="flex justify-center items-center py-4 sm:py-8">
+  <div class="glass-card w-full max-w-xl text-white text-center p-5 sm:p-8">
+    <img src="https://cdn-icons-png.flaticon.com/512/2910/2910791.png" alt="QR Result" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4">
 
-    <h2 class="text-3xl font-bold mb-4">✅ QR Code Scan Result</h2>
+    <h2 class="text-2xl sm:text-3xl font-bold mb-4">✅ QR Code Scan Result</h2>
 
-    <p class="text-lg mb-3"><strong>🔗 URL:</strong> <span class="text-yellow-300">{{ qr_data }}</span></p>
-    <p class="text-lg mb-6"><strong>🔎 Classification:</strong> 
-      <span class="text-yellow-300">
+    <p class="text-base sm:text-lg mb-3 break-all"><strong>🔗 URL:</strong> <span class="text-yellow-300 font-medium">{{ qr_data }}</span></p>
+    <p class="text-base sm:text-lg mb-6"><strong>🔎 Classification:</strong> 
+      <span class="text-yellow-300 font-bold">
         {{ classification }}
       </span>
     </p>
 
-    <a href="{% url 'qr-scan' %}" class="inline-block bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300 rescan-button">
+    <a href="{% url 'qr-scan' %}" class="inline-block w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 rescan-button shadow-lg">
       🔁 Scan Another
     </a>
   </div>

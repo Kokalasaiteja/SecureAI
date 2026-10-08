@@ -30,75 +30,76 @@
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto px-2 sm:px-6 py-4 sm:py-6">
 
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8 animate-slide-up">
-        <h2 class="text-3xl font-bold flex items-center space-x-3 text-indigo-400">
-            <i class="fas fa-tachometer-alt"></i>
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 sm:mb-8 animate-slide-up bg-gray-900 bg-opacity-80 p-4 rounded-xl border border-gray-800">
+        <h2 class="text-2xl sm:text-3xl font-bold flex items-center space-x-3 text-indigo-400">
+            <i class="fas fa-tachometer-alt text-xl sm:text-2xl"></i>
             <span>Admin Dashboard</span>
         </h2>
-        <div class="space-x-4">
-            {% comment %} <a href="/admin_home" class="bg-purple-600 hover:bg-purple-700 px-5 py-2 rounded-lg shadow-md text-white font-semibold transition-all">
-                <i class="fas fa-home mr-1"></i> Home
-            </a> {% endcomment %}
-            <a href="/" class="bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg shadow-md text-white font-semibold transition-all">
+        <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+            <a href="{% url 'user_logout' %}" class="w-full sm:w-auto text-center bg-red-600 hover:bg-red-700 px-5 py-2.5 rounded-lg shadow-md text-white font-semibold transition-all text-sm sm:text-base">
                 <i class="fas fa-sign-out-alt mr-1"></i> Logout
             </a>
         </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-gray-900 bg-opacity-80 p-6 rounded-lg shadow-lg animate-fade-in overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700 text-sm text-white">
-            <thead class="bg-gray-800 text-indigo-300 uppercase font-semibold text-xs">
-                <tr>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Email</th>
-                    <th class="px-4 py-3 text-left">Mobile</th>
-                    <th class="px-4 py-3 text-left">Image</th>
-                    <th class="px-4 py-3 text-left">Active</th>
-                    <th class="px-4 py-3 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-800">
-                {% for user in users %}
-                <tr class="hover:bg-gray-800 transition duration-300">
-                    <td class="px-4 py-3">{{ user.name }}</td>
-                    <td class="px-4 py-3">{{ user.email }}</td>
-                    <td class="px-4 py-3">{{ user.mobile }}</td>
-                    <td class="px-4 py-3">
-                        <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-14 h-14 rounded-full object-cover border border-gray-500 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
-                    </td>
-                    <td class="px-4 py-3">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {% if user.is_active %}bg-green-600{% else %}bg-red-600{% endif %}">
-                            <i class="fas {% if user.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
-                            {{ user.is_active|yesno:"Active,Inactive" }}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3 text-center space-x-3">
-                        {% if not user.is_active %}
-                        <a href="{% url 'activate_user' user.id %}" class="text-green-400 hover:text-green-300 font-medium">
-                            <i class="fas fa-user-check mr-1"></i> Activate
-                        </a>
-                        {% else %}
-                        <a href="{% url 'deactivate_user' user.id %}" class="text-yellow-400 hover:text-yellow-300 font-medium">
-                            <i class="fas fa-user-slash mr-1"></i> Deactivate
-                        </a>
-                        {% endif %}
-                        <span class="text-gray-500">|</span>
-                        <a href="{% url 'delete_user' user.id %}" class="text-red-400 hover:text-red-300 font-medium">
-                            <i class="fas fa-trash-alt mr-1"></i> Delete
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="px-4 py-5 text-center text-gray-300">No users found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Table Container -->
+    <div class="bg-gray-900 bg-opacity-80 p-3 sm:p-6 rounded-xl shadow-2xl animate-fade-in border border-gray-800">
+        <div class="overflow-x-auto rounded-lg border border-gray-800">
+            <table class="min-w-full divide-y divide-gray-800 text-xs sm:text-sm text-white">
+                <thead class="bg-gray-800 text-indigo-300 uppercase font-semibold text-xs tracking-wider">
+                    <tr>
+                        <th class="px-3 sm:px-4 py-3 text-left whitespace-nowrap">Name</th>
+                        <th class="px-3 sm:px-4 py-3 text-left whitespace-nowrap">Email</th>
+                        <th class="px-3 sm:px-4 py-3 text-left whitespace-nowrap">Mobile</th>
+                        <th class="px-3 sm:px-4 py-3 text-left whitespace-nowrap">Image</th>
+                        <th class="px-3 sm:px-4 py-3 text-left whitespace-nowrap">Status</th>
+                        <th class="px-3 sm:px-4 py-3 text-center whitespace-nowrap">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/60">
+                    {% for user in users %}
+                    <tr class="hover:bg-gray-800/50 transition duration-200">
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap font-medium">{{ user.name }}</td>
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap text-gray-300">{{ user.email }}</td>
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap text-gray-300">{{ user.mobile }}</td>
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap">
+                            <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-gray-700 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
+                        </td>
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {% if user.is_active %}bg-green-600/90 text-green-100{% else %}bg-red-600/90 text-red-100{% endif %}">
+                                <i class="fas {% if user.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
+                                {{ user.is_active|yesno:"Active,Inactive" }}
+                            </span>
+                        </td>
+                        <td class="px-3 sm:px-4 py-3 whitespace-nowrap text-center">
+                            <div class="flex items-center justify-center space-x-2 sm:space-x-3">
+                                {% if not user.is_active %}
+                                <a href="{% url 'activate_user' user.id %}" class="text-green-400 hover:text-green-300 font-medium text-xs sm:text-sm bg-green-950/40 px-2.5 py-1 rounded border border-green-800/50">
+                                    <i class="fas fa-user-check mr-1"></i> Activate
+                                </a>
+                                {% else %}
+                                <a href="{% url 'deactivate_user' user.id %}" class="text-yellow-400 hover:text-yellow-300 font-medium text-xs sm:text-sm bg-yellow-950/40 px-2.5 py-1 rounded border border-yellow-800/50">
+                                    <i class="fas fa-user-slash mr-1"></i> Deactivate
+                                </a>
+                                {% endif %}
+                                <span class="text-gray-600">|</span>
+                                <a href="{% url 'delete_user' user.id %}" class="text-red-400 hover:text-red-300 font-medium text-xs sm:text-sm bg-red-950/40 px-2.5 py-1 rounded border border-red-800/50">
+                                    <i class="fas fa-trash-alt mr-1"></i> Delete
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-400">No registered users found in database.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

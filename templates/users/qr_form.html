@@ -4,25 +4,25 @@
 
 
 <!-- Main Layout -->
-<div class="flex justify-center items-center min-h-screen">
-  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-8 rounded-2xl shadow-2xl animate-slide-up">
+<div class="flex justify-center items-center py-4 sm:py-8">
+  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-4 sm:p-8 rounded-xl sm:rounded-2xl shadow-2xl animate-slide-up border border-gray-700">
     <div class="text-center mb-6">
-      <img src="https://cdn-icons-png.flaticon.com/512/888/888879.png" alt="QR icon" class="w-20 h-20 mx-auto mb-4">
-      <h2 class="text-3xl font-bold">📸 QR Code Classifier</h2>
-      <p class="text-sm text-gray-100">Powered by Gemini + LangChain for threat detection</p>
+      <img src="https://cdn-icons-png.flaticon.com/512/888/888879.png" alt="QR icon" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4">
+      <h2 class="text-2xl sm:text-3xl font-bold">📸 QR Code Classifier</h2>
+      <p class="text-xs sm:text-sm text-gray-200 mt-1">Powered by Gemini + LangChain for threat detection</p>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" class="space-y-5">
+    <form method="POST" enctype="multipart/form-data" class="space-y-4 sm:space-y-5">
       {% csrf_token %}
 
       <div>
-        <label class="block mb-2 font-semibold text-white">Upload QR Code Image:</label>
-        <input type="file" name="qr_image" accept="image/*" required class="w-full bg-white text-black rounded p-2">
+        <label class="block mb-2 text-xs sm:text-sm font-semibold text-white">Upload QR Code Image:</label>
+        <input type="file" name="qr_image" accept="image/*" required class="w-full bg-gray-900 text-white rounded-lg p-2.5 border border-gray-700 text-xs sm:text-sm">
       </div>
 
-      <div class="text-center">
+      <div class="text-center pt-2">
         <button type="submit"
-          class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300">
+          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md">
           Scan & Classify
         </button>
       </div>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}500 Server Error - SecureAI{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-2 sm:px-4 py-8 sm:py-12 max-w-xl text-center">
+    <div class="bg-gray-800 bg-opacity-80 rounded-2xl p-6 sm:p-10 shadow-2xl animate-slide-up border border-yellow-500/40">
+        <div class="mb-6">
+            <div class="w-20 h-20 sm:w-24 sm:h-24 bg-yellow-900/40 border-2 border-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/20">
+                <i class="fas fa-server text-yellow-400 text-4xl sm:text-5xl"></i>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-2">500 Server Error</h1>
+            <p class="text-yellow-400 font-semibold text-lg mb-4">Internal Processing Exception</p>
+        </div>
+
+        <p class="text-gray-300 text-sm sm:text-base leading-relaxed mb-8">
+            An unexpected error occurred while processing your request. Please try again or return to the main dashboard.
+        </p>
+
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <a href="/" class="btn-3d w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300">
+                <i class="fas fa-home"></i>
+                <span>Return to Home</span>
+            </a>
+            <a href="{% url 'user_homepage' %}" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300">
+                <i class="fas fa-user-shield"></i>
+                <span>User Panel</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -50,3 +50,8 @@ urlpatterns = [
     path('confirm-verification/', views.confirm_verification_challenge, name='confirm_verification_challenge'),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
+
+# Custom Error Handlers
+handler403 = 'users.views.custom_403_view'
+handler404 = 'users.views.custom_404_view'
+handler500 = 'users.views.custom_500_view'

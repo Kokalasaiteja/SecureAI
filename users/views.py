@@ -1,7 +1,25 @@
 
+from functools import wraps
 from django.shortcuts import render, redirect
 from .models import RegisteredUser
 from django.core.files.storage import FileSystemStorage
+
+# Authentication Decorators to handle forbidden / unauthorized access cleanly
+def user_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if 'user_id' not in request.session:
+            return redirect('user_login')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.session.get('is_admin'):
+            return redirect('admin_login')
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 def register_view(request):
     msg = ''
@@ -30,8 +48,6 @@ def register_view(request):
             msg = "Registered successfully! Wait for admin approval."
 
     return render(request, 'register.html', {'msg': msg})
-
-from django.utils import timezone
 
 from django.utils import timezone
 import pytz
@@ -70,46 +86,56 @@ def admin_login(request):
         password = request.POST.get('password')
 
         if name == 'admin' and password == 'admin':
+            request.session['is_admin'] = True
             return redirect('admin_home')
         else:
             msg = "Invalid admin credentials."
 
     return render(request, 'admin_login.html', {'msg': msg})
 
+@admin_required
 def admin_home(request):
     return render(request, 'admin_home.html')
-    
+
+@admin_required
 def admin_dashboard(request):
     users = RegisteredUser.objects.all()
     return render(request, 'admin_dashboard.html', {'users': users})
 
+@admin_required
 def activate_user(request, user_id):
-    user = RegisteredUser.objects.get(id=user_id)
-    user.is_active = True
-    user.save()
+    try:
+        user = RegisteredUser.objects.get(id=user_id)
+        user.is_active = True
+        user.save()
+    except RegisteredUser.DoesNotExist:
+        pass
     return redirect('admin_dashboard')
 
+@admin_required
 def deactivate_user(request, user_id):
-    user = RegisteredUser.objects.get(id=user_id)
-    user.is_active = False
-    user.save()
+    try:
+        user = RegisteredUser.objects.get(id=user_id)
+        user.is_active = False
+        user.save()
+    except RegisteredUser.DoesNotExist:
+        pass
     return redirect('admin_dashboard')
 
+@admin_required
 def delete_user(request, user_id):
-    user = RegisteredUser.objects.get(id=user_id)
-    user.delete()
+    try:
+        user = RegisteredUser.objects.get(id=user_id)
+        user.delete()
+    except RegisteredUser.DoesNotExist:
+        pass
     return redirect('admin_dashboard')
-
-
 
 def home(request):
     return render(request, 'home.html')
 
+@user_required
 def user_homepage(request):
-    if 'user_id' not in request.session:
-        # User not logged in, redirect to login page
-        return redirect('user_login')
-
     user_name = request.session.get('user_name')
     user_image = request.session.get('user_image')
     login_time = request.session.get('login_time')
@@ -243,6 +269,7 @@ Respond only with 'spam' or 'ham' and give a one-line explanation.
     return prompt | get_google_llm()
 
 
+@user_required
 def detect_spam(request):
     result = None
     explanation = None
@@ -283,6 +310,7 @@ def detect_spam(request):
 # to prevent Gunicorn workers from running out of memory on startup.
 
 # Training View
+@user_required
 def train_anomaly_model(request):
     # --- lazy imports: only loaded when this view is actually called ---
     import os
@@ -345,27 +373,50 @@ def train_anomaly_model(request):
 
 
 # Prediction View
+@user_required
 def predict_anomaly(request):
     import os
     import joblib
     from django.conf import settings
 
     prediction = None
+    error = None
     if request.method == 'POST':
-        login_hour = int(request.POST['login_hour'])
-        ip_score = float(request.POST['ip_score'])
+        try:
+            raw_hour = request.POST.get('login_hour', '').strip()
+            raw_score = request.POST.get('ip_score', '').strip()
+            if not raw_hour or not raw_score:
+                error = "Please fill in both login hour and IP score."
+            else:
+                login_hour = int(raw_hour)
+                ip_score = float(raw_score)
 
-        model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'random_forest.pkl')
-        model = joblib.load(model_path)
-        pred = model.predict([[login_hour, ip_score]])[0]
-        prediction = 'Normal' if pred == 0 else 'Anomaly'
+                model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'random_forest.pkl')
+                if not os.path.exists(model_path):
+                    import pandas as pd
+                    from sklearn.ensemble import RandomForestClassifier
+                    df = pd.read_csv(os.path.join(settings.MEDIA_ROOT, 'behavior_anomaly_dataset.csv'))
+                    df['label_encoded'] = df['label'].map({'normal': 0, 'anomaly': 1})
+                    X = df[['login_hour', 'ip_score']]
+                    y = df['label_encoded']
+                    model = RandomForestClassifier(n_estimators=100, random_state=42)
+                    model.fit(X, y)
+                    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+                    joblib.dump(model, model_path)
+                else:
+                    model = joblib.load(model_path)
 
-    return render(request, 'users/predict_anomaly.html', {'prediction': prediction})
+                pred = model.predict([[login_hour, ip_score]])[0]
+                prediction = 'Normal' if pred == 0 else 'Anomaly'
+        except ValueError:
+            error = "Invalid numerical values. Login hour must be 0-23 and IP score must be 0.0-1.0."
+        except Exception as exc:
+            error = f"Prediction failed: {exc}"
+
+    return render(request, 'users/predict_anomaly.html', {'prediction': prediction, 'error': error})
 
 
 # QR
-# views.py
-
 import os
 import cv2
 from django.conf import settings
@@ -376,28 +427,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# 🔑 Set your Gemini 2.5 Flash API key from environment variable
-# Already set above, no need to duplicate
-
 # 📌 Function to decode QR using OpenCV
 def decode_qr_opencv(image_path):
-    """Robust QR decoder.
-
-    me-qr.com outputs often fail with plain cv2.QRCodeDetector().
-    This function tries multiple strategies:
-    - detectAndDecodeMulti
-    - detectAndDecode
-    - preprocessing + retries
-    - pyzbar fallback
-    """
     img = cv2.imread(image_path)
     if img is None:
         return None
 
     def _try_decode(frame):
         detector = cv2.QRCodeDetector()
-
-        # 1) Multi-code decoder
         try:
             ok, decoded_info, _, _ = detector.detectAndDecodeMulti(frame)
             if ok and decoded_info:
@@ -407,7 +444,6 @@ def decode_qr_opencv(image_path):
         except Exception:
             pass
 
-        # 2) Single-code decoder
         try:
             data, _, _ = detector.detectAndDecode(frame)
             if data:
@@ -417,24 +453,20 @@ def decode_qr_opencv(image_path):
 
         return None
 
-    # 1st pass (raw)
     data = _try_decode(img)
     if data:
         return data
 
-    # Preprocess: grayscale + blur + adaptive threshold
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
     th = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
 
-    # 2nd pass (binarized)
     data = _try_decode(th)
     if data:
         return data
 
-    # 3rd pass (upscaled)
     scale = 2
     up = cv2.resize(
         img,
@@ -445,7 +477,6 @@ def decode_qr_opencv(image_path):
     if data:
         return data
 
-    # 4th pass: pyzbar fallback (often more tolerant)
     try:
         from pyzbar.pyzbar import decode as zbar_decode
 
@@ -457,7 +488,6 @@ def decode_qr_opencv(image_path):
 
     return None
 
-# 📌 LangChain + Gemini-based URL classification
 def classify_url_with_langchain(url):
     llm = get_google_llm(temperature=0)
     
@@ -478,26 +508,30 @@ def classify_url_with_langchain(url):
     return result
 
 # 📌 Main QR scan view
+@user_required
 def qr_scan_view(request):
-    if request.method == 'POST' and request.FILES['qr_image']:
-        img = request.FILES['qr_image']
+    if request.method == 'POST':
+        img = request.FILES.get('qr_image')
+        if not img:
+            return render(request, 'users/qr_form.html', {'error': 'Please select an image file to scan.'})
+
         fs = FileSystemStorage()
         filename = fs.save(img.name, img)
         uploaded_file_path = fs.path(filename)
 
-        # Step 1: Decode QR
-        decoded_url = decode_qr_opencv(uploaded_file_path)
+        try:
+            decoded_url = decode_qr_opencv(uploaded_file_path)
+            if decoded_url:
+                classification = classify_url_with_langchain(decoded_url)
+            else:
+                classification = "❌ QR Code not detected."
 
-        # Step 2: Classify via Gemini + LangChain
-        if decoded_url:
-            classification = classify_url_with_langchain(decoded_url)
-        else:
-            classification = "❌ QR Code not detected."
-
-        return render(request, 'users/qr_result.html', {
-            'qr_data': decoded_url,
-            'classification': classification
-        })
+            return render(request, 'users/qr_result.html', {
+                'qr_data': decoded_url,
+                'classification': classification
+            })
+        except Exception as exc:
+            return render(request, 'users/qr_form.html', {'error': f"QR scanning failed: {exc}"})
 
     return render(request, 'users/qr_form.html')
 
@@ -506,12 +540,12 @@ def qr_scan_view(request):
 import hashlib
 import requests
 
+@user_required
 def password_analyzer(request):
     result = None
     if request.method == 'POST':
         password = request.POST.get('password', '')
         
-        # 1. Check strength
         length = len(password)
         has_upper = any(c.isupper() for c in password)
         has_lower = any(c.islower() for c in password)
@@ -529,7 +563,6 @@ def password_analyzer(request):
             strength = "Strong"
             color = "green-500"
             
-        # 2. Check Have I Been Pwned API (k-Anonymity)
         sha1_pwd = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
         prefix, suffix = sha1_pwd[:5], sha1_pwd[5:]
         
@@ -546,7 +579,7 @@ def password_analyzer(request):
             pass
             
         result = {
-            'password_length': length, # Don't send plaintext back to UI for security best practice, but maybe as masked
+            'password_length': length,
             'masked_password': '*' * length,
             'strength': strength,
             'color': color,
@@ -567,6 +600,7 @@ def contact(request):
     return render(request, 'contact.html')
 
 # 📌 Email Phishing Analyzer
+@user_required
 def email_phishing_analyzer(request):
     result = None
     explanation = None
@@ -619,11 +653,6 @@ from .utils import generate_six_digit_otp, send_secure_otp_email
 @require_POST
 @csrf_protect
 def dispatch_verification_challenge(request):
-    """
-    Handles background verification initialization.
-    Saves verification state to the active session container.
-    """
-    # Capture target address securely
     target_email = request.POST.get("email", "").strip()
     
     if not target_email:
@@ -632,14 +661,8 @@ def dispatch_verification_challenge(request):
             "message": "Target registration parameter 'email' is required."
         }, status=400)
     
-    # 1. Generate token challenge
     generated_otp = generate_six_digit_otp()
-    
-    # 2. Append token criteria to current user pipeline context
     request.session["active_security_otp"] = generated_otp
-    # Optional: track session lifespan timestamps if handling formal timeouts
-    
-    # 3. Ship via HTTPS REST channel
     delivery_success = send_secure_otp_email(target_email, generated_otp)
     
     if delivery_success:
@@ -656,9 +679,6 @@ def dispatch_verification_challenge(request):
 @require_POST
 @csrf_protect
 def confirm_verification_challenge(request):
-    """
-    Validates user entry input against cached system values.
-    """
     user_entry = request.POST.get("otp_entry", "").strip()
     cached_challenge = request.session.get("active_security_otp")
     
@@ -669,7 +689,6 @@ def confirm_verification_challenge(request):
         }, status=400)
         
     if user_entry == cached_challenge:
-        # Clear token context so it can't be used again
         del request.session["active_security_otp"]
         return JsonResponse({
             "status": "success", 
@@ -680,3 +699,19 @@ def confirm_verification_challenge(request):
             "status": "error", 
             "message": "Supplied passcode does not match target profile criteria."
         }, status=403)
+
+# --- CUSTOM ERROR HANDLERS FOR FORBIDDEN / CSRF / 404 / 500 ---
+
+def custom_403_view(request, exception=None):
+    return render(request, '403.html', {'exception': exception}, status=403)
+
+def custom_csrf_failure(request, reason=""):
+    return render(request, '403.html', {
+        'exception': 'Security verification failed (CSRF check mismatch). Please refresh the page and log in again.'
+    }, status=403)
+
+def custom_404_view(request, exception=None):
+    return render(request, '404.html', status=404)
+
+def custom_500_view(request):
+    return render(request, '500.html', status=500)

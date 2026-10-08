@@ -26,12 +26,23 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-qc8g0%&_do4285+4z4y1l
 # Debug: False in production
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# Allowed Hosts & CSRF Settings
 ALLOWED_HOSTS = [
+    '*',
     'localhost',
     '127.0.0.1',
     '.onrender.com',
     'secureai-7wgj.onrender.com',
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://*.onrender.com',
+    'https://secureai-7wgj.onrender.com',
+]
+
+CSRF_FAILURE_VIEW = 'users.views.custom_csrf_failure'
 
 
 # Application definition

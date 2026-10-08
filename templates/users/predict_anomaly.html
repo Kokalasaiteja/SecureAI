@@ -1,40 +1,40 @@
 {% extends 'users/user_base.html' %}
 {% block bg_color %}bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-500 gradient-bg{% endblock %}
 {% block content %}
-<div class="flex justify-center items-center min-h-screen">
-  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-8 rounded-2xl shadow-2xl animate-slide-up">
+<div class="flex justify-center items-center py-4 sm:py-8">
+  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-4 sm:p-8 rounded-xl sm:rounded-2xl shadow-2xl animate-slide-up border border-gray-700">
     <div class="text-center mb-6">
-      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="Anomaly icon" class="w-20 h-20 mx-auto mb-4">
-      <h2 class="text-3xl font-bold">Predict User Behavior Anomaly</h2>
-      <p class="text-sm text-gray-100">Use AI to detect suspicious login patterns.</p>
+      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="Anomaly icon" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4">
+      <h2 class="text-2xl sm:text-3xl font-bold">Predict User Behavior Anomaly</h2>
+      <p class="text-xs sm:text-sm text-gray-200 mt-1">Use AI to detect suspicious login patterns.</p>
     </div>
 
-    <form method="POST" class="space-y-5">
+    <form method="POST" class="space-y-4 sm:space-y-5">
       {% csrf_token %}
 
       <div>
-        <label class="block mb-1 font-semibold text-white">Login Hour (0 - 23):</label>
+        <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">Login Hour (0 - 23):</label>
         <input type="number" name="login_hour" required min="0" max="23"
-          class="w-full p-3 rounded border border-gray-300 text-gray-800">
+          class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">
       </div>
 
       <div>
-        <label class="block mb-1 font-semibold text-white">IP Score (0.0 - 1.0):</label>
+        <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">IP Score (0.0 - 1.0):</label>
         <input type="text" name="ip_score" required pattern="^0(\.\d+)?|1(\.0+)?$"
-          class="w-full p-3 rounded border border-gray-300 text-gray-800">
+          class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400" placeholder="e.g. 0.85">
       </div>
 
-      <div class="text-center">
+      <div class="text-center pt-2">
         <button type="submit"
-          class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold transition duration-300">
+          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md">
           Predict
         </button>
       </div>
     </form>
 
     {% if prediction %}
-    <div class="mt-6 bg-white bg-opacity-20 p-4 rounded text-white">
-      <h3 class="text-xl font-semibold">🔍 Predicted Behavior: <span class="text-yellow-300">{{ prediction }}</span></h3>
+    <div class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border border-gray-700 shadow-lg text-xs sm:text-sm">
+      <h3 class="text-base sm:text-xl font-semibold">🔍 Predicted Behavior: <span class="text-yellow-300 font-bold">{{ prediction }}</span></h3>
     </div>
     {% endif %}
   </div>

@@ -89,54 +89,103 @@
   <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 </head>
 
-<body class="min-h-screen flex {% block bg_color %}bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 gradient-bg{% endblock %} text-white relative">
+<body class="min-h-screen flex flex-col md:flex-row {% block bg_color %}bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 gradient-bg{% endblock %} text-white relative">
   <div id="particles-js"></div>
-  <!-- Sidebar -->
-  <aside class="w-64 bg-gray-900 bg-opacity-90 h-screen fixed p-6 shadow-lg">
-    <div class="flex items-center space-x-2 mb-8">
-      <i class="fas fa-user-shield text-teal-400 text-2xl"></i>
-      <h1 class="text-2xl font-bold">SecureAI Panel</h1>
+
+  <!-- Mobile Topbar Header (visible on < md) -->
+  <header class="md:hidden bg-gray-900 bg-opacity-95 backdrop-blur-md border-b border-gray-800 p-3 sm:p-4 fixed top-0 left-0 right-0 z-30 flex items-center justify-between shadow-lg">
+    <div class="flex items-center space-x-3">
+      <button id="user-menu-btn" aria-label="Toggle Navigation Drawer" class="text-gray-300 hover:text-white p-2 rounded-xl bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 focus:outline-none transition-all flex items-center justify-center space-x-2">
+        <i class="fas fa-bars text-xl text-teal-400" id="user-menu-icon"></i>
+        <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider hidden sm:inline">Menu</span>
+      </button>
+      <div class="flex items-center space-x-2">
+        <i class="fas fa-user-shield text-teal-400 text-xl"></i>
+        <span class="font-bold text-base sm:text-lg text-white">SecureAI Panel</span>
+      </div>
     </div>
-    <nav class="space-y-4">
-      <a href="{% url 'user_homepage' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-home"></i> <span>Home</span>
+  </header>
+
+  <!-- Mobile Backdrop Overlay -->
+  <div id="user-sidebar-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-300 opacity-0"></div>
+
+  <!-- Responsive Sidebar -->
+  <aside id="user-sidebar" class="fixed top-0 left-0 z-40 w-64 bg-gray-900 bg-opacity-95 h-screen p-6 shadow-2xl transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 flex flex-col overflow-y-auto">
+    <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-800 md:border-none">
+      <div class="flex items-center space-x-2">
+        <i class="fas fa-user-shield text-teal-400 text-2xl"></i>
+        <h1 class="text-xl font-bold">SecureAI Panel</h1>
+      </div>
+      <!-- Mobile Close Button inside sidebar -->
+      <button id="user-sidebar-close" aria-label="Close Navigation" class="md:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+    </div>
+    
+    <nav class="space-y-3 flex-1">
+      <a href="{% url 'user_homepage' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-home w-5 text-center text-teal-400"></i> <span>Home</span>
       </a>
-      <a href="{% url 'detect_spam' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-sms"></i> <span>SMS Spam Detection</span>
+      <a href="{% url 'detect_spam' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-sms w-5 text-center text-green-400"></i> <span>SMS Spam Detection</span>
       </a>
-      <a href="{% url 'qr-scan' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-qrcode"></i> <span>QR Code Scanner</span>
+      <a href="{% url 'qr-scan' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-qrcode w-5 text-center text-purple-400"></i> <span>QR Code Scanner</span>
       </a>
-      <a href="{% url 'predict_anomaly' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-user-secret w-6"></i> <span>Behavior Analysis</span>
+      <a href="{% url 'predict_anomaly' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-user-secret w-5 text-center text-indigo-400"></i> <span>Behavior Analysis</span>
       </a>
-      <a href="{% url 'password_analyzer' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-shield-alt w-6"></i> <span>Password Analyzer</span>
+      <a href="{% url 'password_analyzer' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-shield-alt w-5 text-center text-yellow-400"></i> <span>Password Analyzer</span>
       </a>
-      <a href="{% url 'email_phishing_analyzer' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-envelope-open-text w-6"></i> <span>Email Phishing</span>
+      <a href="{% url 'email_phishing_analyzer' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-envelope-open-text w-5 text-center text-blue-400"></i> <span>Email Phishing</span>
       </a>
-      <a href="{% url 'train_anomaly_model' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-teal-400 p-2 rounded-lg">
-        <i class="fas fa-brain w-6"></i> <span>Train ML Models</span>
+      <a href="{% url 'train_anomaly_model' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
+        <i class="fas fa-brain w-5 text-center text-pink-400"></i> <span>Train ML Models</span>
       </a>
-      <a href="{% url 'user_logout' %}" class="nav-item flex items-center space-x-2 text-lg font-medium text-gray-300 hover:text-red-400 p-2 rounded-lg">
-        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+      <a href="{% url 'user_logout' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-red-400 p-2.5 rounded-lg transition-colors mt-4 border-t border-gray-800">
+        <i class="fas fa-sign-out-alt w-5 text-center text-red-400"></i> <span>Logout</span>
       </a>
     </nav>
   </aside>
 
   <!-- Main Content -->
-  <main class="ml-64 p-6 flex-grow animate-slide-up">
+  <main class="w-full md:ml-64 p-4 sm:p-6 pt-20 md:pt-6 pb-20 md:pb-16 flex-grow animate-slide-up">
     {% block content %}{% endblock %}
   </main>
 
   <!-- Footer -->
-  <footer class="fixed bottom-0 left-64 right-0 bg-gray-900 bg-opacity-90 p-4 text-center">
-<p>© 2026 SecureAI. All rights reserved.</p>
+  <footer class="fixed bottom-0 left-0 md:left-64 right-0 bg-gray-900 bg-opacity-95 p-3 text-center text-xs sm:text-sm border-t border-gray-800 z-20">
+    <p>© 2026 SecureAI. All rights reserved.</p>
   </footer>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Sidebar drawer toggle logic
+      const menuBtn = document.getElementById('user-menu-btn');
+      const sidebar = document.getElementById('user-sidebar');
+      const backdrop = document.getElementById('user-sidebar-backdrop');
+      const closeBtn = document.getElementById('user-sidebar-close');
+
+      function openSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+        setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+      }
+
+      function closeSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('opacity-0');
+        setTimeout(() => backdrop.classList.add('hidden'), 300);
+      }
+
+      if (menuBtn && sidebar && backdrop) {
+        menuBtn.addEventListener('click', openSidebar);
+        backdrop.addEventListener('click', closeSidebar);
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+      }
+
       // Initialize Particles.js for interactive background
       if(window.particlesJS) {
           particlesJS("particles-js", {
