@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}User Management System{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/media/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/media/favicon.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
@@ -98,9 +101,7 @@
 
                 <!-- Brand Logo / Title -->
                 <a href="/" class="text-base sm:text-lg lg:text-xl font-extrabold flex items-center space-x-2.5 text-white hover:text-indigo-300 transition-all group">
-                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <i class="fas fa-shield-alt text-indigo-400 text-lg sm:text-xl"></i>
-                    </div>
+                    <img src="/media/logo.jpg" alt="Logo" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-amber-400/50 shadow-md group-hover:scale-105 transition-transform">
                     <div class="flex flex-col">
                         <span class="hidden xl:inline tracking-tight font-extrabold text-white text-base">Usage_of_AI_in_Prevention_of_Social_Engineering_Attack</span>
                         <span class="xl:hidden tracking-tight font-black text-indigo-400 text-lg sm:text-xl">SecureAI</span>
@@ -147,9 +148,7 @@
         <!-- Drawer Header -->
         <div class="p-4 sm:p-5 border-b border-gray-800/80 flex items-center justify-between bg-gray-900/80">
             <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center">
-                    <i class="fas fa-shield-alt text-indigo-400"></i>
-                </div>
+                <img src="/media/logo.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-400/50 shadow-md">
                 <div>
                     <h2 class="text-base font-bold text-white tracking-tight">SecureAI</h2>
                     <p class="text-[11px] text-gray-400">Navigation Menu</p>
