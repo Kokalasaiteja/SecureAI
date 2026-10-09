@@ -1,6 +1,7 @@
 
 from functools import wraps
 from django.shortcuts import render, redirect
+from django.views.decorators.csrf import csrf_exempt
 from .models import RegisteredUser
 from django.core.files.storage import FileSystemStorage
 
@@ -21,6 +22,7 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+@csrf_exempt
 def register_view(request):
     msg = ''
     if request.method == 'POST':
@@ -52,6 +54,7 @@ def register_view(request):
 from django.utils import timezone
 import pytz
 
+@csrf_exempt
 def user_login(request):
     msg = ''
     if request.method == 'POST':
@@ -79,6 +82,7 @@ def user_login(request):
 
     return render(request, 'user_login.html', {'msg': msg})
 
+@csrf_exempt
 def admin_login(request):
     msg = ''
     if request.method == 'POST':
@@ -173,6 +177,7 @@ def send_otp(email):
     otp_storage[email] = otp
     return otp, None
 
+@csrf_exempt
 def forgot_password(request):
     if request.method == "POST":
         email = request.POST.get("email")
@@ -189,6 +194,7 @@ def forgot_password(request):
 
     return render(request, "forgot_password.html")
 
+@csrf_exempt
 def verify_otp(request):
     if request.method == "POST":
         otp_entered = request.POST.get("otp")
@@ -201,6 +207,7 @@ def verify_otp(request):
 
     return render(request, "verify_otp.html")
 
+@csrf_exempt
 def reset_password(request):
     if request.method == "POST":
         new_password = request.POST.get("new_password")
@@ -269,6 +276,7 @@ Respond only with 'spam' or 'ham' and give a one-line explanation.
     return prompt | get_google_llm()
 
 
+@csrf_exempt
 @user_required
 def detect_spam(request):
     result = None
@@ -310,6 +318,7 @@ def detect_spam(request):
 # to prevent Gunicorn workers from running out of memory on startup.
 
 # Training View
+@csrf_exempt
 @user_required
 def train_anomaly_model(request):
     # --- lazy imports: only loaded when this view is actually called ---
@@ -373,6 +382,7 @@ def train_anomaly_model(request):
 
 
 # Prediction View
+@csrf_exempt
 @user_required
 def predict_anomaly(request):
     import os
@@ -508,6 +518,7 @@ def classify_url_with_langchain(url):
     return result
 
 # 📌 Main QR scan view
+@csrf_exempt
 @user_required
 def qr_scan_view(request):
     if request.method == 'POST':
@@ -540,6 +551,7 @@ def qr_scan_view(request):
 import hashlib
 import requests
 
+@csrf_exempt
 @user_required
 def password_analyzer(request):
     result = None
@@ -600,6 +612,7 @@ def contact(request):
     return render(request, 'contact.html')
 
 # 📌 Email Phishing Analyzer
+@csrf_exempt
 @user_required
 def email_phishing_analyzer(request):
     result = None
