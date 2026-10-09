@@ -35,11 +35,13 @@ class AppDrawer extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryIndigo.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.primaryIndigo.withOpacity(0.5)),
+                        border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5)),
                       ),
-                      child: const Icon(Icons.shield, color: AppTheme.primaryIndigo, size: 24),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset('assets/images/app_icon.png', fit: BoxFit.cover),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
