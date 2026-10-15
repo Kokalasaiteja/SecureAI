@@ -22,12 +22,14 @@ media/*
 !media/behavior_anomaly_dataset.csv
 !media/models/
 !media/models/*.pkl
+!media/*.apk
 SecureAI_Web/db.sqlite3
 SecureAI_Web/db.sqlite3-journal
 SecureAI_Web/media/*
 !SecureAI_Web/media/behavior_anomaly_dataset.csv
 !SecureAI_Web/media/models/
 !SecureAI_Web/media/models/*.pkl
+!SecureAI_Web/media/*.apk
 static_root/
 *.log
 

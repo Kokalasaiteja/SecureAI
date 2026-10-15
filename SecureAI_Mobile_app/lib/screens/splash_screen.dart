@@ -39,7 +39,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     await ApiService.initSession();
     await Future.delayed(const Duration(milliseconds: 2600));
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/user_login');
+      if (ApiService.isLoggedIn) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        Navigator.pushReplacementNamed(context, '/public_home');
+      }
     }
   }
 

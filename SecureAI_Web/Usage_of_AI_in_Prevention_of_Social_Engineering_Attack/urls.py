@@ -48,6 +48,8 @@ urlpatterns = [
     path('contact/', views.contact, name='contact'),
     path('dispatch-verification/', views.dispatch_verification_challenge, name='dispatch_verification_challenge'),
     path('confirm-verification/', views.confirm_verification_challenge, name='confirm_verification_challenge'),
+    path('download-apk/', views.download_apk, name='download_apk'),
+    path('media/app-arm64-v8a-release.apk', views.download_apk, name='download_apk_direct'),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 

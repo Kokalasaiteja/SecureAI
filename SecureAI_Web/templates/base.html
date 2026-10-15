@@ -11,42 +11,58 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Google Fonts Outfit matching Mobile App -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* Custom 3D button styles */
+        * {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* --- LIQUID GLASS DESIGN SYSTEM (Sampled from Mobile App Tokens) --- */
+        /* Color Tokens: Indigo #6366F1, Purple #8B5CF6, Pink #EC4899, Blue #3B82F6, Dark Slate #0F172A */
+
+        /* Liquid 3D Buttons with Specular Edge and Elastic Press Physics */
         .btn-3d {
             position: relative;
-            transition: all 0.3s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
+            border: 1.1px solid rgba(255, 255, 255, 0.28) !important;
+            box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.42), 0 4px 10px rgba(0, 0, 0, 0.25) !important;
         }
         .btn-3d:hover {
-            transform: translateY(-4px) rotateX(10deg) rotateY(10deg);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 30px -6px rgba(79, 70, 229, 0.55), 0 0 20px rgba(99, 102, 241, 0.3) !important;
         }
         .btn-3d:active {
-            transform: translateY(2px);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            transform: scale(0.97) translateY(1px) !important;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3) !important;
         }
-        /* Navbar animation */
+
+        /* Navbar & Link Animations */
         .nav-item {
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
+            position: relative;
         }
         .nav-item:hover {
             transform: translateY(-2px);
-            color: #a78bfa;
+            color: #a78bfa !important;
+            text-shadow: 0 0 12px rgba(167, 139, 250, 0.5);
         }
-        /* Animated Gradient Background */
+
+        /* Animated Cosmic Gradient Background matching mobile */
         @keyframes gradient {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
         .gradient-bg {
-            background: linear-gradient(45deg, #4f46e5, #ec4899, #8b5cf6, #3b82f6);
-            background-size: 400% 400%;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 35%, #ec4899 70%, #3b82f6 100%);
+            background-size: 300% 300%;
             animation: gradient 15s ease infinite;
         }
         
-        /* Interactive Particles Background */
+        /* Interactive Particles Canvas under Glass */
         #particles-js {
             position: fixed;
             width: 100%;
@@ -56,37 +72,79 @@
             z-index: -1;
         }
 
-        /* Ultimate Glassmorphism */
-        .bg-gray-800.bg-opacity-80, .bg-gray-900.bg-opacity-90, .bg-gray-900, .glass-panel {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            background-color: rgba(0, 0, 0, 0.45) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            border-radius: 1rem;
+        /* Liquid Glass Cards & Panels across Laptop, Computer, Tablet, Phone */
+        :not(nav):not(footer).bg-gray-800.bg-opacity-80, :not(nav):not(footer).bg-gray-900.bg-opacity-90, div.bg-gray-900, .glass-panel, .glass-card, section.shadow-2xl {
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 25%, transparent 65%, rgba(0, 0, 0, 0.20) 100%), rgba(15, 23, 42, 0.72) !important;
+            border: 1.2px solid rgba(255, 255, 255, 0.22) !important;
+            box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.45), 0 0 35px -5px rgba(99, 102, 241, 0.14) !important;
+            border-radius: 1.25rem;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 5px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6); }
+        /* Liquid Glass Navigation Bar */
+        nav {
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent), rgba(15, 23, 42, 0.75) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-top: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-radius: 0 !important;
+        }
 
-        /* Glowing Text */
-        h1, h2 { text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
-
-        /* Drawer Transitions */
+        /* Liquid Glass Smoked Drawer */
         #base-mobile-drawer {
+            backdrop-filter: blur(24px) saturate(190%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent), rgba(15, 23, 42, 0.82) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.20) !important;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #base-drawer-overlay {
             transition: opacity 0.3s ease;
         }
 
-        /* Remove default browser underlines from links */
-        a {
-            text-decoration: none !important;
+        /* Liquid Glass Inputs */
+        input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+            background-color: rgba(17, 24, 39, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            backdrop-filter: blur(10px);
+            transition: all 0.25s ease;
         }
+        input:not([type="checkbox"]):not([type="radio"]):focus, textarea:focus, select:focus {
+            border-color: #818cf8 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 15px rgba(99, 102, 241, 0.2) !important;
+        }
+
+        /* Liquid Glass Straight Edge Footer (matches straight header edges) */
+        footer, footer.bg-gray-900, footer.bg-opacity-90 {
+            backdrop-filter: blur(18px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.70)) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            border-radius: 0 !important;
+            -webkit-border-radius: 0 !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
+
+        /* Glowing Headlines */
+        h1, h2 { text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); }
+
+        /* Clean link underlines */
+        a { text-decoration: none !important; }
     </style>
     <!-- Particles.js CDN -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -135,6 +193,10 @@
                     <i class="fas fa-user-plus text-lg xl:text-xl mb-1 text-purple-400 group-hover:scale-110 transition-transform"></i>
                     <span class="text-xs xl:text-sm font-medium whitespace-nowrap">Register</span>
                 </a>
+                <a href="/media/app-arm64-v8a-release.apk" download="app-arm64-v8a-release.apk" class="px-3 xl:px-4 py-2 flex flex-col items-center justify-center text-center rounded-xl bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 text-white transition-all duration-300 shadow-md group" title="Download Android Mobile App APK">
+                    <i class="fab fa-android text-lg xl:text-xl mb-1 text-teal-400 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">Download APK</span>
+                </a>
                 <a href="{% url 'user_login' %}" class="px-4 xl:px-5 py-2 flex flex-col items-center justify-center text-center rounded-xl bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-white transition-all duration-300 shadow-md group">
                     <i class="fas fa-sign-in-alt text-lg xl:text-xl mb-1 text-green-400 group-hover:scale-110 transition-transform"></i>
                     <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">User Login</span>
@@ -146,6 +208,19 @@
             </div>
         </div>
     </nav>
+
+    <!-- Cloud Server Wake Notification (502/503 Auto-Detector) -->
+    <div id="render-wake-banner" class="hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-lg p-3 sm:p-4 rounded-2xl border border-white/20 shadow-2xl backdrop-blur-xl bg-slate-900/90 text-white">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-400">
+                <i class="fas fa-satellite-dish animate-pulse"></i>
+            </div>
+            <div class="flex-1">
+                <div class="text-xs font-bold text-white">Cloud Server Waking Up (Render Free Tier)</div>
+                <div class="text-[11px] text-gray-300">Container is booting up from idle. Establishing secure connection...</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Mobile & Tablet Off-Canvas Drawer Backdrop -->
     <div id="base-drawer-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
@@ -207,6 +282,16 @@
                 </div>
             </a>
             
+            <!-- Download APK in Mobile Drawer -->
+            <a href="/media/app-arm64-v8a-release.apk" download="app-arm64-v8a-release.apk" class="flex items-center space-x-3.5 px-4 py-3 rounded-xl text-teal-200 hover:text-white bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 transition-all">
+                <div class="w-9 h-9 rounded-lg bg-teal-500/30 text-teal-300 flex items-center justify-center text-base">
+                    <i class="fab fa-android text-lg"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-white">Download Android App</span>
+                </div>
+            </a>
+            
             <div class="pt-3 border-t border-gray-800/80 space-y-2">
                 <a href="{% url 'user_login' %}" class="flex items-center px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg transition-all space-x-3">
                     <i class="fas fa-sign-in-alt text-green-300 text-lg"></i>
@@ -236,7 +321,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 bg-opacity-90 p-4 text-center text-sm border-t border-gray-800 mt-auto">
+    <footer class="w-full bg-gray-900 bg-opacity-90 p-4 text-center text-sm border-t border-gray-800 mt-auto rounded-none">
         <p>&copy; 2026 SecureAI. All rights reserved.</p>
     </footer>
 

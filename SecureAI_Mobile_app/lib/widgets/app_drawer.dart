@@ -1,207 +1,404 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
-  const AppDrawer({super.key, required this.currentRoute});
+  final bool? forcePublicMode;
+
+  const AppDrawer({
+    super.key,
+    required this.currentRoute,
+    this.forcePublicMode,
+  });
+
+  bool get isPublicMode {
+    if (forcePublicMode != null) return forcePublicMode!;
+    const publicRoutes = [
+      '/',
+      '/public_home',
+      '/user_login',
+      '/register',
+      '/admin_login',
+      '/forgot_password',
+      '/verify_otp',
+      '/reset_password',
+      '/introduction',
+      '/contact',
+    ];
+    return publicRoutes.contains(currentRoute);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xF00F172A),
-          border: Border(
-            right: BorderSide(color: Colors.white.withOpacity(0.15)),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xC80F172A), // Translucent smoked liquid glass
+                border: Border(
+                  right: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.20),
+                    width: 1.0,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.5)),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset('assets/images/app_icon.png', fit: BoxFit.cover),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "SecureAI",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            "AI Security Framework",
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.08),
+                    Colors.transparent,
                   ],
                 ),
               ),
-
-              // Drawer Nav Items
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  children: [
-                    _buildNavItem(
-                      context,
-                      icon: Icons.home_rounded,
-                      title: "Home",
-                      subtitle: "Dashboard & Metrics",
-                      iconColor: AppTheme.primaryIndigo,
-                      route: "/home",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.sms_rounded,
-                      title: "SMS Spam Detection",
-                      subtitle: "Check suspicious texts",
-                      iconColor: AppTheme.accentGreen,
-                      route: "/detect_spam",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.qr_code_scanner_rounded,
-                      title: "QR Code Scanner",
-                      subtitle: "Scan & verify QR URLs",
-                      iconColor: AppTheme.accentPurple,
-                      route: "/qr_scanner",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.security_rounded,
-                      title: "Behavior Analysis",
-                      subtitle: "Login anomaly detection",
-                      iconColor: AppTheme.primaryIndigo,
-                      route: "/anomaly_prediction",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.shield_rounded,
-                      title: "Password Analyzer",
-                      subtitle: "Check strength & breaches",
-                      iconColor: Colors.amber,
-                      route: "/password_analyzer",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.mark_email_read_rounded,
-                      title: "Email Phishing",
-                      subtitle: "Analyze email content",
-                      iconColor: Colors.blueAccent,
-                      route: "/email_phishing",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.psychology_rounded,
-                      title: "Train ML Models",
-                      subtitle: "Retrain AI Sentry models",
-                      iconColor: AppTheme.accentPink,
-                      route: "/train_models",
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Divider(color: Colors.white12),
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.menu_book_rounded,
-                      title: "Introduction",
-                      subtitle: "Social Engineering & AI",
-                      iconColor: AppTheme.accentTeal,
-                      route: "/introduction",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.support_agent_rounded,
-                      title: "Contact Us",
-                      subtitle: "Support & Feedback",
-                      iconColor: Colors.lightBlue,
-                      route: "/contact",
-                    ),
-                    _buildNavItem(
-                      context,
-                      icon: Icons.admin_panel_settings_rounded,
-                      title: "Admin Portal",
-                      subtitle: "User management dashboard",
-                      iconColor: AppTheme.accentPink,
-                      route: "/admin_dashboard",
-                    ),
-                  ],
-                ),
+              child: SafeArea(
+                child: isPublicMode ? _buildPublicDrawer(context) : _buildUserDrawer(context),
               ),
-
-              // Footer Logout Button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: InkWell(
-                  onTap: () async {
-                    await ApiService.logout();
-                    if (context.mounted) {
-                      Navigator.pushNamedAndRemoveUntil(context, '/user_login', (r) => false);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentRed.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.accentRed.withOpacity(0.4)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.logout_rounded, color: AppTheme.accentRed, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          "Logout",
-                          style: TextStyle(
-                            color: AppTheme.accentRed,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(
+  // --- 1. PUBLIC / LOGGED-OUT DRAWER MODE (Matches Image 2 - base.html) ---
+  Widget _buildPublicDrawer(BuildContext context) {
+    return Column(
+      children: [
+        // Drawer Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryIndigo.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryIndigo.withValues(alpha: 0.4)),
+                ),
+                child: const Icon(Icons.shield_rounded, color: AppTheme.accentPurple, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "SecureAI",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      "Navigation Menu",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+
+        // Nav Items List
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            children: [
+              _buildPublicItem(
+                context,
+                icon: Icons.home_rounded,
+                title: "Home",
+                subtitle: "Main portal & Overview",
+                iconColor: AppTheme.primaryIndigo,
+                route: "/public_home",
+              ),
+              _buildPublicItem(
+                context,
+                icon: Icons.menu_book_rounded,
+                title: "Introduction",
+                subtitle: "Social Engineering & AI",
+                iconColor: AppTheme.accentTeal,
+                route: "/introduction",
+              ),
+              _buildPublicItem(
+                context,
+                icon: Icons.email_rounded,
+                title: "Contact Us",
+                subtitle: "Support & Feedback",
+                iconColor: Colors.blueAccent,
+                route: "/contact",
+              ),
+              _buildPublicItem(
+                context,
+                icon: Icons.person_add_rounded,
+                title: "Register",
+                subtitle: "Create new account",
+                iconColor: AppTheme.accentPurple,
+                route: "/register",
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: Colors.white12),
+              const SizedBox(height: 12),
+
+              // User Login Pill Button
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  if (currentRoute != '/user_login') {
+                    Navigator.pushReplacementNamed(context, '/user_login');
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4F46E5).withValues(alpha: 0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Row(
+                        children: [
+                          Icon(Icons.login_rounded, color: Color(0xFF86EFAC), size: 20),
+                          SizedBox(width: 12),
+                          Text(
+                            "User Login",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Admin Portal Bordered Button
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  if (currentRoute != '/admin_login') {
+                    Navigator.pushReplacementNamed(context, '/admin_login');
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Row(
+                        children: [
+                          Icon(Icons.lock_rounded, color: Color(0xFFF472B6), size: 20),
+                          SizedBox(width: 12),
+                          Text(
+                            "Admin Portal",
+                            style: TextStyle(
+                              color: Color(0xFFF472B6),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Icon(Icons.shield_outlined, color: Color(0xFFF472B6), size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Public Footer
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            "© 2026 SecureAI Framework",
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- 2. LOGGED-IN USER PANEL DRAWER MODE (Matches Image 1 - user_base.html / SecureAI Panel) ---
+  Widget _buildUserDrawer(BuildContext context) {
+    return Column(
+      children: [
+        // Drawer Header (SecureAI Panel)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentTeal, size: 24),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  "SecureAI Panel",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 24),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+
+        // Logged In Items List
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            children: [
+              _buildUserItem(
+                context,
+                icon: Icons.home_rounded,
+                title: "Home",
+                iconColor: AppTheme.accentTeal,
+                route: "/home",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.chat_bubble_rounded,
+                title: "SMS Spam Detection",
+                iconColor: AppTheme.accentGreen,
+                route: "/detect_spam",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.qr_code_2_rounded,
+                title: "QR Code Scanner",
+                iconColor: AppTheme.accentPurple,
+                route: "/qr_scanner",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.account_balance_rounded,
+                title: "Behavior Analysis",
+                iconColor: AppTheme.primaryIndigo,
+                route: "/anomaly_prediction",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.shield_rounded,
+                title: "Password Analyzer",
+                iconColor: Colors.amber,
+                route: "/password_analyzer",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.mark_email_read_rounded,
+                title: "Email Phishing",
+                iconColor: Colors.blueAccent,
+                route: "/email_phishing",
+              ),
+              _buildUserItem(
+                context,
+                icon: Icons.psychology_rounded,
+                title: "Train ML Models",
+                iconColor: AppTheme.accentPink,
+                route: "/train_models",
+              ),
+              const SizedBox(height: 12),
+              const Divider(color: Colors.white12),
+              const SizedBox(height: 8),
+
+              // Logout Button Container Box (Matching Image 1)
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.accentRed.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.accentRed.withValues(alpha: 0.25)),
+                ),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  leading: const Icon(Icons.logout_rounded, color: AppTheme.accentRed, size: 22),
+                  title: const Text(
+                    "Logout",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.accentRed,
+                    ),
+                  ),
+                  onTap: () async {
+                    await ApiService.logout();
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(context, '/user_login', (r) => false);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper Widget for Public Drawer Nav Items
+  Widget _buildPublicItem(
     BuildContext context, {
     required IconData icon,
     required String title,
@@ -212,15 +409,15 @@ class AppDrawer extends StatelessWidget {
     final bool isSelected = currentRoute == route;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 4),
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isSelected ? AppTheme.primaryIndigo.withOpacity(0.25) : Colors.transparent,
+        tileColor: isSelected ? AppTheme.primaryIndigo.withValues(alpha: 0.25) : Colors.transparent,
         leading: Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.2),
+            color: iconColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -236,6 +433,40 @@ class AppDrawer extends StatelessWidget {
         subtitle: Text(
           subtitle,
           style: const TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+        onTap: () {
+          Navigator.pop(context);
+          if (!isSelected) {
+            Navigator.pushReplacementNamed(context, route);
+          }
+        },
+      ),
+    );
+  }
+
+  // Helper Widget for User Panel Nav Items
+  Widget _buildUserItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Color iconColor,
+    required String route,
+  }) {
+    final bool isSelected = currentRoute == route;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 2),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        tileColor: isSelected ? AppTheme.accentTeal.withValues(alpha: 0.2) : Colors.transparent,
+        leading: Icon(icon, color: iconColor, size: 22),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.white70,
+          ),
         ),
         onTap: () {
           Navigator.pop(context);

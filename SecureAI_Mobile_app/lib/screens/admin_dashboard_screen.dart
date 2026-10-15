@@ -1,121 +1,404 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/app_drawer.dart';
+import '../widgets/constellation_background.dart';
+import '../services/api_service.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _users = [];
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final users = await ApiService.getAdminUsers();
+      if (mounted) {
+        setState(() {
+          _users = users;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Failed to load users: $e";
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleToggleStatus(Map<String, dynamic> user) async {
+    final int id = user['id'] ?? 0;
+    final bool currentStatus = user['is_active'] ?? false;
+    final bool activate = !currentStatus;
+    final String actionText = activate ? "activate" : "deactivate";
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        title: Text("Confirm $actionText", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to $actionText user ${user['name']}?", style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: activate ? AppTheme.accentGreen : Colors.amber.shade700,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(activate ? "Activate" : "Deactivate", style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final success = await ApiService.toggleUserStatus(id, activate);
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("User ${user['name']} has been ${activate ? 'activated' : 'deactivated'} successfully."),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+        _loadUsers();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to update status for ${user['name']}."),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDeleteUser(Map<String, dynamic> user) async {
+    final int id = user['id'] ?? 0;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1B4B),
+        title: const Text("Delete User", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to permanently delete user ${user['name']}?", style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentRed,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final success = await ApiService.deleteUser(id);
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("User ${user['name']} deleted."),
+            backgroundColor: AppTheme.accentGreen,
+          ),
+        );
+        _loadUsers();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to delete user ${user['name']}."),
+            backgroundColor: AppTheme.accentRed,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: '/admin_dashboard'),
-      appBar: AppBar(
-        title: const Text("Admin Dashboard"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.bgGradient),
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: const [
-                    Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentPink, size: 28),
-                    SizedBox(width: 12),
-                    Text(
-                      "User Account Management",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AppBar(
+              backgroundColor: const Color(0xB80F172A), // Translucent smoked liquid glass
+              elevation: 0,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.16),
                 ),
               ),
-              const SizedBox(height: 16),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                tooltip: "Back to Admin Home",
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/admin_home');
+                  }
+                },
+              ),
+              title: const Text(
+                "Admin Dashboard",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: AppTheme.accentTeal),
+                  tooltip: "Refresh users",
+                  onPressed: _loadUsers,
+                ),
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.5)),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.15),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.logout_rounded, color: Color(0xFFFCA5A5), size: 16),
+                        SizedBox(width: 4),
+                        Text("Logout", style: TextStyle(color: Color(0xFFFCA5A5), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  onPressed: () async {
+                    await ApiService.logout();
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: ConstellationBackground(
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _loadUsers,
+            color: AppTheme.accentTeal,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentTeal, size: 28),
+                          SizedBox(width: 12),
+                          Text(
+                            "User Account Management",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentTeal.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.accentTeal.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          "${_users.length} Users",
+                          style: const TextStyle(color: AppTheme.accentTeal, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-              _buildUserCard(
-                name: "testuser",
-                email: "test@example.com",
-                mobile: "9876543210",
-                isActive: true,
-              ),
-              const SizedBox(height: 12),
-              _buildUserCard(
-                name: "testuser3748",
-                email: "testuser3748@example.com",
-                mobile: "9876543210",
-                isActive: true,
-              ),
-            ],
+                if (_isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(color: AppTheme.accentTeal),
+                    ),
+                  )
+                else if (_errorMessage != null)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: AppTheme.accentRed, fontSize: 14),
+                      ),
+                    ),
+                  )
+                else if (_users.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        "No users registered yet.",
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ),
+                  )
+                else
+                  ..._users.map((u) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildUserCard(u),
+                      )),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildUserCard({
-    required String name,
-    required String email,
-    required String mobile,
-    required bool isActive,
-  }) {
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (isActive ? AppTheme.accentGreen : AppTheme.accentRed).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: (isActive ? AppTheme.accentGreen : AppTheme.accentRed).withOpacity(0.4)),
+  Widget _buildUserCard(Map<String, dynamic> user) {
+    final String name = user['name'] ?? 'User';
+    final String email = user['email'] ?? '';
+    final String mobile = user['mobile'] ?? '';
+    final bool isActive = user['is_active'] ?? false;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1F2937), width: 1.2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: const Color(0xFF1F2937),
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                        style: const TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      name,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  isActive ? "Active" : "Inactive",
-                  style: TextStyle(
-                    color: isActive ? AppTheme.accentGreen : AppTheme.accentRed,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isActive ? AppTheme.accentGreen : AppTheme.accentRed).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (isActive ? AppTheme.accentGreen : AppTheme.accentRed).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    isActive ? "Active" : "Inactive",
+                    style: TextStyle(
+                      color: isActive ? AppTheme.accentGreen : AppTheme.accentRed,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (email.isNotEmpty)
+              Text("Email: $email", style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+            if (mobile.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text("Mobile: $mobile", style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text("Email: $email", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-          Text("Mobile: $mobile", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {},
-                icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_rounded, size: 16, color: Colors.amber),
-                label: Text(isActive ? "Deactivate" : "Activate", style: const TextStyle(color: Colors.amber, fontSize: 12)),
-              ),
-              const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.delete_forever_rounded, size: 16, color: AppTheme.accentRed),
-                label: const Text("Delete", style: TextStyle(color: AppTheme.accentRed, fontSize: 12)),
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _handleToggleStatus(user),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isActive ? Colors.amber : AppTheme.accentGreen,
+                    side: BorderSide(color: isActive ? Colors.amber : AppTheme.accentGreen),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_rounded, size: 16),
+                  label: Text(isActive ? "Deactivate" : "Activate", style: const TextStyle(fontSize: 12)),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () => _handleDeleteUser(user),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accentRed,
+                    side: const BorderSide(color: AppTheme.accentRed),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                  label: const Text("Delete", style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

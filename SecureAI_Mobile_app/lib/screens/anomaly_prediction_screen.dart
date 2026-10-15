@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/custom_text_field.dart';
+import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
 import '../services/api_service.dart';
+import '../widgets/secure_ai_app_bar.dart';
 
 class AnomalyPredictionScreen extends StatefulWidget {
   const AnomalyPredictionScreen({super.key});
@@ -14,140 +14,251 @@ class AnomalyPredictionScreen extends StatefulWidget {
 
 class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
   final _hourController = TextEditingController(text: "3");
-  final _scoreController = TextEditingController(text: "85.5");
+  final _scoreController = TextEditingController(text: "0.85");
   bool _isLoading = false;
   Map<String, dynamic>? _predictionResult;
+  String? _errorMessage;
 
   Future<void> _predict() async {
     final hourStr = _hourController.text.trim();
     final scoreStr = _scoreController.text.trim();
-    if (hourStr.isEmpty || scoreStr.isEmpty) return;
+    if (hourStr.isEmpty || scoreStr.isEmpty) {
+      setState(() {
+        _errorMessage = "Please fill in both login hour and IP score.";
+      });
+      return;
+    }
 
     final hour = int.tryParse(hourStr) ?? 0;
-    final score = double.tryParse(scoreStr) ?? 0.0;
+    final score = double.tryParse(scoreStr) ?? 0.85;
 
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
       _predictionResult = null;
     });
 
     final res = await ApiService.predictAnomaly(hour, score);
 
+    if (!mounted) return;
     setState(() {
       _isLoading = false;
-      _predictionResult = res;
+      if (res['success'] == true) {
+        _predictionResult = res;
+      } else {
+        _errorMessage = res['message']?.toString() ?? "Prediction failed.";
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final String predictionText = _predictionResult?['prediction']?.toString() ?? '';
+
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/anomaly_prediction'),
-      appBar: AppBar(title: const Text("Behavior Anomaly Predictor")),
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppTheme.bgGradient),
+      appBar: SecureAIAppBar.user(title: "SecureAI Panel"),
+      body: ConstellationBackground(
+        gradientColors: const [
+          Color(0xFF6366F1), // from-indigo-500
+          Color(0xFF3B82F6), // via-blue-500
+          Color(0xFF06B6D4), // to-cyan-500
+        ],
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                GlassCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.person_search_rounded, color: AppTheme.primaryIndigo, size: 28),
-                          SizedBox(width: 12),
-                          Text(
-                            "ML Anomaly Sentry",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Icon matching predict_anomaly.html
+                  Image.network(
+                    "https://cdn-icons-png.flaticon.com/512/3064/3064197.png",
+                    width: 72,
+                    height: 72,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.security_rounded,
+                      color: Color(0xFF3B82F6),
+                      size: 64,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Title matching predict_anomaly.html
+                  const Text(
+                    "Predict User Behavior Anomaly",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Subtitle matching predict_anomaly.html
+                  const Text(
+                    "Use AI to detect suspicious login patterns.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFE5E7EB),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Error notice if any
+                  if (_errorMessage != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Color(0xFFFECACA), fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Field 1: Login Hour (0 - 23):
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Login Hour (0 - 23):",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111827), // bg-gray-900
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF4B5563)), // border-gray-600
+                    ),
+                    child: TextField(
+                      controller: _hourController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Field 2: IP Score (0.0 - 1.0):
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "IP Score (0.0 - 1.0):",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111827), // bg-gray-900
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF4B5563)), // border-gray-600
+                    ),
+                    child: TextField(
+                      controller: _scoreController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        hintText: "e.g. 0.85",
+                        hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Button: Predict (Teal bg-teal-600)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _predict,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D9488), // bg-teal-600
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                            )
+                          : const Text(
+                              "Predict",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  // Result display matching predict_anomaly.html
+                  if (_predictionResult != null) ...[
+                    const SizedBox(height: 22),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xF0111827), // bg-gray-900 bg-opacity-90
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF374151)), // border-gray-700
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Random Forest classifier trained on login hour and IP threat score parameters to detect unauthorized login behavior.",
-                        style: TextStyle(fontSize: 12, color: Colors.white70),
-                      ),
-                      const SizedBox(height: 20),
-
-                      CustomTextField(
-                        controller: _hourController,
-                        label: "Login Hour (0 - 23)",
-                        hint: "e.g., 3 for 3 AM",
-                        icon: Icons.access_time_filled_rounded,
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 16),
-
-                      CustomTextField(
-                        controller: _scoreController,
-                        label: "IP Threat Score (0.0 - 100.0)",
-                        hint: "e.g., 85.5",
-                        icon: Icons.speed_rounded,
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _predict,
-                          icon: _isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Icon(Icons.analytics_rounded),
-                          label: Text(_isLoading ? "Evaluating..." : "Run ML Anomaly Prediction"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryIndigo,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                if (_predictionResult != null)
-                  GlassCard(
-                    padding: const EdgeInsets.all(20),
-                    borderColor: (_predictionResult!['is_anomaly'] == true) ? AppTheme.accentRed : AppTheme.accentGreen,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
                           children: [
-                            Icon(
-                              (_predictionResult!['is_anomaly'] == true) ? Icons.error_rounded : Icons.check_circle_rounded,
-                              color: (_predictionResult!['is_anomaly'] == true) ? AppTheme.accentRed : AppTheme.accentGreen,
-                              size: 30,
+                            const TextSpan(
+                              text: "🔍 Predicted Behavior: ",
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _predictionResult!['prediction'],
-                              style: TextStyle(
-                                fontSize: 18,
+                            TextSpan(
+                              text: predictionText,
+                              style: const TextStyle(
+                                color: Color(0xFFFDE047), // text-yellow-300
                                 fontWeight: FontWeight.bold,
-                                color: (_predictionResult!['is_anomaly'] == true) ? AppTheme.accentRed : AppTheme.accentGreen,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        const Divider(color: Colors.white12),
-                        const SizedBox(height: 8),
-                        Text(
-                          _predictionResult!['raw_response'] ?? "Processed by Random Forest Model.",
-                          style: const TextStyle(fontSize: 13, color: Colors.white70, height: 1.4),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
         ),

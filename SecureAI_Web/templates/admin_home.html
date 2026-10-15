@@ -10,116 +10,248 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Google Fonts Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        /* Custom 3D button styles */
-        .btn-3d {
-            position: relative;
-            transition: all 0.3s ease;
-            transform-style: preserve-3d;
+        /* --- LIQUID GLASS DESIGN SYSTEM (Mobile Design Tokens) --- */
+        /* Color Tokens: Indigo #6366F1, Purple #8B5CF6, Pink #EC4899, Blue #3B82F6, Slate #0F172A */
+        * {
+            font-family: 'Outfit', sans-serif;
         }
-        .btn-3d:hover {
-            transform: translateY(-4px) rotateX(10deg) rotateY(10deg);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-        }
-        .btn-3d:active {
-            transform: translateY(2px);
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-        }
-        /* Gradient background animation */
+
+        /* Animated Cosmic Gradient Background matching mobile */
         @keyframes gradient {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
         .gradient-bg {
-            background: linear-gradient(45deg, #6366f1, #a78bfa, #ec4899, #3b82f6);
-            background-size: 400%;
+            background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 35%, #ec4899 70%, #3b82f6 100%);
+            background-size: 300% 300%;
             animation: gradient 15s ease infinite;
         }
-        /* Animations */
-        .animate-fade-in {
-            animation: fadeIn 1s ease-in-out;
+
+        /* Interactive Particles Canvas under Glass */
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
         }
+
+        /* Translucent Smoked Liquid Glass Header */
+        header {
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), transparent), rgba(15, 23, 42, 0.75);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        /* Frosted Liquid Glass Card Container */
+        .glass-card {
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 25%, transparent 65%, rgba(0, 0, 0, 0.20) 100%), rgba(15, 23, 42, 0.72);
+            border: 1.2px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.45), 0 0 35px -5px rgba(99, 102, 241, 0.14);
+            border-radius: 1.5rem;
+        }
+
+        /* Stat Glass Badge */
+        .glass-stat {
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            background: rgba(17, 24, 39, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 1rem;
+            transition: all 0.25s ease;
+        }
+        .glass-stat:hover {
+            transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Liquid 3D Buttons with Specular Edge and Elastic Press Physics */
+        .btn-3d {
+            position: relative;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            border: 1.1px solid rgba(255, 255, 255, 0.28);
+        }
+        .btn-3d-indigo {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.45), 0 4px 10px rgba(0, 0, 0, 0.25);
+        }
+        .btn-3d-indigo:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 30px -6px rgba(79, 70, 229, 0.6), 0 0 20px rgba(99, 102, 241, 0.35);
+        }
+        .btn-3d-indigo:active {
+            transform: scale(0.97) translateY(1px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-3d-purple {
+            background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+            box-shadow: 0 12px 24px -6px rgba(124, 58, 237, 0.45), 0 4px 10px rgba(0, 0, 0, 0.25);
+        }
+        .btn-3d-purple:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 30px -6px rgba(124, 58, 237, 0.6), 0 0 20px rgba(167, 139, 250, 0.35);
+        }
+        .btn-3d-purple:active {
+            transform: scale(0.97) translateY(1px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Frosted Liquid Glass Footer (straight edges matching header navbar) */
+        footer {
+            backdrop-filter: blur(18px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.70)) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            border-radius: 0 !important;
+            -webkit-border-radius: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+
+        /* Fade-in Animation */
         .animate-slide-up {
-            animation: slideUp 1s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(24px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
+
+        a { text-decoration: none !important; }
     </style>
+    <!-- Particles.js CDN -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 </head>
-<body class="min-h-screen flex flex-col gradient-bg text-white">
-    <!-- Header -->
-    <header class="bg-gray-900 bg-opacity-90 backdrop-blur-md p-4 shadow-lg fixed w-full z-20 top-0 left-0 border-b border-gray-800">
-        <div class="container mx-auto flex flex-wrap justify-between items-center">
-            <div class="text-xl sm:text-2xl font-bold flex items-center space-x-2">
-                <i class="fas fa-shield-alt text-indigo-400"></i>
-                <span>SecureAI Admin</span>
+<body class="min-h-screen flex flex-col gradient-bg text-white relative antialiased selection:bg-indigo-500 selection:text-white">
+    <!-- Interactive Background Particles -->
+    <div id="particles-js"></div>
+
+    <!-- Liquid Glass Header (Matching Mobile Admin Bar) -->
+    <header class="p-3 sm:p-4 fixed w-full z-40 top-0 left-0 shadow-xl">
+        <div class="container mx-auto flex justify-between items-center px-2 sm:px-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center shadow-inner">
+                    <i class="fas fa-shield-alt text-indigo-400 text-xl sm:text-2xl"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="tracking-tight font-extrabold text-white text-lg sm:text-xl">SecureAI Admin</span>
+                    <span class="text-[11px] text-indigo-300 font-semibold tracking-wider uppercase">Administrative Portal</span>
+                </div>
             </div>
-            <nav class="mt-2 sm:mt-0">
-                <ul class="flex space-x-4 sm:space-x-6">
-                    <li>
-                        <a href="{% url 'admin_dashboard' %}" class="flex items-center space-x-2 text-sm sm:text-lg font-medium hover:text-indigo-400 transition-all duration-300">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'user_logout' %}" class="flex items-center space-x-2 text-sm sm:text-lg font-medium hover:text-indigo-400 transition-all duration-300">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Logout</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto mt-20 sm:mt-24 px-4 sm:px-6 py-6 flex-grow">
-        <section class="text-center py-8 sm:py-12 animate-slide-up">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 flex items-center justify-center space-x-2 flex-wrap">
-                <i class="fas fa-user-shield text-indigo-400"></i>
-                <span>Welcome, Admin!</span>
+    <!-- Main Content (Centered Glass Card across Laptop, Computer, Tablet, Phone) -->
+    <main class="container mx-auto mt-20 sm:mt-24 px-4 sm:px-6 py-8 flex-grow flex items-center justify-center">
+        <div class="glass-card w-full max-w-2xl p-6 sm:p-10 animate-slide-up text-center">
+            <!-- Glowing Icon Badge -->
+            <div class="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 rounded-2xl bg-indigo-600/20 border border-indigo-400/40 flex items-center justify-center shadow-lg relative group">
+                <div class="absolute inset-0 rounded-2xl bg-indigo-500/10 blur-xl group-hover:blur-2xl transition-all"></div>
+                <i class="fas fa-user-shield text-indigo-400 text-3xl sm:text-4xl relative z-10"></i>
+            </div>
+
+            <!-- Welcome Title & Description -->
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-3 tracking-tight text-white">
+                Welcome, Admin!
             </h1>
-            <p class="text-base sm:text-xl text-gray-300 mb-8 animate-fade-in max-w-2xl mx-auto">
-                Manage SecureAI’s AI-driven defenses against social engineering attacks.
+            <p class="text-sm sm:text-base md:text-lg text-gray-300 mb-8 max-w-lg mx-auto leading-relaxed">
+                Manage SecureAI’s AI-driven defenses against social engineering attacks, monitor threats, and oversee system users.
             </p>
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-xs sm:max-w-none mx-auto">
-                <a href="{% url 'admin_dashboard' %}" class="btn-3d w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transform hover:scale-105 transition-all duration-300 shadow-lg">
-                    <i class="fas fa-tachometer-alt"></i>
+
+            <!-- Action Buttons with 3D Specular Glass Rim -->
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-md mx-auto mb-10">
+                <a href="{% url 'admin_dashboard' %}" class="btn-3d btn-3d-indigo w-full sm:w-auto px-8 py-3.5 sm:py-4 rounded-xl font-bold text-white flex items-center justify-center space-x-2 text-sm sm:text-base">
+                    <i class="fas fa-tachometer-alt text-lg"></i>
                     <span>Go to Dashboard</span>
                 </a>
-                <a href="{% url 'user_logout' %}" class="btn-3d w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transform hover:scale-105 transition-all duration-300 shadow-lg">
-                    <i class="fas fa-sign-out-alt"></i>
+                <a href="{% url 'user_logout' %}" class="btn-3d btn-3d-purple w-full sm:w-auto px-8 py-3.5 sm:py-4 rounded-xl font-bold text-white flex items-center justify-center space-x-2 text-sm sm:text-base">
+                    <i class="fas fa-sign-out-alt text-lg"></i>
                     <span>Logout</span>
                 </a>
             </div>
-        </section>
+
+            <!-- Admin Overview Metrics (Derived from Mobile App Design) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-6 border-t border-white/10 text-left">
+                <div class="glass-stat p-3.5 sm:p-4">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <i class="fas fa-users text-indigo-400 text-lg"></i>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">User Directory</span>
+                    </div>
+                    <div class="text-lg sm:text-xl font-bold text-white">Full Control</div>
+                    <p class="text-[11px] text-gray-400">Activate or deactivate users</p>
+                </div>
+                <div class="glass-stat p-3.5 sm:p-4">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <i class="fas fa-shield-virus text-teal-400 text-lg"></i>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Threat Sentry</span>
+                    </div>
+                    <div class="text-lg sm:text-xl font-bold text-teal-300">Live Active</div>
+                    <p class="text-[11px] text-gray-400">Continuous AI monitoring</p>
+                </div>
+                <div class="glass-stat p-3.5 sm:p-4">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <i class="fas fa-lock text-pink-400 text-lg"></i>
+                        <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">System Status</span>
+                    </div>
+                    <div class="text-lg sm:text-xl font-bold text-pink-300">Operational</div>
+                    <p class="text-[11px] text-gray-400">All security modules online</p>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 bg-opacity-90 p-4 text-center">
-        <p>© 2025 SecureAI. All rights reserved.</p>
+    <!-- Frosted Liquid Glass Footer -->
+    <footer class="w-full p-4 text-center text-xs sm:text-sm text-gray-400 mt-auto rounded-none">
+        <p>&copy; 2026 SecureAI. All rights reserved.</p>
     </footer>
 
-    <!-- JavaScript for page load animation -->
+    <!-- Particles.js Configuration -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const main = document.querySelector('main');
-            main.style.opacity = 0;
-            main.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                main.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                main.style.opacity = 1;
-                main.style.transform = 'translateY(0)';
-            }, 100);
+            if (window.particlesJS) {
+                particlesJS("particles-js", {
+                  "particles": {
+                    "number": {"value": 80, "density": {"enable": true, "value_area": 800}},
+                    "color": {"value": ["#ffffff"]},
+                    "shape": {"type": "circle"},
+                    "opacity": {"value": 0.4, "random": true},
+                    "size": {"value": 3, "random": true},
+                    "line_linked": {"enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1},
+                    "move": {"enable": true, "speed": 2, "direction": "none", "random": true, "out_mode": "out"}
+                  },
+                  "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                      "onhover": {"enable": true, "mode": "grab"},
+                      "onclick": {"enable": true, "mode": "push"},
+                      "resize": true
+                    },
+                    "modes": {
+                      "grab": {"distance": 200, "line_linked": {"opacity": 0.5}},
+                      "push": {"particles_nb": 4}
+                    }
+                  },
+                  "retina_detect": true
+                });
+            }
         });
     </script>
 </body>

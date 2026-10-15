@@ -728,3 +728,24 @@ def custom_404_view(request, exception=None):
 
 def custom_500_view(request):
     return render(request, '500.html', status=500)
+
+from django.http import FileResponse, Http404
+from django.shortcuts import redirect
+import os
+import shutil
+
+def download_apk(request):
+    """Directly serves the compiled Android ARM64 APK from SecureAI_Web/media/ with proper filename and attachment headers"""
+    apk_filename = 'app-arm64-v8a-release.apk'
+    apk_path = os.path.join(settings.MEDIA_ROOT, apk_filename)
+    if not os.path.exists(apk_path):
+        fallback_path = os.path.join(str(settings.BASE_DIR.parent), 'SecureAI_Mobile_app', 'build', 'app', 'outputs', 'flutter-apk', apk_filename)
+        if os.path.exists(fallback_path):
+            shutil.copy2(fallback_path, apk_path)
+
+    if os.path.exists(apk_path):
+        response = FileResponse(open(apk_path, 'rb'), as_attachment=True, filename=apk_filename)
+        response['Content-Type'] = 'application/vnd.android.package-archive'
+        response['Content-Disposition'] = f'attachment; filename="{apk_filename}"'
+        return response
+    raise Http404("Android APK package is currently compiling. Please refresh in a moment.")

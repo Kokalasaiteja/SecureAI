@@ -15,39 +15,58 @@
   <!-- Font Awesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
 
+  <!-- Google Fonts Outfit matching Mobile App -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
-    /* Custom 3D Button */
+    * {
+      font-family: 'Outfit', sans-serif;
+    }
+    /* --- LIQUID GLASS DESIGN SYSTEM (User Panel) --- */
+    /* Mobile Tokens: Teal #2DD4BF, Indigo #6366F1, Purple #8B5CF6, Dark Slate #0F172A */
+
+    /* Custom Liquid 3D Button */
     .btn-3d {
       position: relative;
-      transition: all 0.3s ease;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       transform-style: preserve-3d;
+      border: 1.1px solid rgba(255, 255, 255, 0.28) !important;
+      box-shadow: 0 12px 24px -6px rgba(13, 148, 136, 0.42), 0 4px 10px rgba(0, 0, 0, 0.25) !important;
     }
     .btn-3d:hover {
-      transform: translateY(-4px) rotateX(5deg) rotateY(5deg);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 16px 30px -6px rgba(13, 148, 136, 0.55), 0 0 20px rgba(45, 212, 191, 0.3) !important;
     }
     .btn-3d:active {
-      transform: translateY(2px);
-      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+      transform: scale(0.97) translateY(1px) !important;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3) !important;
     }
 
-    /* Sidebar Hover Effect */
+    /* Sidebar Navigation Item */
     .nav-item {
-      transition: all 0.3s ease;
+      transition: all 0.25s ease;
+      position: relative;
+      border: 1px solid transparent;
+      border-radius: 0.75rem;
     }
     .nav-item:hover {
-      background-color: #115e59;
-      transform: translateX(6px);
+      background-color: rgba(45, 212, 191, 0.15) !important;
+      border-color: rgba(45, 212, 191, 0.3) !important;
+      transform: translateX(4px);
+      box-shadow: 0 4px 15px rgba(45, 212, 191, 0.15);
     }
 
-    /* Animated Gradient Background */
+    /* Animated Cosmic Gradient Background */
     @keyframes gradient {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
     .gradient-bg {
-      background-size: 400% 400%;
+      background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 35%, #ec4899 70%, #3b82f6 100%);
+      background-size: 300% 300%;
       animation: gradient 15s ease infinite;
     }
 
@@ -61,23 +80,57 @@
       z-index: -1;
     }
 
-    /* Ultimate Glassmorphism */
-    .bg-gray-800.bg-opacity-80, .bg-gray-900.bg-opacity-90, .bg-gray-900, aside, footer {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background-color: rgba(0, 0, 0, 0.45) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    /* Liquid Glass Panels across Laptop, Computer, Tablet, Phone */
+    :not(nav):not(footer).bg-gray-800.bg-opacity-80, :not(nav):not(footer).bg-gray-900.bg-opacity-90, div.bg-gray-900, aside, .glass-panel, .glass-card {
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 25%, transparent 65%, rgba(0, 0, 0, 0.20) 100%), rgba(15, 23, 42, 0.72) !important;
+      border: 1.2px solid rgba(255, 255, 255, 0.22) !important;
+      box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.45), 0 0 35px -5px rgba(45, 212, 191, 0.12) !important;
+      border-radius: 1.25rem;
+    }
+
+    aside {
+      border-right: 1.2px solid rgba(255, 255, 255, 0.20) !important;
+      backdrop-filter: blur(24px) saturate(190%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+      border-radius: 0 !important;
+    }
+
+    /* Straight Edge Liquid Glass Footer (matches straight header navbar) */
+    footer, footer.bg-gray-900, footer.bg-opacity-95 {
+      backdrop-filter: blur(18px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+      background: linear-gradient(to top, rgba(15, 23, 42, 0.90), rgba(15, 23, 42, 0.75)) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+      border-left: none !important;
+      border-right: none !important;
+      border-bottom: none !important;
+      border-radius: 0 !important;
+      -webkit-border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    /* Liquid Inputs */
+    input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+      background-color: rgba(17, 24, 39, 0.85) !important;
+      border: 1px solid rgba(255, 255, 255, 0.16) !important;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s ease;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):focus, textarea:focus, select:focus {
+      border-color: #2dd4bf !important;
+      box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.25), 0 0 15px rgba(45, 212, 191, 0.2) !important;
     }
 
     /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 10px; }
-    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 5px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6); }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.5); }
 
     /* Glowing Text */
-    h1, h2 { text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
+    h1, h2 { text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); }
 
     /* Slide-up Animation */
     .animate-slide-up {
@@ -164,7 +217,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="fixed bottom-0 left-0 md:left-64 right-0 bg-gray-900 bg-opacity-95 p-3 text-center text-xs sm:text-sm border-t border-gray-800 z-20">
+  <footer class="fixed bottom-0 left-0 md:left-64 right-0 bg-gray-900 bg-opacity-95 p-3 text-center text-xs sm:text-sm border-t border-gray-800 z-20 rounded-none">
     <p>© 2026 SecureAI. All rights reserved.</p>
   </footer>
 
