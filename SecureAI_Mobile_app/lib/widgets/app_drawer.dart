@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 
@@ -254,6 +255,54 @@ class AppDrawer extends StatelessWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 10),
+
+              // Download Android App Button (below Admin Portal)
+              InkWell(
+                onTap: () async {
+                  Navigator.pop(context);
+                  final uri = Uri.parse("http://127.0.0.1:8000/media/app-arm64-v8a-release.apk");
+                  final fallbackUri = Uri.parse("https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk");
+                  try {
+                    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+                    }
+                  } catch (_) {
+                    try {
+                      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+                    } catch (_) {}
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.45)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.android_rounded, color: Color(0xFF2DD4BF), size: 20),
+                          SizedBox(width: 12),
+                          Text(
+                            "Download Android App",
+                            style: TextStyle(
+                              color: Color(0xFF2DD4BF),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Icon(Icons.download_rounded, color: Color(0xFF2DD4BF), size: 18),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -262,7 +311,7 @@ class AppDrawer extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.all(16),
           child: Text(
-            "© 2026 SecureAI Framework",
+            "© 2026 SecureAI",
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ),
@@ -397,7 +446,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Helper Widget for Public Drawer Nav Items
+  // Helper Widget for Public Drawer Nav Items with Active Route Highlighting
   Widget _buildPublicItem(
     BuildContext context, {
     required IconData icon,
@@ -406,21 +455,38 @@ class AppDrawer extends StatelessWidget {
     required Color iconColor,
     required String route,
   }) {
-    final bool isSelected = currentRoute == route;
+    final bool isSelected = currentRoute == route || (route == '/public_home' && currentRoute == '/');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF4F46E5).withValues(alpha: 0.32) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF818CF8).withValues(alpha: 0.7) : Colors.transparent,
+          width: 1.2,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
+      ),
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isSelected ? AppTheme.primaryIndigo.withValues(alpha: 0.25) : Colors.transparent,
         leading: Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.2),
+            color: iconColor.withValues(alpha: isSelected ? 0.35 : 0.2),
             borderRadius: BorderRadius.circular(10),
+            border: isSelected ? Border.all(color: iconColor.withValues(alpha: 0.6)) : null,
           ),
-          child: Icon(icon, color: iconColor, size: 20),
+          child: Icon(icon, color: isSelected ? Colors.white : iconColor, size: 20),
         ),
         title: Text(
           title,
@@ -432,8 +498,28 @@ class AppDrawer extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 11,
+            color: isSelected ? const Color(0xFFC7D2FE) : Colors.grey,
+          ),
         ),
+        trailing: isSelected
+            ? Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF818CF8),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF818CF8),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    )
+                  ],
+                ),
+              )
+            : null,
         onTap: () {
           Navigator.pop(context);
           if (!isSelected) {
@@ -444,7 +530,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  // Helper Widget for User Panel Nav Items
+  // Helper Widget for User Panel Nav Items with Active Route Highlighting
   Widget _buildUserItem(
     BuildContext context, {
     required IconData icon,
@@ -455,11 +541,35 @@ class AppDrawer extends StatelessWidget {
     final bool isSelected = currentRoute == route;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 2),
+      margin: const EdgeInsets.only(bottom: 5),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF0D9488).withValues(alpha: 0.30) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF2DD4BF).withValues(alpha: 0.7) : Colors.transparent,
+          width: 1.2,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF2DD4BF).withValues(alpha: 0.30),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
+      ),
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        tileColor: isSelected ? AppTheme.accentTeal.withValues(alpha: 0.2) : Colors.transparent,
-        leading: Icon(icon, color: iconColor, size: 22),
+        leading: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: isSelected ? 0.35 : 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: isSelected ? Colors.white : iconColor, size: 20),
+        ),
         title: Text(
           title,
           style: TextStyle(
@@ -468,6 +578,23 @@ class AppDrawer extends StatelessWidget {
             color: isSelected ? Colors.white : Colors.white70,
           ),
         ),
+        trailing: isSelected
+            ? Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2DD4BF),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF2DD4BF),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    )
+                  ],
+                ),
+              )
+            : null,
         onTap: () {
           Navigator.pop(context);
           if (!isSelected) {

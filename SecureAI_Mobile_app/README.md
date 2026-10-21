@@ -178,26 +178,28 @@ flutter run
 
 ### 3. Export Release APKs
 
-#### **Option A: Split-per-ABI Release APK (Recommended - Lightweight ~18 MB)**
-Generates optimized, architecture-specific APK packages that strip unused native libraries for smaller file sizes:
+#### **Option A: Split-per-ABI Release APK (Recommended)**
+Generates optimized, architecture-specific APK packages that strip unused native libraries for compact file sizes:
 ```bash
 flutter build apk --split-per-abi
 ```
-Generated APK outputs will be located in:
-- **`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`** *(Target for modern 64-bit phones - 18 MB)*
-- **`build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`** *(Target for older 32-bit devices)*
-- **`build/app/outputs/flutter-apk/app-x86_64-release.apk`** *(Target for Intel emulators & Chromebooks)*
+Generated APK outputs:
+- **`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`** (**20.2 MB** - Target for modern 64-bit Android smartphones)
+- **`build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`** (**17.6 MB** - Target for older 32-bit legacy devices)
+- **`build/app/outputs/flutter-apk/app-x86_64-release.apk`** (**21.6 MB** - Target for Android Studio emulators & ChromeOS)
 
 > [!TIP]
-> The `app-arm64-v8a-release.apk` file is also bundled directly inside the website repository at `SecureAI_Web/media/app-arm64-v8a-release.apk`, downloadable via the website's navigation bar.
+> Both the lightweight **`app-arm64-v8a-release.apk`** (20.2 MB) and universal all-device **`app-release.apk`** (54 MB) are hosted on the website and directly downloadable from the navigation bar:
+> - Universal APK (All Devices): [https://secureai-7wgj.onrender.com/media/app-release.apk](https://secureai-7wgj.onrender.com/media/app-release.apk)
+> - 64-bit v8a APK: [https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)
 
 #### **Option B: Universal Fat APK (All Architectures Combined)**
-Generates a single self-contained APK compatible with all Android devices:
+Generates a single self-contained APK compatible with all Android devices (ARMv7, ARM64-v8a, x86_64):
 ```bash
 flutter build apk --release
 ```
 Output:
-- `build/app/outputs/flutter-apk/app-release.apk`
+- `build/app/outputs/flutter-apk/app-release.apk` (~54 MB)
 
 #### **Option C: Google Play Store App Bundle (AAB)**
 Generates a signed Android App Bundle ready for Google Play Console distribution:

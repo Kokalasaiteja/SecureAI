@@ -2,8 +2,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
@@ -22,154 +20,43 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   File? _selectedFile;
   Uint8List? _selectedBytes;
   String? _selectedFileName;
-  String _dropdownValue = "device";
   bool _isScanning = false;
   String? _errorMessage;
   Map<String, dynamic>? _scanResult;
 
-  // Sample preset QR image URLs (from reliable QR generator API)
-  final Map<String, Map<String, String>> _sampleQrs = {
-    "sample_safe": {
-      "name": "sample_safe_qr.png",
-      "qrUrl": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://secureai-7wgj.onrender.com/",
-      "targetUrl": "https://secureai-7wgj.onrender.com/",
-      "fallbackClass": "Safe - Official SecureAI cybersecurity platform.",
-    },
-    "sample_suspicious": {
-      "name": "sample_suspicious_qr.png",
-      "qrUrl": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=http://secure-login-verify-account.tk/login",
-      "targetUrl": "http://secure-login-verify-account.tk/login",
-      "fallbackClass": "Suspicious - Uses suspicious TLD (.tk) and generic credential prompt.",
-    },
-    "sample_phishing": {
-      "name": "sample_phishing_qr.png",
-      "qrUrl": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=http://192.168.1.100/chase-bank-verify-pin.php",
-      "targetUrl": "http://192.168.1.100/chase-bank-verify-pin.php",
-      "fallbackClass": "Phishing - Direct IP address hosting deceptive bank credential harvesting page.",
-    },
-  };
-
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(source: source);
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 90,
+      );
+
       if (picked != null) {
         final bytes = await picked.readAsBytes();
         setState(() {
           _selectedFile = File(picked.path);
           _selectedBytes = bytes;
           _selectedFileName = picked.name;
-          _dropdownValue = "device";
           _errorMessage = null;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = "Failed to pick image: $e";
+        if (source == ImageSource.camera) {
+          _errorMessage = "Camera access denied or camera not available on this device. Please use 'Upload from Gallery'.";
+        } else {
+          _errorMessage = "Failed to select image from storage: $e";
+        }
       });
     }
-  }
-
-  Future<void> _selectSample(String key) async {
-    final sample = _sampleQrs[key];
-    if (sample == null) return;
-
-    setState(() {
-      _dropdownValue = key;
-      _selectedFileName = sample['name'];
-      _selectedFile = null;
-      _isScanning = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final res = await http.get(Uri.parse(sample['qrUrl']!));
-      if (res.statusCode == 200) {
-        setState(() {
-          _selectedBytes = res.bodyBytes;
-          _isScanning = false;
-        });
-      } else {
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    } catch (_) {
-      setState(() {
-        _isScanning = false;
-      });
-    }
-  }
-
-  void _showImageSourceModal() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1E293B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Upload QR Code Image",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                leading: const Icon(Icons.photo_library_rounded, color: AppTheme.accentTeal),
-                title: const Text("Choose from Gallery", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickImage(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.accentPurple),
-                title: const Text("Take Photo with Camera", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickImage(ImageSource.camera);
-                },
-              ),
-              const Divider(color: Colors.white12),
-              ListTile(
-                leading: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF22C55E)),
-                title: const Text("Sample 1: Safe SecureAI Portal QR", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _selectSample("sample_safe");
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.qr_code_2_rounded, color: Color(0xFFEAB308)),
-                title: const Text("Sample 2: Suspicious Urgent Login QR", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _selectSample("sample_suspicious");
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.qr_code_2_rounded, color: Color(0xFFEF4444)),
-                title: const Text("Sample 3: Malicious Phishing Bank QR", style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _selectSample("sample_phishing");
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _scanAndClassify() async {
     if (_selectedFile == null && (_selectedBytes == null || _selectedBytes!.isEmpty)) {
       setState(() {
-        _errorMessage = "Please select an image file to scan.";
+        _errorMessage = "Please take a camera photo or choose an image file to scan.";
       });
       return;
     }
@@ -189,16 +76,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     if (!mounted) return;
 
     if (res['success'] == true) {
-      final bool detected = res['detected'] == true;
-      String url = res['url']?.toString() ?? 'None';
-      String classification = res['classification']?.toString() ?? '❌ QR Code not detected.';
-
-      // If backend opencv on free Render didn't parse a sample image, provide graceful fallback
-      if (!detected && _sampleQrs.containsKey(_dropdownValue)) {
-        final sample = _sampleQrs[_dropdownValue]!;
-        url = sample['targetUrl']!;
-        classification = sample['fallbackClass']!;
-      }
+      final String url = res['url']?.toString() ?? 'None';
+      final String classification = res['classification']?.toString() ?? '❌ QR Code not detected.';
 
       setState(() {
         _isScanning = false;
@@ -208,22 +87,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         };
       });
     } else {
-      // If sample was chosen and network errored, display the sample classification
-      if (_sampleQrs.containsKey(_dropdownValue)) {
-        final sample = _sampleQrs[_dropdownValue]!;
-        setState(() {
-          _isScanning = false;
-          _scanResult = {
-            'url': sample['targetUrl']!,
-            'classification': sample['fallbackClass']!,
-          };
-        });
-      } else {
-        setState(() {
-          _isScanning = false;
-          _errorMessage = res['message']?.toString() ?? "QR scanning failed.";
-        });
-      }
+      setState(() {
+        _isScanning = false;
+        _errorMessage = res['message']?.toString() ?? "QR scanning failed. Please try a clearer QR image.";
+      });
     }
   }
 
@@ -234,7 +101,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       _selectedBytes = null;
       _selectedFileName = null;
       _errorMessage = null;
-      _dropdownValue = "device";
     });
   }
 
@@ -259,14 +125,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     );
   }
 
-  // --- FORM VIEW (1:1 with qr_form.html) ---
+  // --- FORM VIEW ---
   Widget _buildFormView() {
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Flaticon QR / Ubuntu Icon (matching web)
+          // Flaticon QR Icon
           Image.network(
             "https://cdn-icons-png.flaticon.com/512/888/888879.png",
             width: 72,
@@ -315,95 +181,163 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
               ),
-              child: Text(
-                _errorMessage!,
-                style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Label: Upload QR Code Image:
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Upload QR Code Image:",
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // File Input Field (matching web browser input type="file")
-          InkWell(
-            onTap: _showImageSourceModal,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF111827), // bg-gray-900
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF374151)), // border-gray-700
-              ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      "Choose file",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
+                  const Icon(Icons.error_outline_rounded, color: Color(0xFFFCA5A5), size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _selectedFileName ?? "No file chosen",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _selectedFileName != null ? Colors.white : const Color(0xFF9CA3AF),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                      _errorMessage!,
+                      style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13),
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+          ],
+
+          // Camera vs Upload Action Cards
+          Row(
+            children: [
+              // Option 1: Live Camera Photo
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _pickImage(ImageSource.camera),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5), width: 1.2),
+                      ),
+                      child: Column(
+                        children: const [
+                          Icon(Icons.camera_alt_rounded, color: Color(0xFF818CF8), size: 30),
+                          SizedBox(height: 8),
+                          Text(
+                            "Live Camera",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "Capture live photo",
+                            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Option 2: Upload from Storage / Gallery
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _pickImage(ImageSource.gallery),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.5), width: 1.2),
+                      ),
+                      child: Column(
+                        children: const [
+                          Icon(Icons.photo_library_rounded, color: Color(0xFF2DD4BF), size: 30),
+                          SizedBox(height: 8),
+                          Text(
+                            "Upload Image",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "From device gallery",
+                            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // Preview Thumbnail if chosen
           if (_selectedBytes != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Container(
-              height: 110,
-              width: 110,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF2DD4BF), width: 2),
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.4)),
               ),
-              padding: const EdgeInsets.all(6),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.memory(_selectedBytes!, fit: BoxFit.contain),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedFileName ?? "Selected QR Image",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _resetScanner,
+                        icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFF87171)),
+                        label: const Text(
+                          "Remove",
+                          style: TextStyle(color: Color(0xFFF87171), fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 140,
+                    width: 140,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF2DD4BF), width: 2),
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.memory(_selectedBytes!, fit: BoxFit.contain),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
 
           const SizedBox(height: 24),
 
-          // Scan & Classify Button (matching web teal button)
+          // Scan & Classify Button
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -436,7 +370,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     );
   }
 
-  // --- RESULT VIEW (1:1 with qr_result.html) ---
+  // --- RESULT VIEW ---
   Widget _buildResultView() {
     final url = _scanResult!['url']?.toString() ?? 'None';
     final classification = _scanResult!['classification']?.toString() ?? '';
@@ -446,7 +380,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Green check result icon
+          // Result Icon
           Image.network(
             "https://cdn-icons-png.flaticon.com/512/2910/2910791.png",
             width: 76,
@@ -515,7 +449,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           ),
           const SizedBox(height: 30),
 
-          // Scan Another Button (matching web rescan-button)
+          // Scan Another Button
           SizedBox(
             width: double.infinity,
             height: 48,

@@ -131,8 +131,8 @@ class PublicHomeScreen extends StatelessWidget {
                 GlassCard(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
                   child: Column(
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         "Join the Fight Against Social Engineering",
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -141,14 +141,65 @@ class PublicHomeScreen extends StatelessWidget {
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 10),
-                      Text(
+                      const SizedBox(height: 10),
+                      const Text(
                         "Protecting users and organizations with AI-powered defense mechanisms against modern cyber threats.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13.5,
                           color: Color(0xFFD1D5DB),
                           height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.28),
+                              width: 1.1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4F46E5).withValues(alpha: 0.45),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.pushNamed(context, '/register'),
+                            icon: const Icon(Icons.rocket_launch_rounded, size: 20, color: Colors.white),
+                            label: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "Get Started Now",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
+                              ],
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
                         ),
                       ),
                     ],
