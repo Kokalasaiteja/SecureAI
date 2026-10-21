@@ -353,12 +353,12 @@ To train the behavioral anomaly detection models:
   <tr>
     <td align="center" width="25%">
       <b>Home Page</b><br><br>
-      <img src="screenshots/01_home_page.png" width="260" alt="Home Page"/><br>
+      <img width="260" alt="image" src="https://github.com/user-attachments/assets/4834d1b8-b389-437a-bfd5-e86ac418ed29" />
       <i>Landing page with dynamic liquid glass navigation and direct call-to-action</i>
     </td>
     <td align="center" width="25%">
       <b>Introduction Page</b><br><br>
-      <img src="screenshots/02_introduction_page.png" width="260" alt="Introduction Page"/><br>
+      <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/51580331-82cb-4f2e-8b2d-396cda2c4c1a" />
       <i>Security overview with justified responsive typography and threat vectors</i>
     </td>
     <td align="center" width="25%">
@@ -391,7 +391,7 @@ To train the behavioral anomaly detection models:
     </td>
     <td align="center" width="25%">
       <b>Admin User Management</b><br><br>
-      <img src="https://github.com/user-attachments/assets/0f105354-041a-4325-90fb-3884aacf307b" width="260" alt="Admin User Management"/><br>
+      <img width="260" alt="image" src="https://github.com/user-attachments/assets/72462b4b-356c-4d43-8fa3-864344877ed5" />
       <i>User directory with instant activation, deactivation, and deletion controls</i>
     </td>
   </tr>
