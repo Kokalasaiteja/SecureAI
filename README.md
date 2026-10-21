@@ -114,58 +114,6 @@ Generated APK outputs:
 
 ---
 
-## 📸 Dual-Platform Visual Showcase
-
-<table>
-  <tr>
-    <td align="center" width="20%">
-      <b>Mobile Home Screen</b><br><br>
-      <img src="SecureAI_Mobile_app/screenshots/01_home_screen.png" width="180" alt="Mobile Home Screen"/><br>
-      <i>Cosmic particle canvas & threat cards</i>
-    </td>
-    <td align="center" width="20%">
-      <b>Mobile Navigation Drawer</b><br><br>
-      <img src="SecureAI_Mobile_app/screenshots/02_navigation_drawer.png" width="180" alt="Mobile Drawer"/><br>
-      <i>Slide-out menu with active route glow</i>
-    </td>
-    <td align="center" width="30%">
-      <b>Web Landing Page (Laptop View)</b><br><br>
-      <img src="SecureAI_Web/screenshots/01_home_page.png" width="320" alt="Web Landing Page"/><br>
-      <i>Desktop liquid glass hero with 3D buttons</i>
-    </td>
-    <td align="center" width="30%">
-      <b>Web Introduction Page (Laptop View)</b><br><br>
-      <img src="SecureAI_Web/screenshots/02_introduction_page.png" width="320" alt="Web Introduction"/><br>
-      <i>Responsive typography with justified layout</i>
-    </td>
-  </tr>
-
-  <tr>
-    <td align="center" width="25%">
-      <b>Mobile SMS Detector</b><br><br>
-      <img src="SecureAI_Mobile_app/screenshots/07_sms_spam_detector.png" width="220" alt="Mobile SMS Detector"/><br>
-      <i>Google Gemini 2.5 Flash Smishing analysis</i>
-    </td>
-    <td align="center" width="25%">
-      <b>Mobile QR Quishing Scanner</b><br><br>
-      <img src="SecureAI_Mobile_app/screenshots/11_qr_scanner_quishing.png" width="220" alt="Mobile QR Scanner"/><br>
-      <i>Live camera viewfinder & OpenCV decoding</i>
-    </td>
-    <td align="center" width="25%">
-      <b>Web Admin Dashboard</b><br><br>
-      <img src="https://github.com/user-attachments/assets/6008da22-5036-4549-be07-c3216e0ca042" width="240" alt="Web Admin Dashboard"/><br>
-      <i>Glowing Database Live indicator & analytics</i>
-    </td>
-    <td align="center" width="25%">
-      <b>Web Anomaly ML Training</b><br><br>
-      <img src="https://github.com/user-attachments/assets/4276f12d-2c00-4d85-bd35-66d0226c169d" width="240" alt="Web ML Training"/><br>
-      <i>Classification reports & confusion matrix heatmap</i>
-    </td>
-  </tr>
-</table>
-
----
-
 ## 🚀 Core Security Features
 
 SecureAI provides synchronized threat protection across both the Web portal and the Android application:
