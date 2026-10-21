@@ -10,10 +10,10 @@
                 <i class="fas fa-shield-alt text-indigo-500 animate-pulse"></i> 
                 <span>Welcome to SecureAI</span>
             </h1>
-            <p class="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto mb-4 leading-relaxed">
+            <p class="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto mb-4 leading-relaxed text-justify" style="text-align: justify; text-justify: inter-word;">
                 The <strong>Usage of AI in prevention of Social Engineering Attacks</strong> project is an advanced, comprehensive cybersecurity platform designed to identify, analyze, and thwart various forms of human-targeted cyber threats. By leveraging cutting-edge Artificial Intelligence and Machine Learning techniques, this system proactively defends against the psychological manipulation tactics commonly employed by modern cybercriminals.
             </p>
-            <p class="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            <p class="text-base sm:text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed text-justify" style="text-align: justify; text-justify: inter-word;">
                 In today's digital landscape, social engineering attacks such as phishing, smishing, and quishing exploit human vulnerability rather than technical flaws. Our project aims to bridge this security gap by providing a multi-layered defense mechanism. It evaluates communications and user behaviors in real-time, serving as a vigilant digital guardian that empowers users to navigate the web safely and securely.
             </p>
         </div>
@@ -142,10 +142,13 @@
         
         <div class="mt-10 sm:mt-16 text-center">
             <h3 class="text-xl sm:text-2xl font-bold text-white mb-6">Ready to secure your digital life?</h3>
-            <a href="{% url 'register' %}" class="btn-3d w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 sm:px-12 py-4 sm:py-5 rounded-full font-bold text-lg sm:text-2xl inline-flex items-center justify-center space-x-3 shadow-xl transform transition-all duration-300 hover:scale-105">
-                <i class="fas fa-rocket text-xl sm:text-2xl"></i>
-                <span>Get Started Now</span>
-            </a>
+            <div class="flex justify-center items-center">
+                <a href="{% url 'register' %}" class="btn-3d w-full sm:w-auto max-w-sm bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white px-10 py-4 rounded-xl font-bold text-base sm:text-lg inline-flex items-center justify-center space-x-3 shadow-[0_0_20px_rgba(79,70,229,0.45)] transform hover:scale-105 transition-all duration-300 border border-white/20">
+                    <i class="fas fa-rocket text-xl text-white"></i>
+                    <span>Get Started Now</span>
+                    <i class="fas fa-arrow-right text-sm text-white/80 ml-1"></i>
+                </a>
+            </div>
         </div>
     </section>
 </div>

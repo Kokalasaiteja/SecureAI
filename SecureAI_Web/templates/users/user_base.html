@@ -1,13 +1,15 @@
 <!-- users/user_base.html -->
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{% block title %}User Panel - SecureAI{% endblock %}</title>
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/media/favicon.png">
-  <link rel="shortcut icon" type="image/png" href="/media/favicon.png">
+  <link rel="icon" type="image/png" href="{% static 'favicon.png' %}?v=3">
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=3">
+  <link rel="apple-touch-icon" href="/favicon.png?v=3">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -184,28 +186,52 @@
     </div>
     
     <nav class="space-y-3 flex-1">
-      <a href="{% url 'user_homepage' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-home w-5 text-center text-teal-400"></i> <span>Home</span>
+      <a href="{% url 'user_homepage' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'user-homepage' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-home w-5 text-center text-teal-400"></i> <span>Home</span>
+        </div>
+        {% if 'user-homepage' in request.path %}<span class="w-2 h-2 rounded-full bg-teal-400"></span>{% endif %}
       </a>
-      <a href="{% url 'detect_spam' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-sms w-5 text-center text-green-400"></i> <span>SMS Spam Detection</span>
+      <a href="{% url 'detect_spam' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'detect_spam' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-sms w-5 text-center text-green-400"></i> <span>SMS Spam Detection</span>
+        </div>
+        {% if 'detect_spam' in request.path %}<span class="w-2 h-2 rounded-full bg-green-400"></span>{% endif %}
       </a>
-      <a href="{% url 'qr-scan' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-qrcode w-5 text-center text-purple-400"></i> <span>QR Code Scanner</span>
+      <a href="{% url 'qr-scan' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'qr' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-qrcode w-5 text-center text-purple-400"></i> <span>QR Code Scanner</span>
+        </div>
+        {% if 'qr' in request.path %}<span class="w-2 h-2 rounded-full bg-purple-400"></span>{% endif %}
       </a>
-      <a href="{% url 'predict_anomaly' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-user-secret w-5 text-center text-indigo-400"></i> <span>Behavior Analysis</span>
+      <a href="{% url 'predict_anomaly' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'predict-anomaly' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-user-secret w-5 text-center text-indigo-400"></i> <span>Behavior Analysis</span>
+        </div>
+        {% if 'predict-anomaly' in request.path %}<span class="w-2 h-2 rounded-full bg-indigo-400"></span>{% endif %}
       </a>
-      <a href="{% url 'password_analyzer' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-shield-alt w-5 text-center text-yellow-400"></i> <span>Password Analyzer</span>
+      <a href="{% url 'password_analyzer' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'password' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-shield-alt w-5 text-center text-yellow-400"></i> <span>Password Analyzer</span>
+        </div>
+        {% if 'password' in request.path %}<span class="w-2 h-2 rounded-full bg-yellow-400"></span>{% endif %}
       </a>
-      <a href="{% url 'email_phishing_analyzer' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-envelope-open-text w-5 text-center text-blue-400"></i> <span>Email Phishing</span>
+      <a href="{% url 'email_phishing_analyzer' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'email' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-envelope-open-text w-5 text-center text-blue-400"></i> <span>Email Phishing</span>
+        </div>
+        {% if 'email' in request.path %}<span class="w-2 h-2 rounded-full bg-blue-400"></span>{% endif %}
       </a>
-      <a href="{% url 'train_anomaly_model' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-teal-400 p-2.5 rounded-lg transition-colors">
-        <i class="fas fa-brain w-5 text-center text-pink-400"></i> <span>Train ML Models</span>
+      <a href="{% url 'train_anomaly_model' %}" class="nav-item flex items-center justify-between text-base font-medium p-2.5 rounded-lg transition-all {% if 'train' in request.path %}bg-teal-500/25 border border-teal-400/50 text-white shadow-[0_0_12px_rgba(45,212,191,0.3)]{% else %}text-gray-300 hover:text-teal-400 border border-transparent{% endif %}">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-brain w-5 text-center text-pink-400"></i> <span>Train ML Models</span>
+        </div>
+        {% if 'train' in request.path %}<span class="w-2 h-2 rounded-full bg-pink-400"></span>{% endif %}
       </a>
-      <a href="{% url 'user_logout' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-red-400 p-2.5 rounded-lg transition-colors mt-4 border-t border-gray-800">
+      <a href="/media/app-arm64-v8a-release.apk" download="app-arm64-v8a-release.apk" class="nav-item flex items-center space-x-3 text-base font-medium text-teal-300 hover:text-white p-2.5 rounded-lg transition-colors border border-teal-500/30 bg-teal-600/15" title="Download Android App APK (ARM64-v8a)">
+        <i class="fab fa-android w-5 text-center text-teal-400"></i> <span>Download Android App</span>
+      </a>
+      <a href="{% url 'user_logout' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-red-400 p-2.5 rounded-lg transition-colors mt-2 border-t border-gray-800">
         <i class="fas fa-sign-out-alt w-5 text-center text-red-400"></i> <span>Logout</span>
       </a>
     </nav>

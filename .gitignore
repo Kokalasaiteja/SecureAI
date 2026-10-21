@@ -31,6 +31,8 @@ SecureAI_Web/media/*
 !SecureAI_Web/media/models/*.pkl
 !SecureAI_Web/media/*.apk
 static_root/
+staticfiles/
+SecureAI_Web/staticfiles/
 *.log
 
 # Workspace Preferences
@@ -38,3 +40,5 @@ static_root/
 .idea/
 *.suo
 *.ntvs*
+.DS_Store
+*/.DS_Store

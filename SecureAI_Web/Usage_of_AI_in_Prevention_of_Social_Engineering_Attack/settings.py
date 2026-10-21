@@ -138,14 +138,12 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'  # Required for collectstatic on Render
 
-# WhiteNoise compressed static file storage
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# WhiteNoise compressed static file storage (robust against missing manifests)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Only include if the static/ folder actually exists locally
-import os as _os
 _static_dir = BASE_DIR / 'static'
-if _os.path.isdir(_static_dir):
-    STATICFILES_DIRS = [_static_dir]
+_static_dir.mkdir(parents=True, exist_ok=True)
+STATICFILES_DIRS = [_static_dir]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

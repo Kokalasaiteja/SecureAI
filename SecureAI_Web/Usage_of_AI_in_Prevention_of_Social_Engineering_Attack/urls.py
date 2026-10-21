@@ -19,9 +19,12 @@ from django.urls import path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
+from django.views.generic import RedirectView
 from users import views
 
 urlpatterns = [
+    path('favicon.ico', views.favicon_ico_view, name='favicon_ico'),
+    path('favicon.png', views.favicon_view, name='favicon_png'),
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('register/', views.register_view, name='register'),
@@ -49,7 +52,8 @@ urlpatterns = [
     path('dispatch-verification/', views.dispatch_verification_challenge, name='dispatch_verification_challenge'),
     path('confirm-verification/', views.confirm_verification_challenge, name='confirm_verification_challenge'),
     path('download-apk/', views.download_apk, name='download_apk'),
-    path('media/app-arm64-v8a-release.apk', views.download_apk, name='download_apk_direct'),
+    path('media/app-arm64-v8a-release.apk', views.download_apk, {'apk_type': 'v8'}, name='download_apk_direct'),
+    path('media/app-release.apk', views.download_apk, {'apk_type': 'universal'}, name='download_apk_universal'),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 

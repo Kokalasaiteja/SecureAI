@@ -1,46 +1,67 @@
 {% extends 'users/user_base.html' %}
+{% block title %}QR Code Scan Result - SecureAI{% endblock %}
+{% block bg_color %}bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 gradient-bg{% endblock %}
+
 {% block content %}
-
-<!-- Background + Styling -->
-<style>
-  body {
-    background-image: url('https://images.unsplash.com/photo-1607871142344-c3c679e0c9d3?auto=format&fit=crop&w=1950&q=80');
-    background-size: cover;
-    background-position: center;
-    font-family: 'Arial', sans-serif;
-  }
-
-  .glass-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  }
-
-  .rescan-button:hover {
-    background-color: #0d9488;
-  }
-</style>
-
 <div class="flex justify-center items-center py-4 sm:py-8">
-  <div class="glass-card w-full max-w-xl text-white text-center p-5 sm:p-8">
-    <img src="https://cdn-icons-png.flaticon.com/512/2910/2910791.png" alt="QR Result" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4">
+  <div class="glass-card w-full max-w-xl text-white text-center p-6 sm:p-10 rounded-2xl shadow-2xl animate-slide-up border border-white/20">
+    <!-- Result Icon Badge -->
+    <div class="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-5 rounded-2xl 
+      {% if 'Safe' in classification %}bg-green-500/20 border-green-400/40 text-green-400
+      {% elif 'Phishing' in classification or 'Malicious' in classification or 'not detected' in classification %}bg-red-500/20 border-red-400/40 text-red-400
+      {% else %}bg-yellow-500/20 border-yellow-400/40 text-yellow-400{% endif %} 
+      border flex items-center justify-center shadow-lg">
+      <i class="{% if 'Safe' in classification %}fas fa-shield-check text-4xl sm:text-5xl
+                {% elif 'Phishing' in classification or 'Malicious' in classification %}fas fa-skull-crossbones text-4xl sm:text-5xl
+                {% elif 'not detected' in classification %}fas fa-times-circle text-4xl sm:text-5xl
+                {% else %}fas fa-exclamation-triangle text-4xl sm:text-5xl{% endif %}"></i>
+    </div>
 
-    <h2 class="text-2xl sm:text-3xl font-bold mb-4">✅ QR Code Scan Result</h2>
+    <h2 class="text-2xl sm:text-3xl font-extrabold mb-4 tracking-tight">QR Code Scan Result</h2>
 
-    <p class="text-base sm:text-lg mb-3 break-all"><strong>🔗 URL:</strong> <span class="text-yellow-300 font-medium">{{ qr_data }}</span></p>
-    <p class="text-base sm:text-lg mb-6"><strong>🔎 Classification:</strong> 
-      <span class="text-yellow-300 font-bold">
+    <!-- Decoded URL Card -->
+    <div class="bg-gray-950/50 rounded-xl p-4 sm:p-5 border border-white/10 mb-4 text-left shadow-inner">
+      <div class="flex items-center space-x-2 text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1.5">
+        <i class="fas fa-link text-purple-400"></i>
+        <span>Decoded Target URL</span>
+      </div>
+      <p class="text-sm sm:text-base font-mono text-yellow-300 break-all select-all">
+        {% if qr_data %}{{ qr_data }}{% else %}<span class="text-gray-400 italic">No URL matrix decoded</span>{% endif %}
+      </p>
+    </div>
+
+    <!-- AI Classification Card -->
+    <div class="rounded-xl p-4 sm:p-5 border mb-6 text-left shadow-md
+      {% if 'Safe' in classification %}bg-green-950/40 border-green-500/40
+      {% elif 'Phishing' in classification or 'Malicious' in classification %}bg-red-950/40 border-red-500/40
+      {% elif 'not detected' in classification %}bg-gray-900/60 border-gray-700
+      {% else %}bg-yellow-950/40 border-yellow-500/40{% endif %}">
+      <div class="flex items-center space-x-2 text-xs uppercase tracking-wider font-semibold mb-1.5
+        {% if 'Safe' in classification %}text-green-300
+        {% elif 'Phishing' in classification or 'Malicious' in classification %}text-red-300
+        {% else %}text-yellow-300{% endif %}">
+        <i class="fas fa-brain"></i>
+        <span>AI Threat Verdict</span>
+      </div>
+      <p class="text-base sm:text-lg font-bold leading-relaxed
+        {% if 'Safe' in classification %}text-green-400
+        {% elif 'Phishing' in classification or 'Malicious' in classification %}text-red-400
+        {% elif 'not detected' in classification %}text-gray-300
+        {% else %}text-yellow-400{% endif %}">
         {{ classification }}
-      </span>
-    </p>
+      </p>
+    </div>
 
-    <a href="{% url 'qr-scan' %}" class="inline-block w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 rescan-button shadow-lg">
-      🔁 Scan Another
-    </a>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="{% url 'qr-scan' %}" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold transition duration-300 shadow-lg flex items-center justify-center space-x-2">
+        <i class="fas fa-redo"></i>
+        <span>Scan Another QR</span>
+      </a>
+      <a href="{% url 'user_homepage' %}" class="w-full sm:w-auto bg-gray-800/80 hover:bg-gray-800 border border-white/20 text-gray-200 px-6 py-3.5 rounded-xl font-semibold transition duration-300 flex items-center justify-center space-x-2 text-sm">
+        <i class="fas fa-home"></i>
+        <span>User Panel Home</span>
+      </a>
+    </div>
   </div>
 </div>
-
 {% endblock %}

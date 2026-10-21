@@ -20,21 +20,21 @@
             <form method="post" class="space-y-4 sm:space-y-6">
                 {% csrf_token %}
                 <!-- Name Field -->
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-user text-purple-400 text-lg sm:text-xl shrink-0"></i>
-                    <div class="flex-1">
-                        <label for="name" class="block text-xs sm:text-sm font-medium text-gray-300 mb-1">Name</label>
+                <div class="form-row space-y-1.5">
+                    <label for="name" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Name</label>
+                    <div class="flex items-center space-x-3">
+                        <i class="field-icon fas fa-user text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
                         <input type="text" name="name" id="name" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Password Field -->
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-lock text-purple-400 text-lg sm:text-xl shrink-0"></i>
-                    <div class="flex-1 form-group" style="position: relative;">
-                        <label for="id_password" class="block text-xs sm:text-sm font-medium text-gray-300 mb-1">Password</label>
-                        <div class="relative">
+                <div class="form-row space-y-1.5">
+                    <label for="id_password" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Password</label>
+                    <div class="flex items-center space-x-3">
+                        <i class="field-icon fas fa-lock text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
+                        <div class="flex-1 relative">
                             <input type="password" id="id_password" name="password" class="form-control w-full p-3 pr-12 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
-                            <span id="txtToggleBtn" class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 z-10">
+                            <span id="txtToggleBtn" class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 z-10 flex items-center justify-center">
                                 <i class="fa-solid fa-eye text-lg" id="txtEyeIndicator"></i>
                             </span>
                         </div>
@@ -83,12 +83,18 @@
         const inputs = document.querySelectorAll('input');
         inputs.forEach(input => {
             input.addEventListener('focus', () => {
-                input.parentElement.querySelector('i').classList.add('text-indigo-400');
-                input.parentElement.querySelector('i').classList.remove('text-purple-400');
+                const icon = input.closest('.form-row')?.querySelector('.field-icon');
+                if (icon) {
+                    icon.classList.add('text-indigo-400');
+                    icon.classList.remove('text-purple-400');
+                }
             });
             input.addEventListener('blur', () => {
-                input.parentElement.querySelector('i').classList.add('text-purple-400');
-                input.parentElement.querySelector('i').classList.remove('text-indigo-400');
+                const icon = input.closest('.form-row')?.querySelector('.field-icon');
+                if (icon) {
+                    icon.classList.add('text-purple-400');
+                    icon.classList.remove('text-indigo-400');
+                }
             });
         });
     });

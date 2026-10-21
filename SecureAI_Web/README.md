@@ -134,44 +134,47 @@ python manage.py runserver
 
 ### 1. Clone the repository
 ```bash
-git clone <repository-url>
-cd code
+git clone https://github.com/Kokalasaiteja/SecureAI.git
+cd SecureAI/SecureAI_Web
 ```
 
 ### 2. Create and activate virtual environment
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+> [!IMPORTANT]
+> **Avoid `ModuleNotFoundError: No module named 'django'`**: macOS system Python (`/usr/bin/python3`) does not contain Django or ML libraries. Always create and activate your dedicated virtual environment before running management commands.
 
-# Linux/Mac
-python3 -m venv venv
-source venv/bin/activate
+```bash
+# macOS / Linux
+python3 -m venv ../.venv
+source ../.venv/bin/activate
+
+# Windows (Command Prompt / PowerShell)
+python -m venv ..\.venv
+..\.venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
 ```bash
-pip install -r Req.txt
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-#### 3.1 Manual Package Installations
-The following packages have been commented out in `Req.txt` and may need to be installed manually if required for specific features:
+*(Alternatively: `pip install -r Req.txt`)*
+
+#### 3.1 Optional Generative AI & Voice Packages
+If utilizing advanced generative conversational features:
 ```bash
 pip install google-ai-generativelanguage google-generativeai googletrans==4.0.0rc1
 pip install langchain langchain-core langchain-google-genai langchain-text-splitters==0.3.8
-pip install TTS==0.22.0
 ```
-*(Note: `yolov5` is a repository and should be cloned manually if needed)*
 
 ### 4. Configure environment variables
-Create a `.env` file in the root project directory and add your credentials:
+Create a `.env` file in the `SecureAI_Web` directory (or project root) and configure:
 ```env
-SECRET_KEY=your-django-secret-key
+SECRET_KEY=your-django-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
 RESEND_API_KEY=your-resend-api-key
-
 GOOGLE_API_KEY=your-gemini-api-key
 ```
 
@@ -181,17 +184,21 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 6. Create superuser (optional)
+### 6. Create superuser (optional for admin panel)
 ```bash
 python manage.py createsuperuser
 ```
 
 ### 7. Run the development server
 ```bash
+# With virtual environment active:
 python manage.py runserver
+
+# Or run directly via virtual environment python binary:
+../.venv/bin/python manage.py runserver
 ```
 
-Visit `http://127.0.0.1:8000/` in your browser.
+Visit **`http://127.0.0.1:8000/`** in your browser.
 
 ## 🔑 Getting API Keys
 
@@ -340,82 +347,98 @@ To train the behavioral anomaly detection models:
 - `/verify-otp/` - OTP verification
 - `/reset-password/` - New password setup
 
-# 📸 Screenshots
+# 📸 Screenshots & Application Showcase
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Home Page</b><br><br>
-      <img src="https://github.com/user-attachments/assets/89e4aa74-db6b-4d45-be50-f74329e3d073" width="260"/>
+      <img src="screenshots/01_home_page.png" width="260" alt="Home Page"/><br>
+      <i>Landing page with dynamic liquid glass navigation and direct call-to-action</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Introduction Page</b><br><br>
-      <img src="https://github.com/user-attachments/assets/46567a15-372e-4fff-8027-ec5c94458d51" width="260"/>
+      <img src="screenshots/02_introduction_page.png" width="260" alt="Introduction Page"/><br>
+      <i>Security overview with justified responsive typography and threat vectors</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Registration Page</b><br><br>
-      <img src="https://github.com/user-attachments/assets/602ee93c-f624-4809-add5-c0fb2582c07c" width="260"/>
+      <img src="screenshots/06_register.png" width="260" alt="Registration Page"/><br>
+      <i>User sign-up form with aligned input icons and avatar upload</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>User Login</b><br><br>
-      <img src="https://github.com/user-attachments/assets/4e733148-1e1c-444d-be25-0445dc6ecc0a" width="260"/>
+      <img src="screenshots/05_user_login.png" width="260" alt="User Login"/><br>
+      <i>Secure authentication portal with precision-aligned icon fields</i>
     </td>
   </tr>
 
   <tr>
-    <td align="center">
-      <b>Email OTP Verification</b><br><br>
-      <img src="https://github.com/user-attachments/assets/2170618f-8a69-474e-9dc6-a390a7d61ec5" height="220"/>
+    <td align="center" width="25%">
+      <b>Forgot Password</b><br><br>
+      <img src="screenshots/07_forgot_password.png" width="260" alt="Forgot Password"/><br>
+      <i>Aligned inputs with instant OTP recovery challenge dispatch</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Admin Login</b><br><br>
-      <img src="https://github.com/user-attachments/assets/de3a2634-2be8-4379-a08a-595f1792d838" width="260"/>
+      <img src="screenshots/04_admin_login.png" width="260" alt="Admin Login"/><br>
+      <i>Administrative access portal with centered eye toggle for password visibility</i>
     </td>
-    <td align="center">
-      <b>Admin Dashboard Page</b><br><br>
-      <img src="https://github.com/user-attachments/assets/6008da22-5036-4549-be07-c3216e0ca042" width="260"/>
+    <td align="center" width="25%">
+      <b>Contact Developer</b><br><br>
+      <img src="screenshots/03_contact_page.png" width="260" alt="Contact Developer"/><br>
+      <i>Updated Developer contact details with responsive liquid glass card</i>
     </td>
-    <td align="center">
-      <b>Admin Dashboard</b><br><br>
-      <img src="https://github.com/user-attachments/assets/0f105354-041a-4325-90fb-3884aacf307b" width="260"/>
+    <td align="center" width="25%">
+      <b>Admin User Management</b><br><br>
+      <img src="https://github.com/user-attachments/assets/0f105354-041a-4325-90fb-3884aacf307b" width="260" alt="Admin User Management"/><br>
+      <i>User directory with instant activation, deactivation, and deletion controls</i>
     </td>
   </tr>
 
   <tr>
-    <td align="center">
+    <td align="center" width="25%">
       <b>User Dashboard</b><br><br>
-      <img src="https://github.com/user-attachments/assets/27708f2a-c545-4c89-9331-1b33cf062399" width="260"/>
+      <img src="https://github.com/user-attachments/assets/27708f2a-c545-4c89-9331-1b33cf062399" width="260" alt="User Dashboard"/><br>
+      <i>Central security suite with live time, greeting, and analytical tools</i>
     </td>
-    <td align="center">
-      <b>SMS Detector</b><br><br>
-      <img src="https://github.com/user-attachments/assets/2917c677-4f7c-418b-959a-c9ea535a0b55" width="260"/>
+    <td align="center" width="25%">
+      <b>SMS Spam Detector</b><br><br>
+      <img src="https://github.com/user-attachments/assets/2917c677-4f7c-418b-959a-c9ea535a0b55" width="260" alt="SMS Detector"/><br>
+      <i>Real-time NLP message classification powered by Google Gemini 2.5 Flash</i>
     </td>
-    <td align="center">
-      <b>QR Scanner</b><br><br>
-      <img src="https://github.com/user-attachments/assets/da1bfb57-6c28-4420-89b9-2a2207a74955" width="260"/>
+    <td align="center" width="25%">
+      <b>QR Threat Scanner</b><br><br>
+      <img src="https://github.com/user-attachments/assets/da1bfb57-6c28-4420-89b9-2a2207a74955" width="260" alt="QR Threat Scanner"/><br>
+      <i>Live camera viewfinder & file upload with OpenCV URL threat extraction</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Behavior Analysis</b><br><br>
-      <img src="https://github.com/user-attachments/assets/d7914249-ccfa-4274-b495-619f865ad631" width="260"/>
+      <img src="https://github.com/user-attachments/assets/d7914249-ccfa-4274-b495-619f865ad631" width="260" alt="Behavior Analysis"/><br>
+      <i>Account anomaly detection based on login hour and IP risk profiling</i>
     </td>
   </tr>
 
   <tr>
-    <td align="center">
-      <b>Anomaly Detection Training Results</b><br><br>
-      <img src="https://github.com/user-attachments/assets/4276f12d-2c00-4d85-bd35-66d0226c169d" width="260"/>
+    <td align="center" width="25%">
+      <b>ML Training Results</b><br><br>
+      <img src="https://github.com/user-attachments/assets/4276f12d-2c00-4d85-bd35-66d0226c169d" width="260" alt="ML Training Results"/><br>
+      <i>Classification reports and confusion matrix heatmap in liquid glass UI</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Email Phishing Analyzer</b><br><br>
-      <img src="https://github.com/user-attachments/assets/608c93c5-9950-485b-b331-2b464541b1f2" width="260"/>
+      <img src="https://github.com/user-attachments/assets/608c93c5-9950-485b-b331-2b464541b1f2" width="260" alt="Email Phishing Analyzer"/><br>
+      <i>Psychological trigger detection & urgency analysis on incoming emails</i>
     </td>
-    <td align="center">
+    <td align="center" width="25%">
       <b>Phishing Analyzer Output</b><br><br>
-      <img src="https://github.com/user-attachments/assets/f53ab97a-f4da-4cc5-9fa9-84f929fca953" width="260"/>
+      <img src="https://github.com/user-attachments/assets/f53ab97a-f4da-4cc5-9fa9-84f929fca953" width="260" alt="Phishing Analyzer Output"/><br>
+      <i>Verdict breakdown with itemized red flags and classification scores</i>
     </td>
-    <td align="center">
-      <b>Password Checker</b><br><br>
-      <img src="https://github.com/user-attachments/assets/ab778f6f-9d46-41e3-a5be-f0a5623dd5bd" width="260"/>
+    <td align="center" width="25%">
+      <b>Password Breach Checker</b><br><br>
+      <img src="https://github.com/user-attachments/assets/ab778f6f-9d46-41e3-a5be-f0a5623dd5bd" width="260" alt="Password Breach Checker"/><br>
+      <i>k-Anonymity SHA-1 zero-knowledge audit against breached credentials</i>
     </td>
   </tr>
 </table>

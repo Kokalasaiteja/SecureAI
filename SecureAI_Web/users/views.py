@@ -734,18 +734,62 @@ from django.shortcuts import redirect
 import os
 import shutil
 
-def download_apk(request):
-    """Directly serves the compiled Android ARM64 APK from SecureAI_Web/media/ with proper filename and attachment headers"""
-    apk_filename = 'app-arm64-v8a-release.apk'
-    apk_path = os.path.join(settings.MEDIA_ROOT, apk_filename)
-    if not os.path.exists(apk_path):
-        fallback_path = os.path.join(str(settings.BASE_DIR.parent), 'SecureAI_Mobile_app', 'build', 'app', 'outputs', 'flutter-apk', apk_filename)
-        if os.path.exists(fallback_path):
-            shutil.copy2(fallback_path, apk_path)
+def download_apk(request, apk_type=None):
+    """Directly serves the freshly compiled Android APK from SecureAI_Mobile_app/build/app/outputs/flutter-apk/ (or synced SecureAI_Web/media/)"""
+    target = request.GET.get('type', apk_type or 'v8')
+    if target in ['universal', 'all', 'app-release.apk']:
+        apk_filename = 'app-release.apk'
+    else:
+        apk_filename = 'app-arm64-v8a-release.apk'
+    
+    flutter_apk_path = os.path.join(str(settings.BASE_DIR.parent), 'SecureAI_Mobile_app', 'build', 'app', 'outputs', 'flutter-apk', apk_filename)
+    media_apk_path = os.path.join(settings.MEDIA_ROOT, apk_filename)
 
-    if os.path.exists(apk_path):
-        response = FileResponse(open(apk_path, 'rb'), as_attachment=True, filename=apk_filename)
+    # Prioritize the fresh build from flutter-apk and synchronize to media
+    target_path = None
+    if os.path.exists(flutter_apk_path):
+        target_path = flutter_apk_path
+        if not os.path.exists(media_apk_path) or os.path.getmtime(flutter_apk_path) > os.path.getmtime(media_apk_path):
+            try:
+                shutil.copy2(flutter_apk_path, media_apk_path)
+            except Exception:
+                pass
+    elif os.path.exists(media_apk_path):
+        target_path = media_apk_path
+
+    if target_path and os.path.exists(target_path):
+        response = FileResponse(open(target_path, 'rb'), as_attachment=True, filename=apk_filename)
         response['Content-Type'] = 'application/vnd.android.package-archive'
         response['Content-Disposition'] = f'attachment; filename="{apk_filename}"'
         return response
-    raise Http404("Android APK package is currently compiling. Please refresh in a moment.")
+    raise Http404(f"Android APK package ({apk_filename}) is currently unavailable. Please refresh in a moment.")
+
+def favicon_view(request):
+    """Directly serves favicon.png with HTTP 200 and image/png headers to guarantee visibility on Render and local"""
+    candidates = [
+        os.path.join(settings.BASE_DIR, 'static', 'favicon.png'),
+        os.path.join(settings.BASE_DIR, 'staticfiles', 'favicon.png'),
+        os.path.join(settings.MEDIA_ROOT, 'favicon.png'),
+        os.path.join(str(settings.BASE_DIR.parent), 'SecureAI_Mobile_app', 'assets', 'images', 'app_icon.png'),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            resp = FileResponse(open(path, 'rb'), content_type='image/png')
+            resp['Cache-Control'] = 'public, max-age=86400'
+            return resp
+    raise Http404("Favicon not found")
+
+def favicon_ico_view(request):
+    """Directly serves favicon.ico with HTTP 200 and image/x-icon headers"""
+    candidates = [
+        os.path.join(settings.BASE_DIR, 'static', 'favicon.ico'),
+        os.path.join(settings.BASE_DIR, 'staticfiles', 'favicon.ico'),
+        os.path.join(settings.MEDIA_ROOT, 'favicon.ico'),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            resp = FileResponse(open(path, 'rb'), content_type='image/x-icon')
+            resp['Cache-Control'] = 'public, max-age=86400'
+            return resp
+    return favicon_view(request)
+

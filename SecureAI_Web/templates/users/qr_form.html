@@ -2,31 +2,267 @@
 {% block bg_color %}bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 gradient-bg{% endblock %}
 {% block content %}
 
-
 <!-- Main Layout -->
 <div class="flex justify-center items-center py-4 sm:py-8">
-  <div class="bg-gray-800 bg-opacity-80 w-full max-w-xl text-white p-4 sm:p-8 rounded-xl sm:rounded-2xl shadow-2xl animate-slide-up border border-gray-700">
+  <div class="glass-card w-full max-w-xl text-white p-5 sm:p-8 rounded-2xl shadow-2xl animate-slide-up border border-white/20">
     <div class="text-center mb-6">
-      <img src="https://cdn-icons-png.flaticon.com/512/888/888879.png" alt="QR icon" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4">
-      <h2 class="text-2xl sm:text-3xl font-bold">📸 QR Code Classifier</h2>
-      <p class="text-xs sm:text-sm text-gray-200 mt-1">Powered by Gemini + LangChain for threat detection</p>
+      <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 rounded-2xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center shadow-inner">
+        <i class="fas fa-qrcode text-3xl sm:text-4xl text-purple-300"></i>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">QR Code Threat Scanner</h2>
+      <p class="text-xs sm:text-sm text-gray-300 mt-1">AI-powered URL extraction and quishing prevention (Gemini + LangChain)</p>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" class="space-y-4 sm:space-y-5">
-      {% csrf_token %}
+    {% if error %}
+    <div class="mb-5 p-3.5 bg-red-600/80 border border-red-400/50 rounded-xl text-white text-xs sm:text-sm flex items-center space-x-2">
+      <i class="fas fa-exclamation-triangle text-red-200"></i>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
 
-      <div>
-        <label class="block mb-2 text-xs sm:text-sm font-semibold text-white">Upload QR Code Image:</label>
-        <input type="file" name="qr_image" accept="image/*" required class="w-full bg-gray-900 text-white rounded-lg p-2.5 border border-gray-700 text-xs sm:text-sm">
+    <!-- Camera / Upload Mode Tabs -->
+    <div class="grid grid-cols-2 gap-2 p-1.5 bg-gray-950/60 rounded-xl border border-white/10 mb-6">
+      <button type="button" id="tab-camera-btn" onclick="switchMode('camera')" class="py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 bg-purple-600 text-white shadow-md">
+        <i class="fas fa-camera"></i>
+        <span>Live Camera</span>
+      </button>
+      <button type="button" id="tab-upload-btn" onclick="switchMode('upload')" class="py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 text-gray-400 hover:text-white">
+        <i class="fas fa-file-upload"></i>
+        <span>Upload Image</span>
+      </button>
+    </div>
+
+    <!-- Mode 1: Live Camera Scanner -->
+    <div id="camera-section" class="space-y-4">
+      <div id="camera-permission-alert" class="hidden p-3 bg-yellow-500/20 border border-yellow-400/40 rounded-xl text-yellow-200 text-xs">
+        <i class="fas fa-info-circle mr-1"></i>
+        <span id="camera-alert-text">Camera access is required to capture a live QR code photo.</span>
       </div>
 
-      <div class="text-center pt-2">
-        <button type="submit"
-          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md">
-          Scan & Classify
+      <!-- Video Feed Container -->
+      <div class="relative w-full aspect-square max-w-sm mx-auto rounded-2xl overflow-hidden bg-black/60 border border-white/20 shadow-inner flex items-center justify-center">
+        <video id="camera-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+        <img id="captured-preview" class="w-full h-full object-contain hidden" alt="Captured QR">
+
+        <!-- Standby Placeholder -->
+        <div id="camera-placeholder" class="text-center p-6 space-y-3">
+          <i class="fas fa-camera-retro text-4xl text-gray-500"></i>
+          <p class="text-xs text-gray-400">Click below to activate your device's camera and capture a QR code photo.</p>
+        </div>
+
+        <!-- Scanning Reticle Overlay -->
+        <div id="camera-reticle" class="hidden absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div class="w-48 h-48 border-2 border-dashed border-teal-400/80 rounded-2xl relative shadow-[0_0_20px_rgba(45,212,191,0.35)]">
+            <span class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-teal-400"></span>
+            <span class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-teal-400"></span>
+            <span class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-teal-400"></span>
+            <span class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-teal-400"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera Action Buttons -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <button type="button" id="start-camera-btn" onclick="startCamera()" class="btn-3d w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center space-x-2">
+          <i class="fas fa-video"></i>
+          <span>Start Camera</span>
+        </button>
+        <button type="button" id="snap-camera-btn" onclick="takeSnapshot()" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center space-x-2 hidden">
+          <i class="fas fa-camera"></i>
+          <span>Capture & Scan</span>
+        </button>
+        <button type="button" id="retake-camera-btn" onclick="retakePhoto()" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 border border-white/20 text-gray-300 px-5 py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center space-x-2 hidden">
+          <i class="fas fa-redo"></i>
+          <span>Retake</span>
         </button>
       </div>
+    </div>
+
+    <!-- Mode 2: Standard Upload Form -->
+    <div id="upload-section" class="hidden space-y-4">
+      <form id="qr-form" method="POST" enctype="multipart/form-data" class="space-y-4 sm:space-y-5">
+        {% csrf_token %}
+        <input type="file" name="qr_image" id="qr-file-input" accept="image/*" class="hidden" onchange="previewUpload(this)">
+
+        <div onclick="document.getElementById('qr-file-input').click()" class="cursor-pointer border-2 border-dashed border-white/20 hover:border-purple-400/60 rounded-2xl p-6 text-center transition-all bg-gray-950/40 hover:bg-purple-900/10">
+          <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center text-2xl">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <p class="text-sm font-semibold text-white">Click to Browse or Drop QR Image</p>
+          <p class="text-xs text-gray-400 mt-1">Supports PNG, JPG, JPEG, WEBP</p>
+          <p id="file-name-display" class="text-xs font-semibold text-teal-400 mt-2 hidden"></p>
+        </div>
+
+        <div id="upload-preview-container" class="hidden text-center">
+          <img id="upload-preview-img" class="w-40 h-40 object-contain mx-auto rounded-xl border border-white/20 bg-black/40 p-2 shadow-md" alt="Preview">
+        </div>
+
+        <div class="text-center pt-2">
+          <button type="submit" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold text-sm sm:text-base shadow-lg flex items-center justify-center space-x-2 mx-auto">
+            <i class="fas fa-search"></i>
+            <span>Scan & Classify</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Hidden form for submitting camera capture -->
+    <form id="camera-submit-form" method="POST" enctype="multipart/form-data" class="hidden">
+      {% csrf_token %}
+      <input type="file" name="qr_image" id="camera-hidden-file">
     </form>
   </div>
 </div>
+
+<script>
+  let activeStream = null;
+
+  function switchMode(mode) {
+    const cameraSec = document.getElementById('camera-section');
+    const uploadSec = document.getElementById('upload-section');
+    const camBtn = document.getElementById('tab-camera-btn');
+    const upBtn = document.getElementById('tab-upload-btn');
+
+    if (mode === 'camera') {
+      cameraSec.classList.remove('hidden');
+      uploadSec.classList.add('hidden');
+      camBtn.className = "py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 bg-purple-600 text-white shadow-md";
+      upBtn.className = "py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 text-gray-400 hover:text-white";
+    } else {
+      stopCamera();
+      cameraSec.classList.add('hidden');
+      uploadSec.classList.remove('hidden');
+      upBtn.className = "py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 bg-purple-600 text-white shadow-md";
+      camBtn.className = "py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center space-x-2 text-gray-400 hover:text-white";
+    }
+  }
+
+  async function startCamera() {
+    const alertBox = document.getElementById('camera-permission-alert');
+    const alertText = document.getElementById('camera-alert-text');
+    const video = document.getElementById('camera-video');
+    const placeholder = document.getElementById('camera-placeholder');
+    const reticle = document.getElementById('camera-reticle');
+    const startBtn = document.getElementById('start-camera-btn');
+    const snapBtn = document.getElementById('snap-camera-btn');
+    const preview = document.getElementById('captured-preview');
+    const retakeBtn = document.getElementById('retake-camera-btn');
+
+    preview.classList.add('hidden');
+    retakeBtn.classList.add('hidden');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alertBox.classList.remove('hidden');
+      alertText.textContent = "Your browser or device does not have camera hardware support. Switching to upload.";
+      setTimeout(() => switchMode('upload'), 2500);
+      return;
+    }
+
+    try {
+      // Ask user permission for live camera with environment/rear camera preferred
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      activeStream = stream;
+      video.srcObject = stream;
+      video.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      reticle.classList.remove('hidden');
+      alertBox.classList.add('hidden');
+      startBtn.classList.add('hidden');
+      snapBtn.classList.remove('hidden');
+    } catch (err) {
+      console.warn("Camera access denied or unavailable:", err);
+      alertBox.classList.remove('hidden');
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        alertText.textContent = "Camera permission was denied. Please allow camera access in your browser settings or use image upload.";
+      } else {
+        alertText.textContent = "No active camera found on this device. Switching to upload option.";
+      }
+      setTimeout(() => switchMode('upload'), 3000);
+    }
+  }
+
+  function stopCamera() {
+    if (activeStream) {
+      activeStream.getTracks().forEach(track => track.stop());
+      activeStream = null;
+    }
+    const video = document.getElementById('camera-video');
+    if (video) video.srcObject = null;
+  }
+
+  function takeSnapshot() {
+    const video = document.getElementById('camera-video');
+    const canvas = document.getElementById('camera-canvas');
+    const preview = document.getElementById('captured-preview');
+    const reticle = document.getElementById('camera-reticle');
+    const snapBtn = document.getElementById('snap-camera-btn');
+    const retakeBtn = document.getElementById('retake-camera-btn');
+
+    if (!video.videoWidth) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/png');
+    preview.src = dataUrl;
+    preview.classList.remove('hidden');
+    video.classList.add('hidden');
+    reticle.classList.add('hidden');
+    snapBtn.classList.add('hidden');
+    retakeBtn.classList.remove('hidden');
+
+    // Convert canvas to Blob and submit
+    canvas.toBlob(blob => {
+      const file = new File([blob], "live_camera_qr.png", { type: "image/png" });
+      const container = new DataTransfer();
+      container.items.add(file);
+      const hiddenInput = document.getElementById('camera-hidden-file');
+      hiddenInput.files = container.files;
+
+      // Auto submit camera form with visual feedback
+      snapBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>Analyzing...</span>`;
+      document.getElementById('camera-submit-form').submit();
+    }, 'image/png');
+  }
+
+  function retakePhoto() {
+    const preview = document.getElementById('captured-preview');
+    const video = document.getElementById('camera-video');
+    const reticle = document.getElementById('camera-reticle');
+    const snapBtn = document.getElementById('snap-camera-btn');
+    const retakeBtn = document.getElementById('retake-camera-btn');
+
+    preview.classList.add('hidden');
+    video.classList.remove('hidden');
+    reticle.classList.remove('hidden');
+    snapBtn.classList.remove('hidden');
+    retakeBtn.classList.add('hidden');
+  }
+
+  function previewUpload(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      const display = document.getElementById('file-name-display');
+      const container = document.getElementById('upload-preview-container');
+      const img = document.getElementById('upload-preview-img');
+
+      display.textContent = "Selected: " + input.files[0].name;
+      display.classList.remove('hidden');
+
+      reader.onload = e => {
+        img.src = e.target.result;
+        container.classList.remove('hidden');
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // Cleanup camera stream when navigating away
+  window.addEventListener('beforeunload', stopCamera);
+</script>
 {% endblock %}

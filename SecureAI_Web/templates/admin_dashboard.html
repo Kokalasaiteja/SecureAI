@@ -1,12 +1,14 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - SecureAI</title>
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/media/favicon.png">
-    <link rel="shortcut icon" type="image/png" href="/media/favicon.png">
+    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}?v=3">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=3">
+    <link rel="apple-touch-icon" href="/favicon.png?v=3">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -124,6 +126,23 @@
         }
 
         a { text-decoration: none !important; }
+
+        /* Glowing Live Status Indicator (Visible and Not Visible) */
+        @keyframes glowingBlink {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1.2);
+                box-shadow: 0 0 10px #4ade80, 0 0 20px #22c55e, 0 0 30px rgba(34, 197, 94, 0.7);
+            }
+            50% {
+                opacity: 0;
+                transform: scale(0.6);
+                box-shadow: none;
+            }
+        }
+        .live-glowing-ball {
+            animation: glowingBlink 1.4s ease-in-out infinite;
+        }
     </style>
     <!-- Particles.js CDN -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -149,6 +168,10 @@
             </div>
 
             <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                <a href="/media/app-arm64-v8a-release.apk" download="app-arm64-v8a-release.apk" class="w-full sm:w-auto text-center bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 px-3 sm:px-4 py-2.5 rounded-xl text-teal-200 hover:text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 shadow-md group" title="Download Android App APK">
+                    <i class="fab fa-android text-teal-400 group-hover:scale-110 transition-transform"></i>
+                    <span>Download App</span>
+                </a>
                 <a href="{% url 'admin_home' %}" class="w-full sm:w-auto text-center bg-gray-800/80 hover:bg-gray-800 border border-white/20 px-4 py-2.5 rounded-xl text-gray-200 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2">
                     <i class="fas fa-arrow-left text-indigo-400"></i>
                     <span>Admin Home</span>
@@ -175,7 +198,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 text-xs text-gray-300 bg-gray-900/60 px-3.5 py-1.5 rounded-lg border border-white/10">
-                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-400 live-glowing-ball inline-block"></span>
                     <span>Database Live</span>
                 </div>
             </div>
