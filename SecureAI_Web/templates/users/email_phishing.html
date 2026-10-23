@@ -62,10 +62,75 @@
 
             <div class="bg-gray-900 rounded-xl p-5 sm:p-8 shadow-xl border-l-4 border-blue-500 transform hover:-translate-y-1 transition-all duration-300">
                 <h4 class="text-lg sm:text-xl font-bold text-blue-400 mb-4 flex items-center">
-                    <i class="fas fa-search-dollar mr-2 sm:mr-3 text-xl sm:text-2xl"></i> Explanation & Red Flags
+                    <i class="fas fa-shield-alt mr-2 sm:mr-3 text-xl sm:text-2xl"></i> Explanation & Red Flags
                 </h4>
-                <div class="prose prose-invert max-w-none text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">{{ explanation }}</div>
+                <div id="formatted-explanation" class="space-y-3.5">
+                    <!-- Formatted dynamically without raw asterisks -->
+                </div>
+                <div id="raw-explanation" class="hidden">{{ explanation }}</div>
             </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const rawElem = document.getElementById('raw-explanation');
+                const targetElem = document.getElementById('formatted-explanation');
+                if (!rawElem || !targetElem) return;
+
+                const rawText = rawElem.textContent.trim();
+                if (!rawText) return;
+
+                const lines = rawText.split('\n');
+                let outputHtml = '';
+
+                for (let line of lines) {
+                    let trimmed = line.trim();
+                    if (!trimmed) continue;
+
+                    // Match bullet point with bold prefix: "* **Heading:** text" or "**Heading:** text" or "* Heading: text"
+                    let bulletMatch = trimmed.match(/^[\*\-•]?\s*\*\*([^\*]+)\*\*\s*:?\s*(.*)$/);
+                    if (!bulletMatch) {
+                        bulletMatch = trimmed.match(/^[\*\-•]\s+([^:]+):\s*(.*)$/);
+                    }
+
+                    if (bulletMatch) {
+                        const heading = bulletMatch[1].replace(/[:\*]/g, '').trim();
+                        let body = bulletMatch[2].trim();
+                        // Strip remaining markdown asterisks inside body
+                        body = body.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
+                        body = body.replace(/\\*([^\*]+)\\*/g, '$1');
+
+                        outputHtml += `
+                            <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/50"></span>
+                                <div class="text-gray-300 text-sm sm:text-base leading-relaxed">
+                                    <strong class="text-white font-bold tracking-wide">${heading}:</strong> ${body}
+                                </div>
+                            </div>
+                        `;
+                    } else if (trimmed.startsWith('*') || trimmed.startsWith('-')) {
+                        let cleanText = trimmed.replace(/^[\*\-•]\s*/, '').trim();
+                        cleanText = cleanText.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
+                        cleanText = cleanText.replace(/\\*([^\*]+)\\*/g, '$1');
+
+                        outputHtml += `
+                            <div class="flex items-start space-x-3 p-2.5 rounded-lg bg-gray-800/30 border border-gray-700/40">
+                                <span class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></span>
+                                <div class="text-gray-300 text-sm sm:text-base leading-relaxed">${cleanText}</div>
+                            </div>
+                        `;
+                    } else {
+                        let cleanText = trimmed.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
+                        cleanText = cleanText.replace(/\\*([^\*]+)\\*/g, '$1');
+
+                        outputHtml += `
+                            <p class="text-gray-300 text-sm sm:text-base leading-relaxed">${cleanText}</p>
+                        `;
+                    }
+                }
+
+                targetElem.innerHTML = outputHtml;
+            });
+            </script>
         </div>
         {% endif %}
     </section>

@@ -168,7 +168,7 @@
             </div>
 
             <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                <a href="/media/app-arm64-v8a-release.apk" download="app-arm64-v8a-release.apk" class="w-full sm:w-auto text-center bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 px-3 sm:px-4 py-2.5 rounded-xl text-teal-200 hover:text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 shadow-md group" title="Download Android App APK">
+                <a href="/media/app-release.apk" onclick="openApkModal(event)" class="w-full sm:w-auto text-center bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 px-3 sm:px-4 py-2.5 rounded-xl text-teal-200 hover:text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 shadow-md group cursor-pointer" title="Download Android App APK">
                     <i class="fab fa-android text-teal-400 group-hover:scale-110 transition-transform"></i>
                     <span>Download App</span>
                 </a>
@@ -230,7 +230,7 @@
                             <td class="px-4 py-3.5 whitespace-nowrap text-gray-300">{{ user.mobile }}</td>
                             <!-- Profile Photo -->
                             <td class="px-4 py-3.5 whitespace-nowrap">
-                                <img src="{{ user.image.url }}" alt="{{ user.name }}" class="w-10 h-10 rounded-full object-cover border border-white/20 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
+                                <img src="{% if user.image_base64 %}{{ user.image_base64 }}{% elif user.image %}{{ user.image.url }}{% endif %}" alt="{{ user.name }}" class="w-10 h-10 rounded-full object-cover border border-white/20 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
                             </td>
                             <!-- Status Badge -->
                             <td class="px-4 py-3.5 whitespace-nowrap">
@@ -310,5 +310,6 @@
             }
         });
     </script>
+{% include 'apk_download_modal.html' %}
 </body>
 </html>

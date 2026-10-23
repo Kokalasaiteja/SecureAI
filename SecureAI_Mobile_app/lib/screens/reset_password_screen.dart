@@ -4,6 +4,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/secure_ai_app_bar.dart';
+import '../services/api_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -13,32 +14,87 @@ class ResetPasswordScreen extends StatefulWidget {
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _isLoading = false;
+  String? _targetEmail;
 
-  void _resetPassword() {
-    if (_passwordController.text.length < 6) return;
-    if (_passwordController.text != _confirmController.text) {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args.isNotEmpty && _targetEmail == null) {
+      _targetEmail = args;
+      _emailController.text = args;
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = (_targetEmail != null && _targetEmail!.isNotEmpty)
+        ? _targetEmail!
+        : _emailController.text.trim();
+    final newPassword = _passwordController.text.trim();
+    final confirmPassword = _confirmController.text.trim();
+
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
+        const SnackBar(
+          content: Text("Email address is required."),
+          backgroundColor: Color(0xFFEF4444),
+        ),
       );
       return;
     }
+
+    if (newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password must be at least 6 characters long."),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Passwords do not match. Please verify."),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password updated successfully!")),
-        );
-        Navigator.pushNamedAndRemoveUntil(context, '/user_login', (r) => false);
-      }
-    });
+
+    final res = await ApiService.resetPassword(email, newPassword);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (res['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? "Password updated successfully! Please log in."),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/user_login', (r) => false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? "Failed to reset password. Please try again."),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -46,6 +102,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasEmailArg = _targetEmail != null && _targetEmail!.isNotEmpty;
+
     return Scaffold(
       appBar: SecureAIAppBar.public(
         title: "SecureAI",
@@ -84,12 +142,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            "Create a strong, unique password for your SecureAI account",
+                          Text(
+                            hasEmailArg
+                                ? "Create a new password for account: $_targetEmail"
+                                : "Create a strong, unique password for your SecureAI account",
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF), height: 1.4),
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF), height: 1.4),
                           ),
                           const SizedBox(height: 24),
+
+                          if (!hasEmailArg) ...[
+                            CustomTextField(
+                              controller: _emailController,
+                              label: "Email Address",
+                              hint: "your.email@example.com",
+                              icon: Icons.email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
                           CustomTextField(
                             controller: _passwordController,

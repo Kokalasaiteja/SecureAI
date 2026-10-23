@@ -15,13 +15,17 @@
       <div>
         <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">Login Hour (0 - 23):</label>
         <input type="number" name="login_hour" required min="0" max="23"
+          value="{{ login_hour|default:'' }}"
+          placeholder="e.g. 14"
           class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">
       </div>
 
       <div>
         <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">IP Score (0.0 - 1.0):</label>
         <input type="text" name="ip_score" required pattern="^0(\.\d+)?|1(\.0+)?$"
-          class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400" placeholder="e.g. 0.85">
+          value="{{ ip_score|default:'' }}"
+          placeholder="e.g. 0.85"
+          class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">
       </div>
 
       <div class="text-center pt-2">

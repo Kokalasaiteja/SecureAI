@@ -38,13 +38,25 @@ def register_view(request):
         elif RegisteredUser.objects.filter(name=name).exists():
             msg = "already exist keep any other username."
         else:
-            # Save user with is_active=False. Let Django handle the image saving.
+            # Read image bytes and encode to base64 Data URI for permanent persistent storage
+            b64_str = ''
+            if image:
+                try:
+                    img_bytes = image.read()
+                    image.seek(0)
+                    content_type = getattr(image, 'content_type', 'image/jpeg') or 'image/jpeg'
+                    b64_str = f"data:{content_type};base64," + base64.b64encode(img_bytes).decode('utf-8')
+                except Exception:
+                    b64_str = ''
+
+            # Save user with is_active=False. Both file on disk and base64 in DB are saved.
             RegisteredUser.objects.create(
                 name=name,
                 email=email,
                 mobile=mobile,
                 password=password,
                 image=image,
+                image_base64=b64_str,
                 is_active=False
             )
             msg = "Registered successfully! Wait for admin approval."
@@ -57,6 +69,7 @@ import pytz
 @csrf_exempt
 def user_login(request):
     msg = ''
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == 'POST':
         name = request.POST.get('name')
         password = request.POST.get('password')
@@ -68,17 +81,37 @@ def user_login(request):
                 ist = pytz.timezone('Asia/Kolkata')
                 local_time = timezone.now().astimezone(ist)
 
+                img_url = ''
+                if user.image:
+                    try:
+                        img_url = user.image.url
+                    except Exception:
+                        img_url = ''
+
                 # Save user info in session
                 request.session['user_id'] = user.id
                 request.session['user_name'] = user.name
-                request.session['user_image'] = user.image.url  # image URL
+                request.session['user_image'] = img_url
                 request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
+
+                if is_json:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Login successful!',
+                        'user_name': user.name,
+                        'user_image': img_url,
+                        'login_time': local_time.strftime('%I:%M:%S %p'),
+                    })
 
                 return redirect('user_homepage')
             else:
                 msg = "Your account is not activated yet."
+                if is_json:
+                    return JsonResponse({'success': False, 'message': msg}, status=403)
         except RegisteredUser.DoesNotExist:
             msg = "Invalid credentials."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=401)
 
     return render(request, 'user_login.html', {'msg': msg})
 
@@ -103,7 +136,26 @@ def admin_home(request):
 
 @admin_required
 def admin_dashboard(request):
-    users = RegisteredUser.objects.all()
+    users = RegisteredUser.objects.all().order_by('-id')
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    if is_json:
+        user_list = []
+        for u in users:
+            img_url = ''
+            if u.image:
+                try:
+                    img_url = u.image.url
+                except Exception:
+                    pass
+            user_list.append({
+                'id': u.id,
+                'name': u.name,
+                'email': u.email,
+                'mobile': u.mobile,
+                'image_url': img_url,
+                'is_active': u.is_active,
+            })
+        return JsonResponse({'success': True, 'users': user_list})
     return render(request, 'admin_dashboard.html', {'users': users})
 
 @admin_required
@@ -142,11 +194,27 @@ def home(request):
 def user_homepage(request):
     user_name = request.session.get('user_name')
     user_image = request.session.get('user_image')
+    user_image_b64 = request.session.get('user_image_base64')
+    if not user_image_b64 and request.session.get('user_id'):
+        u = RegisteredUser.objects.filter(id=request.session.get('user_id')).first()
+        if u and u.image_base64:
+            user_image_b64 = u.image_base64
+            request.session['user_image_base64'] = user_image_b64
+    active_image = user_image_b64 or user_image
     login_time = request.session.get('login_time')
+
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    if is_json:
+        return JsonResponse({
+            'success': True,
+            'user_name': user_name,
+            'user_image': active_image,
+            'login_time': login_time,
+        })
 
     context = {
         'user_name': user_name,
-        'user_image': user_image,
+        'user_image': active_image,
         'login_time': login_time,
     }
     return render(request, 'users/user_homepage.html', context)
@@ -179,46 +247,66 @@ def send_otp(email):
 
 @csrf_exempt
 def forgot_password(request):
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
-        email = request.POST.get("email")
+        email = (request.POST.get("email") or '').strip()
 
         if RegisteredUser.objects.filter(email=email).exists():
             otp, error = send_otp(email)
             if error:
+                if is_json:
+                    return JsonResponse({'success': False, 'message': error}, status=500)
                 messages.error(request, error)
             else:
                 request.session["reset_email"] = email  # Store email in session
+                if is_json:
+                    return JsonResponse({'success': True, 'message': 'Verification OTP sent to your registered email.'})
                 return redirect("verify_otp")
         else:
+            if is_json:
+                return JsonResponse({'success': False, 'message': 'Email not registered!'}, status=404)
             messages.error(request, "Email not registered!")
 
     return render(request, "forgot_password.html")
 
 @csrf_exempt
 def verify_otp(request):
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
-        otp_entered = request.POST.get("otp")
-        email = request.session.get("reset_email")
+        otp_entered = (request.POST.get("otp") or '').strip()
+        email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
 
         if otp_storage.get(email) and str(otp_storage[email]) == otp_entered:
+            if is_json:
+                return JsonResponse({'success': True, 'message': 'OTP verified successfully!'})
             return redirect("reset_password")
         else:
+            if is_json:
+                return JsonResponse({'success': False, 'message': 'Invalid OTP code!'}, status=400)
             messages.error(request, "Invalid OTP!")
 
     return render(request, "verify_otp.html")
 
 @csrf_exempt
 def reset_password(request):
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
-        new_password = request.POST.get("new_password")
-        email = request.session.get("reset_email")
+        new_password = (request.POST.get("new_password") or '').strip()
+        email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
 
         if RegisteredUser.objects.filter(email=email).exists():
             user = RegisteredUser.objects.get(email=email)
             user.password = new_password  # Updating password
             user.save()
+            otp_storage.pop(email, None)
+            if is_json:
+                return JsonResponse({'success': True, 'message': 'Password reset successful! Please log in.'})
             messages.success(request, "Password reset successful! Please log in.")
             return redirect("user_login")
+        else:
+            if is_json:
+                return JsonResponse({'success': False, 'message': 'User not found or session expired.'}, status=404)
+            messages.error(request, "User not found or session expired.")
 
     return render(request, "reset_password.html")
 
@@ -385,6 +473,7 @@ def train_anomaly_model(request):
 @csrf_exempt
 @user_required
 def predict_anomaly(request):
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     import os
     import joblib
     from django.conf import settings
@@ -423,7 +512,17 @@ def predict_anomaly(request):
         except Exception as exc:
             error = f"Prediction failed: {exc}"
 
-    return render(request, 'users/predict_anomaly.html', {'prediction': prediction, 'error': error})
+        if is_json:
+            if error:
+                return JsonResponse({'success': False, 'message': error}, status=400)
+            return JsonResponse({'success': True, 'prediction': prediction})
+
+    return render(request, 'users/predict_anomaly.html', {
+        'prediction': prediction,
+        'error': error,
+        'login_hour': request.POST.get('login_hour', '') if request.method == 'POST' else '',
+        'ip_score': request.POST.get('ip_score', '') if request.method == 'POST' else '',
+    })
 
 
 # QR
@@ -793,3 +892,47 @@ def favicon_ico_view(request):
             return resp
     return favicon_view(request)
 
+
+
+import base64
+from pathlib import Path
+from django.views.static import serve
+from django.http import HttpResponse, Http404
+
+def smart_media_serve(request, path):
+    """
+    Self-healing media handler:
+    1. Directly serves existing files from disk.
+    2. If Render restarted and wiped ephemeral disk files in user_images/,
+       it automatically retrieves the original image bytes from PostgreSQL (image_base64),
+       restores the physical file on disk on-the-fly, and serves HTTP 200 OK.
+    """
+    full_path = Path(settings.MEDIA_ROOT) / path
+    if full_path.exists():
+        return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+    # Check if this is an uploaded user image that was cleared by container restart
+    if 'user_images/' in path or path.startswith('user_images/'):
+        filename = os.path.basename(path)
+        user = RegisteredUser.objects.filter(image__endswith=filename).first()
+        if user and user.image_base64:
+            try:
+                b64_data = user.image_base64
+                content_type = 'image/jpeg'
+                if b64_data.startswith('data:'):
+                    header, b64_data = b64_data.split(',', 1)
+                    if ';base64' in header:
+                        content_type = header.replace('data:', '').replace(';base64', '')
+
+                img_bytes = base64.b64decode(b64_data)
+
+                # Reconstruct file on disk so future requests are instant
+                full_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(full_path, 'wb') as f:
+                    f.write(img_bytes)
+
+                return HttpResponse(img_bytes, content_type=content_type)
+            except Exception:
+                pass
+
+    return serve(request, path, document_root=settings.MEDIA_ROOT)

@@ -175,9 +175,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   }
                 },
               ),
+              titleSpacing: 0,
               title: const Text(
                 "Admin Dashboard",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               actions: [
                 IconButton(
@@ -232,30 +233,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               children: [
                 GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentTeal, size: 28),
-                          SizedBox(width: 12),
-                          Text(
-                            "User Account Management",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentTeal, size: 24),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          "User Account Management",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppTheme.accentTeal.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.accentTeal.withValues(alpha: 0.3)),
+                          border: Border.all(color: AppTheme.accentTeal.withValues(alpha: 0.4)),
                         ),
                         child: Text(
                           "${_users.length} Users",
-                          style: const TextStyle(color: AppTheme.accentTeal, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: AppTheme.accentTeal,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -305,11 +313,68 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildUserAvatar(String name, String imageUrl) {
+    if (imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildLocalOrUiAvatar(name),
+      );
+    }
+    return _buildLocalOrUiAvatar(name);
+  }
+
+  Widget _buildLocalOrUiAvatar(String name) {
+    final lower = name.toLowerCase();
+    final bool isKokalaUser = lower.contains('kokala') || lower.contains('sai') || lower.contains('manikanta');
+
+    if (isKokalaUser) {
+      return Image.asset(
+        'assets/images/user_avatar.jpg',
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildUiAvatar(name),
+      );
+    }
+    return _buildUiAvatar(name);
+  }
+
+  Widget _buildUiAvatar(String name) {
+    final avatarUrl = ApiService.getAvatarFallbackUrl(name, background: '6366F1', size: 128);
+    return Image.network(
+      avatarUrl,
+      width: 40,
+      height: 40,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildFallbackAvatar(name),
+    );
+  }
+
+  Widget _buildFallbackAvatar(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return Container(
+      color: const Color(0xFF1F2937),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Color(0xFF818CF8),
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+
   Widget _buildUserCard(Map<String, dynamic> user) {
     final String name = user['name'] ?? 'User';
     final String email = user['email'] ?? '';
     final String mobile = user['mobile'] ?? '';
     final bool isActive = user['is_active'] ?? false;
+    final String imageUrl = user['image_url']?.toString() ?? '';
 
     return Container(
       decoration: BoxDecoration(
@@ -323,25 +388,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: const Color(0xFF1F2937),
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                        style: const TextStyle(color: Color(0xFF818CF8), fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (isActive ? AppTheme.accentTeal : const Color(0xFF6B7280)).withValues(alpha: 0.6),
+                            width: 1.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: _buildUserAvatar(name, imageUrl),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(

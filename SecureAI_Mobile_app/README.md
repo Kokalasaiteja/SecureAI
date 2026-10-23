@@ -185,11 +185,11 @@ flutter build apk --split-per-abi
 ```
 Generated APK outputs:
 - **`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`** (**20.2 MB** - Target for modern 64-bit Android smartphones)
-- **`build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`** (**17.6 MB** - Target for older 32-bit legacy devices)
-- **`build/app/outputs/flutter-apk/app-x86_64-release.apk`** (**21.6 MB** - Target for Android Studio emulators & ChromeOS)
+- **`build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`** (**17.7 MB** - Target for older 32-bit legacy devices)
+- **`build/app/outputs/flutter-apk/app-x86_64-release.apk`** (**21.7 MB** - Target for Android Studio emulators & ChromeOS)
 
 > [!TIP]
-> Both the lightweight **`app-arm64-v8a-release.apk`** (20.2 MB) and universal all-device **`app-release.apk`** (54 MB) are hosted on the website and directly downloadable from the navigation bar:
+> Both the lightweight **`app-arm64-v8a-release.apk`** (20.2 MB) and universal all-device **`app-release.apk`** (54.3 MB) are hosted on the website and directly downloadable from the navigation bar:
 > - Universal APK (All Devices): [https://secureai-7wgj.onrender.com/media/app-release.apk](https://secureai-7wgj.onrender.com/media/app-release.apk)
 > - 64-bit v8a APK: [https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)
 

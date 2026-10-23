@@ -66,11 +66,11 @@
         padding: 12px;
         border-radius: 8px;
         overflow-x: auto;
-        font-size: 0.75rem;
-        line-height: 1.5;
+        font-size: 0.8rem;
+        line-height: 1.6;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        white-space: pre-wrap;
-        word-break: break-word;
+        white-space: pre;
+        word-break: normal;
     }
 
     @media (min-width: 640px) {
@@ -136,7 +136,25 @@
                 <i class="fas fa-brain text-teal-400"></i>
                 {{ item.name }}
             </h3>
-            <pre>{{ item.report }}</pre>
+            <div class="report-table-wrapper mb-6 overflow-hidden rounded-xl border border-white/10 bg-gray-950/60 shadow-xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs sm:text-sm text-left text-gray-200 border-collapse">
+                        <thead class="text-[11px] sm:text-xs uppercase bg-white/5 text-teal-300 font-bold tracking-wider border-b border-white/10">
+                            <tr>
+                                <th class="py-3 px-4 text-left">Class / Metric</th>
+                                <th class="py-3 px-4 text-right">Precision</th>
+                                <th class="py-3 px-4 text-right">Recall</th>
+                                <th class="py-3 px-4 text-right">F1-Score</th>
+                                <th class="py-3 px-4 text-right">Support</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono report-table-body">
+                            <!-- Populated dynamically from classification report -->
+                        </tbody>
+                    </table>
+                </div>
+                <pre class="raw-report-pre hidden p-3 text-xs overflow-x-auto whitespace-pre font-mono">{{ item.report }}</pre>
+            </div>
             <div class="flex flex-col items-center mt-6">
                 <h4 class="text-xl font-semibold mb-4 text-teal-400"><i class="fas fa-th-large mr-2"></i>Confusion Matrix</h4>
                 
@@ -180,5 +198,83 @@
         </div>
     {% endfor %}
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.model-block').forEach((block) => {
+        const rawPre = block.querySelector('.raw-report-pre');
+        const tbody = block.querySelector('.report-table-body');
+        if (!rawPre || !tbody) return;
+
+        const rawText = rawPre.textContent.trim();
+        const lines = rawText.split('\n');
+        let htmlRows = '';
+
+        for (let line of lines) {
+            line = line.trim();
+            if (!line || line.startsWith('precision')) continue;
+
+            if (line.startsWith('accuracy')) {
+                const parts = line.split(/\s+/);
+                if (parts.length >= 3) {
+                    htmlRows += `
+                        <tr class="bg-white/[0.02] hover:bg-white/5 transition">
+                            <td class="py-2.5 px-4 font-bold text-teal-300 font-sans">Accuracy</td>
+                            <td class="py-2.5 px-4 text-right text-gray-400">—</td>
+                            <td class="py-2.5 px-4 text-right text-gray-400">—</td>
+                            <td class="py-2.5 px-4 text-right font-bold text-white">${parts[1]}</td>
+                            <td class="py-2.5 px-4 text-right text-gray-300">${parts[2]}</td>
+                        </tr>
+                    `;
+                }
+                continue;
+            }
+
+            let name = '';
+            let rest = line;
+            let isAvg = false;
+
+            if (line.startsWith('macro avg')) {
+                name = 'Macro Avg';
+                rest = line.replace('macro avg', '').trim();
+                isAvg = true;
+            } else if (line.startsWith('weighted avg')) {
+                name = 'Weighted Avg';
+                rest = line.replace('weighted avg', '').trim();
+                isAvg = true;
+            } else {
+                const m = line.match(/^([a-zA-Z0-9_-]+)\s+(.*)$/);
+                if (m) {
+                    name = m[1];
+                    rest = m[2].trim();
+                }
+            }
+
+            const nums = rest.split(/\s+/);
+            if (nums.length >= 4) {
+                const rowClass = isAvg ? 'bg-white/[0.03] font-semibold text-indigo-200' : 'hover:bg-white/5 text-gray-200';
+                const nameDisplay = isAvg ? `<span class="font-sans text-teal-300">${name}</span>` : `<span class="font-sans font-bold text-white">${name}</span>`;
+
+                htmlRows += `
+                    <tr class="${rowClass} transition">
+                        <td class="py-2.5 px-4">${nameDisplay}</td>
+                        <td class="py-2.5 px-4 text-right text-teal-300 font-bold">${nums[0]}</td>
+                        <td class="py-2.5 px-4 text-right text-indigo-300 font-bold">${nums[1]}</td>
+                        <td class="py-2.5 px-4 text-right text-pink-300 font-bold">${nums[2]}</td>
+                        <td class="py-2.5 px-4 text-right text-gray-300">${nums[3]}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        if (htmlRows) {
+            tbody.innerHTML = htmlRows;
+        } else {
+            rawPre.classList.remove('hidden');
+        }
+    });
+});
+</script>
 
 {% endblock %}

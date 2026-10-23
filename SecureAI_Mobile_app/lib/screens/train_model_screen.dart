@@ -206,28 +206,8 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Pre Classification Report Block
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Text(
-                report,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: Colors.white,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ),
+          // Structured Classification Metrics Table
+          _buildClassificationTable(report),
           const SizedBox(height: 18),
 
           // Confusion Matrix Header
@@ -413,4 +393,236 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
       ),
     );
   }
+
+  Widget _buildClassificationTable(String report) {
+    final List<Map<String, String>> rows = [];
+
+    final lines = report
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    for (final line in lines) {
+      if (line.toLowerCase().contains('precision') && line.toLowerCase().contains('recall')) {
+        continue; // Skip header line
+      }
+
+      if (line.toLowerCase().contains('accuracy')) {
+        final matches = RegExp(r'[\d\.]+').allMatches(line).map((m) => m.group(0)!).toList();
+        if (matches.length >= 2) {
+          rows.add({
+            'class': 'Accuracy',
+            'precision': '-',
+            'recall': '-',
+            'f1': matches[matches.length - 2],
+            'support': matches.last,
+            'isHighlight': 'true',
+          });
+        }
+      } else if (line.toLowerCase().contains('macro avg')) {
+        final matches = RegExp(r'[\d\.]+').allMatches(line).map((m) => m.group(0)!).toList();
+        if (matches.length >= 4) {
+          rows.add({
+            'class': 'Macro Avg',
+            'precision': matches[0],
+            'recall': matches[1],
+            'f1': matches[2],
+            'support': matches[3],
+            'isHighlight': 'false',
+          });
+        }
+      } else if (line.toLowerCase().contains('weighted avg')) {
+        final matches = RegExp(r'[\d\.]+').allMatches(line).map((m) => m.group(0)!).toList();
+        if (matches.length >= 4) {
+          rows.add({
+            'class': 'Weighted Avg',
+            'precision': matches[0],
+            'recall': matches[1],
+            'f1': matches[2],
+            'support': matches[3],
+            'isHighlight': 'false',
+          });
+        }
+      } else {
+        final matches = RegExp(r'[\d\.]+').allMatches(line).map((m) => m.group(0)!).toList();
+        if (matches.length == 4) {
+          final labelPart = line.split(RegExp(r'[\d\.]+')).first.trim();
+          final label = labelPart.isNotEmpty ? labelPart : 'Class';
+          rows.add({
+            'class': label,
+            'precision': matches[0],
+            'recall': matches[1],
+            'f1': matches[2],
+            'support': matches[3],
+            'isHighlight': 'false',
+          });
+        } else if (matches.length >= 5) {
+          var label = matches[0];
+          if (label == '0') label = 'Normal';
+          if (label == '1') label = 'Anomaly';
+          rows.add({
+            'class': label,
+            'precision': matches[1],
+            'recall': matches[2],
+            'f1': matches[3],
+            'support': matches[4],
+            'isHighlight': 'false',
+          });
+        }
+      }
+    }
+
+    if (rows.isEmpty) {
+      // Fallback in case raw text cannot be parsed
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Text(
+            report,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: Colors.white,
+              height: 1.4,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Table Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            color: const Color(0xFF1E293B),
+            child: Row(
+              children: const [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    "Metric",
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "Precision",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "Recall",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "F1-Score",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2DD4BF)),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "Support",
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Table Rows
+          for (int i = 0; i < rows.length; i++) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              color: i.isOdd ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      rows[i]['class'] ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: rows[i]['isHighlight'] == 'true' ? FontWeight.bold : FontWeight.w600,
+                        color: rows[i]['class'] == 'Anomaly'
+                            ? const Color(0xFFFDA4AF)
+                            : (rows[i]['class'] == 'Normal'
+                                ? const Color(0xFF5EEAD4)
+                                : Colors.white),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      rows[i]['precision'] ?? '-',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      rows[i]['recall'] ?? '-',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFFE2E8F0)),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      rows[i]['f1'] ?? '-',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2DD4BF),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      rows[i]['support'] ?? '-',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i < rows.length - 1)
+              const Divider(height: 1, thickness: 0.6, color: Color(0xFF1E293B)),
+          ],
+        ],
+      ),
+    );
+  }
+
 }

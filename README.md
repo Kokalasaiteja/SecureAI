@@ -15,10 +15,10 @@ An enterprise-grade, dual-platform security analytics framework designed to proa
 - **🌍 Production Website**: [https://secureai-7wgj.onrender.com](https://secureai-7wgj.onrender.com)
 - **📽 Video Demonstration**: [Watch SecureAI in Action on LinkedIn](https://www.linkedin.com/posts/sai-teja-kokala-245a12299_ai-cybersecurity-machinelearning-ugcPost-7476167691737714688-QWWw)
 - **📲 Direct Android App Downloads**:
-  - **Universal Fat APK (Guaranteed for all devices)**: [`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk) | Local: [`SecureAI_Web/media/app-release.apk`](./SecureAI_Web/media/app-release.apk) *(54 MB - All ABIs: ARMv7 32-bit, ARM64-v8a, x86_64 across Android 5.0 to 16)*
+  - **Universal Fat APK (Guaranteed for all devices)**: [`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk) | Local: [`SecureAI_Web/media/app-release.apk`](./SecureAI_Web/media/app-release.apk) *(54.3 MB - All ABIs: ARMv7 32-bit, ARM64-v8a, x86_64 across Android 5.0 to 16)*
   - **Lightweight 64-bit APK (Modern smartphones)**: [`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk) | Local: [`SecureAI_Web/media/app-arm64-v8a-release.apk`](./SecureAI_Web/media/app-arm64-v8a-release.apk) *(20.2 MB - 64-bit ARM smartphones)*
-  - **32-bit Legacy APK (Older phones)**: [`app-armeabi-v7a-release.apk`](https://secureai-7wgj.onrender.com/media/app-armeabi-v7a-release.apk) | Local: [`SecureAI_Web/media/app-armeabi-v7a-release.apk`](./SecureAI_Web/media/app-armeabi-v7a-release.apk) *(17.6 MB - 32-bit ARM smartphones)*
-  - **x86_64 Android Emulator APK**: [`app-x86_64-release.apk`](https://secureai-7wgj.onrender.com/media/app-x86_64-release.apk) | Local: [`SecureAI_Web/media/app-x86_64-release.apk`](./SecureAI_Web/media/app-x86_64-release.apk) *(21.6 MB - Android Studio emulators & ChromeOS)*
+  - **32-bit Legacy APK (Older phones)**: [`app-armeabi-v7a-release.apk`](https://secureai-7wgj.onrender.com/media/app-armeabi-v7a-release.apk) | Local: [`SecureAI_Web/media/app-armeabi-v7a-release.apk`](./SecureAI_Web/media/app-armeabi-v7a-release.apk) *(17.7 MB - 32-bit ARM smartphones)*
+  - **x86_64 Android Emulator APK**: [`app-x86_64-release.apk`](https://secureai-7wgj.onrender.com/media/app-x86_64-release.apk) | Local: [`SecureAI_Web/media/app-x86_64-release.apk`](./SecureAI_Web/media/app-x86_64-release.apk) *(21.7 MB - Android Studio emulators & ChromeOS)*
 
 > [!NOTE]
 > **Cloud Server Spin-Up Latency**: The cloud backend is hosted on Render's free tier. When the server is in an idle sleep state, the initial wake-up request may take approximately **60–75 seconds** (measured cold start: ~75s). Once awake, subsequent requests respond in under **1 second** (measured warm transfer: ~0.77s). The mobile app includes a built-in `ServerWakeOverlay` that monitors connection readiness.
@@ -37,9 +37,9 @@ SecureAI-main/
 │   ├── manage.py                  # Django administrative script
 │   ├── media/                     # Stored assets, ML models (.pkl), and APK downloads
 │   │   ├── app-arm64-v8a-release.apk # 64-bit optimized APK build (20.2 MB)
-│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (17.6 MB)
-│   │   ├── app-x86_64-release.apk    # Emulator APK build (21.6 MB)
-│   │   └── app-release.apk           # Universal all-device APK build (54.2 MB)
+│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (17.7 MB)
+│   │   ├── app-x86_64-release.apk    # Emulator APK build (21.7 MB)
+│   │   └── app-release.apk           # Universal all-device APK build (54.3 MB)
 │   ├── templates/                 # Liquid glass HTML templates
 │   └── users/                     # Security detection views and models
 └── SecureAI_Mobile_app/           # Cross-platform Flutter Android mobile application
@@ -109,8 +109,8 @@ flutter build apk --split-per-abi
 ```
 Generated APK outputs:
 - `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (20.2 MB - 64-bit phones)
-- `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` (17.6 MB - 32-bit legacy)
-- `build/app/outputs/flutter-apk/app-x86_64-release.apk` (21.6 MB - Emulators)
+- `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` (17.7 MB - 32-bit legacy)
+- `build/app/outputs/flutter-apk/app-x86_64-release.apk` (21.7 MB - Emulators)
 
 ---
 
@@ -153,10 +153,10 @@ Why do we provide both a **Universal Fat APK** and a **Split ABI APK**?
 
 | APK Package | Size | Architecture (ABI) | Compatible Devices |
 | :--- | :--- | :--- | :--- |
-| **`app-release.apk`** *(Universal Build)* | **~54 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
+| **`app-release.apk`** *(Universal Build)* | **~54.3 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
 | **`app-arm64-v8a-release.apk`** *(Targeted Build)* | **~20.2 MB** | **64-bit ARM only** (`arm64-v8a`) | Modern 64-bit Android smartphones (Snapdragon, MediaTek, Exynos, Tensor) |
-| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~17.6 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
-| **`app-x86_64-release.apk`** *(Emulator Build)* | **~21.6 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
+| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~17.7 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
+| **`app-x86_64-release.apk`** *(Emulator Build)* | **~21.7 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
 
 > [!TIP]
 > **Recommendation**: If you are unsure of your Android device's processor architecture, download **[`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk)** to ensure guaranteed installation across all phone brands and Android versions. For modern phones with fast downloads, **[`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)** is 60% lighter!

@@ -61,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
 
-                      // User Avatar (1:1 with ui-avatars.com in web)
+                      // User Avatar (Uploaded image with fallback to initials)
                       Container(
                         width: 104,
                         height: 104,
@@ -77,19 +77,11 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
                         child: ClipOval(
-                          child: Container(
-                            color: const Color(0xFF0D9488),
-                            child: Center(
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                            ),
+                          child: FutureBuilder<String?>(
+                            future: ApiService.getCurrentUserImageUrl(),
+                            builder: (context, snapshot) {
+                              return _buildUserAvatar(userName, snapshot.data, initials);
+                            },
                           ),
                         ),
                       ),
@@ -211,4 +203,64 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _buildUserAvatar(String userName, String? imgUrl, String initials) {
+    if (imgUrl != null && imgUrl.isNotEmpty) {
+      return Image.network(
+        imgUrl,
+        width: 104,
+        height: 104,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildLocalOrUiAvatar(userName, initials),
+      );
+    }
+    return _buildLocalOrUiAvatar(userName, initials);
+  }
+
+  static Widget _buildLocalOrUiAvatar(String userName, String initials) {
+    final lowerName = userName.toLowerCase();
+    final bool isKokalaUser = lowerName.contains('kokala') || lowerName.contains('manikanta') || lowerName.contains('sai');
+
+    if (isKokalaUser) {
+      return Image.asset(
+        'assets/images/user_avatar.jpg',
+        width: 104,
+        height: 104,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildUiAvatar(userName, initials),
+      );
+    }
+    return _buildUiAvatar(userName, initials);
+  }
+
+  static Widget _buildUiAvatar(String userName, String initials) {
+    final avatarUrl = ApiService.getAvatarFallbackUrl(userName, background: '0D9488', size: 256);
+    return Image.network(
+      avatarUrl,
+      width: 104,
+      height: 104,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildFallbackAvatar(initials),
+    );
+  }
+
+  static Widget _buildFallbackAvatar(String initials) {
+    return Container(
+      color: const Color(0xFF0D9488),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            fontSize: 38,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
 }

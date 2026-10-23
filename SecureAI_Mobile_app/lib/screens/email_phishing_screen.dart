@@ -318,14 +318,7 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            explanation,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFD1D5DB),
-                              height: 1.5,
-                            ),
-                          ),
+                          _buildFormattedExplanation(explanation),
                         ],
                       ),
                     ),
@@ -338,4 +331,135 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
       ),
     );
   }
+
+  Widget _buildFormattedExplanation(String rawText) {
+    if (rawText.trim().isEmpty) {
+      return const Text(
+        "No detailed explanation provided.",
+        style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+      );
+    }
+
+    final rawLines = rawText.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final List<Widget> items = [];
+
+    for (final rawLine in rawLines) {
+      bool isBullet = false;
+      String line = rawLine;
+
+      if (line.startsWith('* ') || line.startsWith('- ') || line.startsWith('• ')) {
+        isBullet = true;
+        line = line.substring(2).trim();
+      }
+
+      // Parse bold segments (**bold**) into TextSpans
+      final parts = RegExp(r'(\b|\B)(\*\*.*?\*\*)(\b|\B)').allMatches(line);
+      final List<InlineSpan> spans = [];
+
+      int lastIndex = 0;
+      for (final match in parts) {
+        final matchStart = match.start;
+        final matchEnd = match.end;
+
+        if (matchStart > lastIndex) {
+          spans.add(TextSpan(
+            text: line.substring(lastIndex, matchStart),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.normal,
+              color: Color(0xFFD1D5DB),
+              height: 1.5,
+            ),
+          ));
+        }
+
+        final matchText = match.group(0)!;
+        final boldContent = matchText.replaceAll('**', '').trim();
+        spans.add(TextSpan(
+          text: boldContent.endsWith(':') ? '$boldContent ' : boldContent,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            height: 1.5,
+          ),
+        ));
+
+        lastIndex = matchEnd;
+      }
+
+      if (lastIndex < line.length) {
+        spans.add(TextSpan(
+          text: line.substring(lastIndex),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.normal,
+            color: Color(0xFFD1D5DB),
+            height: 1.5,
+          ),
+        ));
+      }
+
+      if (spans.isEmpty) {
+        spans.add(TextSpan(
+          text: line.replaceAll('**', ''),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.normal,
+            color: Color(0xFFD1D5DB),
+            height: 1.5,
+          ),
+        ));
+      }
+
+      if (isBullet) {
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6, right: 10),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF60A5FA),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF3B82F6),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      )
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(children: spans),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: RichText(
+              text: TextSpan(children: spans),
+            ),
+          ),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items,
+    );
+  }
+
 }

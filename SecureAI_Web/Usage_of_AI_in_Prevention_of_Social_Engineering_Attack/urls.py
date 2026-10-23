@@ -54,7 +54,7 @@ urlpatterns = [
     path('download-apk/', views.download_apk, name='download_apk'),
     path('media/app-arm64-v8a-release.apk', views.download_apk, {'apk_type': 'v8'}, name='download_apk_direct'),
     path('media/app-release.apk', views.download_apk, {'apk_type': 'universal'}, name='download_apk_universal'),
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^media/(?P<path>.*)$', views.smart_media_serve, name='smart_media_serve'),
 ]
 
 # Custom Error Handlers

@@ -13,11 +13,28 @@ class AnomalyPredictionScreen extends StatefulWidget {
 }
 
 class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
-  final _hourController = TextEditingController(text: "3");
-  final _scoreController = TextEditingController(text: "0.85");
+  final _hourController = TextEditingController();
+  final _scoreController = TextEditingController();
   bool _isLoading = false;
   Map<String, dynamic>? _predictionResult;
   String? _errorMessage;
+
+  @override
+  void deactivate() {
+    // When navigating to next page or another screen, clear written text and response
+    _hourController.clear();
+    _scoreController.clear();
+    _predictionResult = null;
+    _errorMessage = null;
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _scoreController.dispose();
+    super.dispose();
+  }
 
   Future<void> _predict() async {
     final hourStr = _hourController.text.trim();
@@ -29,8 +46,22 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
       return;
     }
 
-    final hour = int.tryParse(hourStr) ?? 0;
-    final score = double.tryParse(scoreStr) ?? 0.85;
+    final hour = int.tryParse(hourStr);
+    final score = double.tryParse(scoreStr);
+
+    if (hour == null || hour < 0 || hour > 23) {
+      setState(() {
+        _errorMessage = "Login hour must be an integer between 0 and 23.";
+      });
+      return;
+    }
+
+    if (score == null || score < 0.0 || score > 1.0) {
+      setState(() {
+        _errorMessage = "IP score must be a number between 0.0 and 1.0.";
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -54,6 +85,8 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
   @override
   Widget build(BuildContext context) {
     final String predictionText = _predictionResult?['prediction']?.toString() ?? '';
+    final bool isAnomaly = _predictionResult?['is_anomaly'] == true ||
+        predictionText.toLowerCase() == 'anomaly';
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/anomaly_prediction'),
@@ -150,6 +183,8 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
                       keyboardType: TextInputType.number,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                       decoration: const InputDecoration(
+                        hintText: "e.g. 3",
+                        hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
@@ -227,33 +262,45 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xF0111827), // bg-gray-900 bg-opacity-90
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF374151)), // border-gray-700
+                        border: Border.all(
+                          color: isAnomaly ? const Color(0xFFF43F5E) : const Color(0xFF14B8A6),
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 12,
+                            color: (isAnomaly ? const Color(0xFFF43F5E) : const Color(0xFF14B8A6))
+                                .withValues(alpha: 0.25),
+                            blurRadius: 14,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: const TextStyle(fontSize: 16, color: Colors.white),
-                          children: [
-                            const TextSpan(
-                              text: "🔍 Predicted Behavior: ",
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isAnomaly ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                            color: isAnomaly ? const Color(0xFFF43F5E) : const Color(0xFF14B8A6),
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "🔍 Predicted Behavior: ",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                            TextSpan(
-                              text: predictionText,
-                              style: const TextStyle(
-                                color: Color(0xFFFDE047), // text-yellow-300
-                                fontWeight: FontWeight.bold,
-                              ),
+                          ),
+                          Text(
+                            predictionText,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: isAnomaly ? const Color(0xFFFDE047) : const Color(0xFF5EEAD4),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

@@ -370,56 +370,119 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     );
   }
 
-  // --- RESULT VIEW ---
+  // --- RESULT VIEW (1-to-1 sync with Website qr_result.html UI/UX) ---
   Widget _buildResultView() {
-    final url = _scanResult!['url']?.toString() ?? 'None';
-    final classification = _scanResult!['classification']?.toString() ?? '';
+    final rawUrl = _scanResult!['url']?.toString().trim() ?? '';
+    final hasUrl = rawUrl.isNotEmpty && rawUrl != 'None';
+    final classification = _scanResult!['classification']?.toString().trim() ?? 'QR Code not detected.';
+
+    final bool isSafe = classification.toLowerCase().contains('safe');
+    final bool isPhishing = classification.toLowerCase().contains('phishing') || classification.toLowerCase().contains('malicious');
+    final bool isNotDetected = classification.toLowerCase().contains('not detected');
+
+    // Badge styling
+    final Color badgeBg = isSafe
+        ? const Color(0xFF22C55E).withValues(alpha: 0.18)
+        : (isPhishing || isNotDetected)
+            ? const Color(0xFFEF4444).withValues(alpha: 0.20)
+            : const Color(0xFFF59E0B).withValues(alpha: 0.18);
+
+    final Color badgeBorder = isSafe
+        ? const Color(0xFF4ADE80).withValues(alpha: 0.45)
+        : (isPhishing || isNotDetected)
+            ? const Color(0xFFF87171).withValues(alpha: 0.45)
+            : const Color(0xFFFBBF24).withValues(alpha: 0.45);
+
+    final IconData badgeIcon = isSafe
+        ? Icons.verified_user_rounded
+        : (isPhishing)
+            ? Icons.warning_amber_rounded
+            : (isNotDetected)
+                ? Icons.cancel_rounded
+                : Icons.info_outline_rounded;
+
+    final Color badgeColor = isSafe
+        ? const Color(0xFF4ADE80)
+        : (isPhishing || isNotDetected)
+            ? const Color(0xFFF87171)
+            : const Color(0xFFFBBF24);
 
     return GlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Result Icon
-          Image.network(
-            "https://cdn-icons-png.flaticon.com/512/2910/2910791.png",
-            width: 76,
-            height: 76,
-            errorBuilder: (context, error, stackTrace) => const Icon(
-              Icons.check_circle_rounded,
-              color: Color(0xFF2DD4BF),
-              size: 72,
+          // 1. Result Icon Badge (Matches Image 4 square rounded container)
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: badgeBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: badgeBorder, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: badgeColor.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 18),
-
-          // Result Title
-          const Text(
-            "✅ QR Code Scan Result",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            child: Center(
+              child: Icon(badgeIcon, color: badgeColor, size: 44),
             ),
           ),
           const SizedBox(height: 20),
 
-          // Decoded URL
-          RichText(
+          // 2. Result Title
+          const Text(
+            "QR Code Scan Result",
             textAlign: TextAlign.center,
-            text: TextSpan(
-              style: const TextStyle(fontSize: 16, color: Colors.white),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 3. Decoded Target URL Card (Matches Image 4)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF030712).withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const TextSpan(
-                  text: "🔗 URL: ",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Row(
+                  children: const [
+                    Icon(Icons.link_rounded, color: Color(0xFFC084FC), size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      "DECODED TARGET URL",
+                      style: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: url,
-                  style: const TextStyle(
-                    color: Color(0xFFFDE047), // text-yellow-300
-                    fontWeight: FontWeight.w500,
+                const SizedBox(height: 8),
+                Text(
+                  hasUrl ? rawUrl : "No URL matrix decoded",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontFamily: hasUrl ? 'monospace' : null,
+                    fontStyle: hasUrl ? FontStyle.normal : FontStyle.italic,
+                    color: hasUrl ? const Color(0xFFFDE047) : const Color(0xFF9CA3AF),
+                    fontWeight: hasUrl ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -427,46 +490,121 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Classification
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: const TextStyle(fontSize: 16, color: Colors.white),
+          // 4. AI Threat Verdict Card (Matches Image 4)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSafe
+                  ? const Color(0xFF052E16).withValues(alpha: 0.45)
+                  : (isPhishing)
+                      ? const Color(0xFF450A0A).withValues(alpha: 0.45)
+                      : const Color(0xFF111827).withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSafe
+                    ? const Color(0xFF22C55E).withValues(alpha: 0.40)
+                    : (isPhishing)
+                        ? const Color(0xFFEF4444).withValues(alpha: 0.40)
+                        : const Color(0xFF374151),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const TextSpan(
-                  text: "🔎 Classification: ",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.shield_rounded,
+                      color: isSafe
+                          ? const Color(0xFF4ADE80)
+                          : (isPhishing)
+                              ? const Color(0xFFF87171)
+                              : const Color(0xFFFBBF24),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "AI THREAT VERDICT",
+                      style: TextStyle(
+                        color: isSafe
+                            ? const Color(0xFF86EFAC)
+                            : (isPhishing)
+                                ? const Color(0xFFFCA5A5)
+                                : const Color(0xFFFDE047),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: classification,
-                  style: const TextStyle(
-                    color: Color(0xFFFDE047), // text-yellow-300
+                const SizedBox(height: 8),
+                Text(
+                  classification,
+                  style: TextStyle(
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: isSafe
+                        ? const Color(0xFF4ADE80)
+                        : (isPhishing)
+                            ? const Color(0xFFF87171)
+                            : (isNotDetected)
+                                ? const Color(0xFFE5E7EB)
+                                : const Color(0xFFFDE047),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
 
-          // Scan Another Button
+          // 5. Action Buttons (Matches Image 4)
+          // Scan Another QR (Teal Button)
           SizedBox(
             width: double.infinity,
             height: 48,
-            child: ElevatedButton(
+            child: ElevatedButton.icon(
               onPressed: _resetScanner,
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+              label: const Text(
+                "Scan Another QR",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0D9488), // bg-teal-600
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 4,
               ),
-              child: const Text(
-                "🔁 Scan Another",
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // User Panel Home (Dark Glass Button)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+              icon: const Icon(Icons.home_rounded, color: Color(0xFFE5E7EB), size: 18),
+              label: const Text(
+                "User Panel Home",
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFFE5E7EB),
                 ),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xFF1F2937).withValues(alpha: 0.8),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),

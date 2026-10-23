@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +17,7 @@ class ApiService {
   // Secondary local development endpoint for Android emulator (10.0.2.2 maps to host 127.0.0.1)
   static const String localBaseUrl = "http://10.0.2.2:8000";
 
-  static String _activeBaseUrl = localBaseUrl;
+  static String _activeBaseUrl = liveBaseUrl;
   static final Map<String, String> _cookies = {};
   static String? _csrfToken;
   static String? _currentUser;
@@ -24,6 +25,49 @@ class ApiService {
 
   // Global Notifier for Cloud Server Wake Status
   static final ValueNotifier<ServerWakeStatus> serverWakeNotifier = ValueNotifier(const ServerWakeStatus());
+
+  static String getAvatarFallbackUrl(String name, {String background = '6366F1', int size = 128}) {
+    final safeName = Uri.encodeComponent(name.trim().isEmpty ? 'User' : name.trim());
+    return 'https://ui-avatars.com/api/?name=$safeName&background=$background&color=fff&size=$size&bold=true&format=png';
+  }
+
+  static Future<String?> getCurrentUserImageUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? cached = prefs.getString('user_image_url');
+    if (cached != null && cached.isNotEmpty) return cached;
+
+    // Proactively fetch and cache from user-homepage if session exists
+    if (isLoggedIn || _currentUser != null) {
+      try {
+        final uri = Uri.parse('$_activeBaseUrl/user-homepage/');
+        final res = await http.get(
+          uri,
+          headers: _getHeaders(extraHeaders: {'Accept': 'application/json'}),
+        ).timeout(const Duration(seconds: 4));
+
+        if (res.statusCode == 200) {
+          try {
+            final json = jsonDecode(res.body);
+            if (json is Map && json['user_image'] != null && json['user_image'].toString().isNotEmpty) {
+              String img = json['user_image'].toString();
+              if (!img.startsWith('http')) img = '$_activeBaseUrl$img';
+              await prefs.setString('user_image_url', img);
+              return img;
+            }
+          } catch (_) {}
+
+          final match = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(res.body);
+          if (match != null) {
+            String img = match.group(1)!;
+            if (!img.startsWith('http')) img = '$_activeBaseUrl$img';
+            await prefs.setString('user_image_url', img);
+            return img;
+          }
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
 
   static String get activeBaseUrl => _activeBaseUrl;
   static String? get currentUser => _currentUser;
@@ -224,6 +268,41 @@ class ApiService {
           await prefs.setString('current_user', name);
           await prefs.setString('auth_username', name);
           await prefs.setString('auth_password', password);
+
+          // Extract and persist profile image URL if available
+          try {
+            String imgUrl = '';
+            try {
+              final jsonBody = jsonDecode(response.body);
+              if (jsonBody is Map && jsonBody['user_image'] != null) {
+                imgUrl = jsonBody['user_image'].toString();
+              }
+            } catch (_) {}
+
+            if (imgUrl.isEmpty) {
+              final homeRes = await http.get(
+                Uri.parse('$_activeBaseUrl/user-homepage/'),
+                headers: _getHeaders(extraHeaders: {'Accept': 'application/json'}),
+              );
+              try {
+                final homeJson = jsonDecode(homeRes.body);
+                if (homeJson is Map && homeJson['user_image'] != null) {
+                  imgUrl = homeJson['user_image'].toString();
+                }
+              } catch (_) {
+                final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(homeRes.body);
+                if (imgMatch != null) imgUrl = imgMatch.group(1)!;
+              }
+            }
+
+            if (imgUrl.isNotEmpty) {
+              if (!imgUrl.startsWith('http')) {
+                imgUrl = '$_activeBaseUrl$imgUrl';
+              }
+              await prefs.setString('user_image_url', imgUrl);
+            }
+          } catch (_) {}
+
           return {'success': true, 'message': 'Login successful!'};
         } else if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
           if (attempt < 3) {
@@ -395,6 +474,7 @@ class ApiService {
     await prefs.remove('current_user');
     await prefs.remove('auth_username');
     await prefs.remove('auth_password');
+    await prefs.remove('user_image_url');
   }
 
   // --- AI ANALYSIS APIs ---
@@ -508,7 +588,33 @@ class ApiService {
 
         if (response.statusCode == 200) {
           final body = response.body;
-          bool isAnomaly = body.contains('Anomaly') || body.contains('ANOMALY');
+          // Try JSON response
+          try {
+            final json = jsonDecode(body);
+            if (json is Map && json.containsKey('prediction')) {
+              final pred = json['prediction']?.toString() ?? 'Normal';
+              return {
+                'success': true,
+                'prediction': pred,
+                'is_anomaly': pred.toLowerCase() == 'anomaly',
+                'raw_response': body,
+              };
+            }
+          } catch (_) {}
+
+          // HTML regex target matching predict_anomaly.html: Predicted Behavior: <span ...>{{ prediction }}</span>
+          final predMatch = RegExp(r'Predicted Behavior:\s*<span[^>]*>\s*([^<]+)\s*<\/span>').firstMatch(body);
+          if (predMatch != null) {
+            final pred = predMatch.group(1)?.trim() ?? 'Normal';
+            return {
+              'success': true,
+              'prediction': pred,
+              'is_anomaly': pred.toLowerCase() == 'anomaly',
+              'raw_response': body,
+            };
+          }
+
+          final isAnomaly = body.contains('text-yellow-300 font-bold">Anomaly') || body.contains('>Anomaly</span>');
           return {
             'success': true,
             'prediction': isAnomaly ? 'Anomaly' : 'Normal',
@@ -887,28 +993,244 @@ class ApiService {
     return {'success': false, 'message': 'Training failed'};
   }
 
+  // --- PASSWORD RECOVERY APIs (/forgot-password/, /verify-otp/, /reset-password/) ---
+
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _ensureCsrfToken('/forgot-password/');
+
+        final uri = Uri.parse('$_activeBaseUrl/forgot-password/');
+        final bodyFields = <String, String>{'email': email.trim()};
+        if (_csrfToken != null && _csrfToken!.isNotEmpty) {
+          bodyFields['csrfmiddlewaretoken'] = _csrfToken!;
+        }
+
+        final response = await http.post(
+          uri,
+          headers: _getHeaders(
+            refererPath: '/forgot-password/',
+            extraHeaders: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
+          ),
+          body: bodyFields,
+        );
+
+        _extractCookies(response);
+
+        if (response.statusCode == 200 || response.statusCode == 302) {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json.containsKey('success')) {
+              return {
+                'success': json['success'] == true,
+                'message': json['message']?.toString() ?? 'Verification OTP sent to your registered email.',
+              };
+            }
+          } catch (_) {}
+
+          if (response.body.contains("Email not registered")) {
+            return {'success': false, 'message': 'Email address is not registered!'};
+          }
+          return {'success': true, 'message': 'Verification OTP sent to your registered email.'};
+        } else if (response.statusCode == 404) {
+          return {'success': false, 'message': 'Email address is not registered!'};
+        } else {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json['message'] != null) {
+              return {'success': false, 'message': json['message'].toString()};
+            }
+          } catch (_) {}
+          return {'success': false, 'message': 'Failed to send OTP code (status ${response.statusCode})'};
+        }
+      } catch (e) {
+        if (attempt == 0) continue;
+        return {'success': false, 'message': 'Network error: $e'};
+      }
+    }
+    return {'success': false, 'message': 'Failed to process forgot password request.'};
+  }
+
+  static Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _ensureCsrfToken('/verify-otp/');
+
+        final uri = Uri.parse('$_activeBaseUrl/verify-otp/');
+        final bodyFields = <String, String>{
+          'email': email.trim(),
+          'otp': otp.trim(),
+        };
+        if (_csrfToken != null && _csrfToken!.isNotEmpty) {
+          bodyFields['csrfmiddlewaretoken'] = _csrfToken!;
+        }
+
+        final response = await http.post(
+          uri,
+          headers: _getHeaders(
+            refererPath: '/verify-otp/',
+            extraHeaders: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
+          ),
+          body: bodyFields,
+        );
+
+        _extractCookies(response);
+
+        if (response.statusCode == 200 || response.statusCode == 302) {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json.containsKey('success')) {
+              return {
+                'success': json['success'] == true,
+                'message': json['message']?.toString() ?? 'OTP verified successfully!',
+              };
+            }
+          } catch (_) {}
+
+          if (response.body.contains("Invalid OTP")) {
+            return {'success': false, 'message': 'Invalid OTP code! Please check and re-enter.'};
+          }
+          return {'success': true, 'message': 'OTP verified successfully!'};
+        } else {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json['message'] != null) {
+              return {'success': false, 'message': json['message'].toString()};
+            }
+          } catch (_) {}
+          return {'success': false, 'message': 'Invalid OTP code! Please re-check.'};
+        }
+      } catch (e) {
+        if (attempt == 0) continue;
+        return {'success': false, 'message': 'Network error: $e'};
+      }
+    }
+    return {'success': false, 'message': 'Failed to verify OTP.'};
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        await _ensureCsrfToken('/reset-password/');
+
+        final uri = Uri.parse('$_activeBaseUrl/reset-password/');
+        final bodyFields = <String, String>{
+          'email': email.trim(),
+          'new_password': newPassword.trim(),
+        };
+        if (_csrfToken != null && _csrfToken!.isNotEmpty) {
+          bodyFields['csrfmiddlewaretoken'] = _csrfToken!;
+        }
+
+        final response = await http.post(
+          uri,
+          headers: _getHeaders(
+            refererPath: '/reset-password/',
+            extraHeaders: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
+          ),
+          body: bodyFields,
+        );
+
+        _extractCookies(response);
+
+        if (response.statusCode == 200 || response.statusCode == 302) {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json.containsKey('success')) {
+              return {
+                'success': json['success'] == true,
+                'message': json['message']?.toString() ?? 'Password reset successful! Please log in.',
+              };
+            }
+          } catch (_) {}
+
+          return {'success': true, 'message': 'Password reset successful! Please log in.'};
+        } else {
+          try {
+            final json = jsonDecode(response.body);
+            if (json is Map && json['message'] != null) {
+              return {'success': false, 'message': json['message'].toString()};
+            }
+          } catch (_) {}
+          return {'success': false, 'message': 'Password update failed (status ${response.statusCode})'};
+        }
+      } catch (e) {
+        if (attempt == 0) continue;
+        return {'success': false, 'message': 'Network error: $e'};
+      }
+    }
+    return {'success': false, 'message': 'Failed to reset password.'};
+  }
+
   // --- ADMIN APIs ---
 
   static Future<List<Map<String, dynamic>>> getAdminUsers() async {
     try {
       final uri = Uri.parse('$_activeBaseUrl/admin-dashboard/');
-      final response = await http.get(uri, headers: _getHeaders(refererPath: '/admin-dashboard/'));
+      final response = await http.get(
+        uri,
+        headers: _getHeaders(
+          refererPath: '/admin-dashboard/',
+          extraHeaders: {'Accept': 'application/json'},
+        ),
+      );
       _extractCookies(response);
 
       if (response.statusCode == 200) {
         final body = response.body;
+
+        // 1. Try direct JSON response from enhanced Django backend
+        try {
+          final json = jsonDecode(body);
+          if (json is Map && json['users'] is List) {
+            final List<Map<String, dynamic>> parsedList = [];
+            for (var u in json['users']) {
+              String imgUrl = u['image_url']?.toString() ?? '';
+              if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+                imgUrl = '$_activeBaseUrl$imgUrl';
+              }
+              parsedList.add({
+                'id': u['id'] ?? 0,
+                'name': u['name']?.toString() ?? 'User',
+                'email': u['email']?.toString() ?? '',
+                'mobile': u['mobile']?.toString() ?? '',
+                'image_url': imgUrl,
+                'is_active': u['is_active'] ?? false,
+              });
+            }
+            if (parsedList.isNotEmpty) return parsedList;
+          }
+        } catch (_) {}
+
+        // 2. Fallback to HTML parser
         final List<Map<String, dynamic>> users = [];
         final userBlocks = RegExp(r'<tr[^>]*>(.*?)<\/tr>', dotAll: true).allMatches(body);
 
         for (var match in userBlocks) {
           final tr = match.group(1) ?? '';
           if (tr.contains('deactivate') || tr.contains('activate') || tr.contains('delete')) {
-            final nameMatch = RegExp(r'<div class="font-semibold[^>]*>\s*([^<]+)\s*<\/div>').firstMatch(tr) ??
+            final nameMatch = RegExp(r'<span class="font-semibold">\s*([^<]+)\s*<\/span>').firstMatch(tr) ??
+                RegExp(r'<div class="font-semibold[^>]*>\s*([^<]+)\s*<\/div>').firstMatch(tr) ??
                 RegExp(r'alt="([^"]+)"').firstMatch(tr);
             final emailMatch = RegExp(r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)').firstMatch(tr);
             final mobileMatch = RegExp(r'(\+?\d{10,13})').firstMatch(tr);
             final idMatch = RegExp(r'\/(?:activate|deactivate|delete)\/(\d+)\/').firstMatch(tr);
+            final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(tr);
             final isActive = tr.contains('deactivate');
+
+            String imgUrl = imgMatch?.group(1) ?? '';
+            if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+              imgUrl = '$_activeBaseUrl$imgUrl';
+            }
 
             if (nameMatch != null) {
               users.add({
@@ -916,6 +1238,7 @@ class ApiService {
                 'name': nameMatch.group(1)!.trim(),
                 'email': emailMatch?.group(1) ?? '',
                 'mobile': mobileMatch?.group(1) ?? '',
+                'image_url': imgUrl,
                 'is_active': isActive,
               });
             }
@@ -926,8 +1249,8 @@ class ApiService {
     } catch (_) {}
 
     return [
-      {'id': 2, 'name': 'Sai Teja Kokala', 'email': 'kokalasaiteja@gmail.com', 'mobile': '7013120537', 'is_active': true},
-      {'id': 3, 'name': 'testverify123', 'email': 'testverify@example.com', 'mobile': '9876543210', 'is_active': true},
+      {'id': 2, 'name': 'Sai Teja Kokala', 'email': 'kokalasaiteja@gmail.com', 'mobile': '7013120537', 'image_url': '', 'is_active': true},
+      {'id': 3, 'name': 'testverify123', 'email': 'testverify@example.com', 'mobile': '9876543210', 'image_url': '', 'is_active': true},
     ];
   }
 
