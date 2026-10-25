@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -46,6 +48,18 @@ jobs:
           mkdir -p SecureAI_Web/media
           cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk SecureAI_Web/media/
           ls -la SecureAI_Web/media/*.apk
+
+      - name: Commit and Push Updated APKs to Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f SecureAI_Web/media/*.apk
+          if git diff --staged --quiet; then
+            echo "No changes in APK files to commit."
+          else
+            git commit -m "Auto-update release APKs in web media and UI [skip ci]"
+            git push origin main
+          fi
 
       - name: Upload APKs as Artifacts
         uses: actions/upload-artifact@v4
