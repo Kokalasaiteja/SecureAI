@@ -431,11 +431,26 @@ class ApiService {
       final response = await http.Response.fromStream(streamedResponse);
       _extractCookies(response);
 
-      if (response.statusCode == 200 || response.statusCode == 302) {
-        if (response.body.contains("already exist")) {
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return {
+            'success': data['success'] == true,
+            'message': data['message']?.toString() ?? (data['success'] == true ? 'Registered successfully! Wait for admin approval.' : 'Registration failed.'),
+          };
+        }
+      } catch (_) {}
+
+      if (response.statusCode == 200 || response.statusCode == 302 || response.statusCode == 400) {
+        if (response.body.contains("already exist") || response.body.contains("already registered")) {
+          if (response.body.toLowerCase().contains("email")) {
+            return {'success': false, 'message': 'Email address is already registered. Please choose another.'};
+          }
           return {'success': false, 'message': 'Username already exists. Please choose another.'};
         } else if (response.body.contains("All fields are required")) {
           return {'success': false, 'message': 'All fields are required (including profile image).'};
+        } else if (response.statusCode == 400) {
+          return {'success': false, 'message': 'Registration rejected. Please verify your details.'};
         }
         return {'success': true, 'message': 'Registered successfully! Wait for admin approval.'};
       }
@@ -1385,6 +1400,64 @@ class ApiService {
       return res.statusCode == 200 || res.statusCode == 302;
     } catch (_) {
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> editUser({
+    required int id,
+    required String name,
+    required String email,
+    required String mobile,
+    required bool isActive,
+    String? password,
+    String? imagePath,
+    List<int>? imageBytes,
+    String? imageName,
+  }) async {
+    try {
+      await _ensureCsrfToken('/admin-dashboard/');
+
+      final uri = Uri.parse('$_activeBaseUrl/admin-edit-user/$id/');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(_getHeaders(refererPath: '/admin-dashboard/'));
+      request.fields['name'] = name;
+      request.fields['email'] = email;
+      request.fields['mobile'] = mobile;
+      request.fields['is_active'] = isActive ? 'true' : 'false';
+      if (password != null && password.isNotEmpty) {
+        request.fields['password'] = password;
+      }
+      if (_csrfToken != null && _csrfToken!.isNotEmpty) {
+        request.fields['csrfmiddlewaretoken'] = _csrfToken!;
+      }
+
+      if (imagePath != null && imagePath.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      } else if (imageBytes != null && imageName != null) {
+        request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: imageName));
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      _extractCookies(response);
+
+      try {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return {
+            'success': data['success'] == true,
+            'message': data['message']?.toString() ?? (data['success'] == true ? 'User updated successfully.' : 'Update failed.'),
+            'user': data['user'],
+          };
+        }
+      } catch (_) {}
+
+      if (response.statusCode == 200 || response.statusCode == 302) {
+        return {'success': true, 'message': 'User details updated successfully.'};
+      }
+      return {'success': false, 'message': 'Failed with status ${response.statusCode}'};
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
     }
   }
 }

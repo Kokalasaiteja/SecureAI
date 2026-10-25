@@ -11,8 +11,8 @@
             <span>User Registration</span>
         </h2>
         {% if msg %}
-        <div class="mb-6 p-4 bg-green-600 bg-opacity-80 rounded-xl text-white text-center animate-fade-in text-sm sm:text-base">
-            <i class="fas fa-check-circle mr-2"></i>{{ msg }}
+        <div class="mb-6 p-4 {% if is_error %}bg-red-600/90 border border-red-500/50{% else %}bg-green-600/90 border border-green-500/50{% endif %} rounded-xl text-white text-center animate-fade-in text-sm sm:text-base shadow-lg">
+            <i class="fas {% if is_error %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} mr-2"></i>{{ msg }}
         </div>
         {% endif %}
         <!-- Form -->
@@ -24,7 +24,7 @@
                     <label for="name" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Name</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-user text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="text" name="name" id="name" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="text" name="name" id="name" value="{{ request.POST.name|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Email Field -->
@@ -32,7 +32,7 @@
                     <label for="email" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Email</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-envelope text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="email" name="email" id="email" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="email" name="email" id="email" value="{{ request.POST.email|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Mobile Field -->
@@ -40,7 +40,7 @@
                     <label for="mobile" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Mobile</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-phone text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="text" name="mobile" id="mobile" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="text" name="mobile" id="mobile" value="{{ request.POST.mobile|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Password Field -->

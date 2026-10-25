@@ -183,6 +183,20 @@
             </div>
         </div>
 
+        {% if messages %}
+        <div class="mb-6 space-y-2 animate-slide-up">
+            {% for message in messages %}
+            <div class="p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-lg {% if message.tags == 'error' %}bg-red-600/90 text-white border border-red-500/50{% elif message.tags == 'warning' %}bg-amber-600/90 text-white border border-amber-500/50{% else %}bg-green-600/90 text-white border border-green-500/50{% endif %}">
+                <div class="flex items-center space-x-2">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">&times;</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <!-- Table Container (Frosted Liquid Glass Panel across Laptop, Computer, Tablet, Phone) -->
         <div class="glass-panel p-4 sm:p-6 lg:p-8 animate-slide-up">
             
@@ -241,18 +255,22 @@
                             </td>
                             <!-- Actions -->
                             <td class="px-4 py-3.5 whitespace-nowrap text-center">
-                                <div class="flex items-center justify-center space-x-2 sm:space-x-3">
+                                <div class="flex items-center justify-center space-x-2 sm:space-x-2.5">
+                                    <button type="button" onclick="openEditModal('{{ user.id }}', '{{ user.name|escapejs }}', '{{ user.email|escapejs }}', '{{ user.mobile|escapejs }}', {{ user.is_active|yesno:'true,false' }}, '{% if user.image_base64 %}{{ user.image_base64 }}{% elif user.image %}{{ user.image.url }}{% endif %}')" class="btn-action inline-flex items-center text-indigo-300 hover:text-white font-medium text-xs bg-indigo-600/20 hover:bg-indigo-600/40 px-2.5 py-1.5 rounded-lg border border-indigo-500/40 shadow-sm cursor-pointer" title="Edit User">
+                                        <i class="fas fa-user-edit mr-1 text-indigo-400"></i> Edit
+                                    </button>
+                                    <span class="text-white/20">|</span>
                                     {% if not user.is_active %}
-                                    <a href="{% url 'activate_user' user.id %}" class="btn-action inline-flex items-center text-green-300 hover:text-white font-medium text-xs bg-green-600/20 hover:bg-green-600/40 px-3 py-1.5 rounded-lg border border-green-500/40 shadow-sm">
+                                    <a href="{% url 'activate_user' user.id %}" class="btn-action inline-flex items-center text-green-300 hover:text-white font-medium text-xs bg-green-600/20 hover:bg-green-600/40 px-2.5 py-1.5 rounded-lg border border-green-500/40 shadow-sm">
                                         <i class="fas fa-user-check mr-1 text-green-400"></i> Activate
                                     </a>
                                     {% else %}
-                                    <a href="{% url 'deactivate_user' user.id %}" class="btn-action inline-flex items-center text-yellow-300 hover:text-white font-medium text-xs bg-yellow-600/20 hover:bg-yellow-600/40 px-3 py-1.5 rounded-lg border border-yellow-500/40 shadow-sm">
+                                    <a href="{% url 'deactivate_user' user.id %}" class="btn-action inline-flex items-center text-yellow-300 hover:text-white font-medium text-xs bg-yellow-600/20 hover:bg-yellow-600/40 px-2.5 py-1.5 rounded-lg border border-yellow-500/40 shadow-sm">
                                         <i class="fas fa-user-slash mr-1 text-yellow-400"></i> Deactivate
                                     </a>
                                     {% endif %}
                                     <span class="text-white/20">|</span>
-                                    <a href="{% url 'delete_user' user.id %}" onclick="return confirm('Permanently delete user {{ user.name }}? This will remove their account, profile picture, and invalidate all active sessions.');" class="btn-action inline-flex items-center text-red-300 hover:text-white font-medium text-xs bg-red-600/20 hover:bg-red-600/40 px-3 py-1.5 rounded-lg border border-red-500/40 shadow-sm">
+                                    <a href="{% url 'delete_user' user.id %}" onclick="return confirm('Permanently delete user {{ user.name }}? This will remove their account, profile picture, and invalidate all active sessions.');" class="btn-action inline-flex items-center text-red-300 hover:text-white font-medium text-xs bg-red-600/20 hover:bg-red-600/40 px-2.5 py-1.5 rounded-lg border border-red-500/40 shadow-sm">
                                         <i class="fas fa-trash-alt mr-1 text-red-400"></i> Delete
                                     </a>
                                 </div>
@@ -308,6 +326,105 @@
                   "retina_detect": true
                 });
             }
+        });
+    </script>
+    <!-- Edit User Liquid Glass Modal -->
+    <div id="editUserModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in" onclick="if(event.target === this) closeEditModal();">
+        <div class="glass-panel w-full max-w-lg p-5 sm:p-7 relative border border-white/20 shadow-2xl rounded-2xl animate-slide-up bg-slate-900/90 text-white">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-user-edit text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Edit User Account</h3>
+                        <p class="text-xs text-gray-300">Admin Only • Update credentials & access</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditModal()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+
+            <form id="editUserForm" method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <div class="flex items-center space-x-3.5 p-3 rounded-xl bg-gray-950/40 border border-white/5">
+                    <img id="editUserAvatar" src="" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-white/20" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=User&background=6366F1&color=fff&size=64&bold=true';">
+                    <div>
+                        <span id="editUserBadgeId" class="text-xs text-indigo-400 font-semibold">User #0</span>
+                        <h4 id="editUserBadgeName" class="text-sm font-bold text-white">Loading...</h4>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="modal_name" class="block text-xs font-semibold text-gray-300 mb-1">Username <span class="text-red-400">*</span></label>
+                    <input type="text" name="name" id="modal_name" required class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400">
+                </div>
+
+                <div>
+                    <label for="modal_email" class="block text-xs font-semibold text-gray-300 mb-1">Email Address <span class="text-red-400">*</span></label>
+                    <input type="email" name="email" id="modal_email" required class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400">
+                </div>
+
+                <div>
+                    <label for="modal_mobile" class="block text-xs font-semibold text-gray-300 mb-1">Mobile Number <span class="text-red-400">*</span></label>
+                    <input type="text" name="mobile" id="modal_mobile" required class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400">
+                </div>
+
+                <div>
+                    <label for="modal_password" class="block text-xs font-semibold text-gray-300 mb-1">Reset Password <span class="text-gray-400 font-normal">(Leave blank to keep unchanged)</span></label>
+                    <input type="password" name="password" id="modal_password" placeholder="••••••••••••" class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400">
+                </div>
+
+                <div>
+                    <label class="flex items-center space-x-2.5 cursor-pointer pt-1">
+                        <input type="checkbox" name="is_active" id="modal_is_active" value="true" class="w-4 h-4 rounded bg-gray-900 border-gray-700 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-xs font-semibold text-gray-200">Account Active (Authorize login)</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label for="modal_image" class="block text-xs font-semibold text-gray-300 mb-1">Change Profile Photo <span class="text-gray-400 font-normal">(Optional)</span></label>
+                    <input type="file" name="image" id="modal_image" class="w-full p-2 text-xs rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400">
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-white/10">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl border border-white/20 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs sm:text-sm font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-3d px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg flex items-center space-x-1.5">
+                        <i class="fas fa-save"></i>
+                        <span>Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal(userId, name, email, mobile, isActive, avatarUrl) {
+            const modal = document.getElementById('editUserModal');
+            const form = document.getElementById('editUserForm');
+            form.action = `/admin-edit-user/${userId}/`;
+            document.getElementById('editUserBadgeId').textContent = `User #${userId}`;
+            document.getElementById('editUserBadgeName').textContent = name;
+            document.getElementById('modal_name').value = name;
+            document.getElementById('modal_email').value = email;
+            document.getElementById('modal_mobile').value = mobile;
+            document.getElementById('modal_password').value = '';
+            document.getElementById('modal_is_active').checked = !!isActive;
+            const avatar = document.getElementById('editUserAvatar');
+            avatar.src = avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366F1&color=fff&size=64&bold=true`;
+            modal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editUserModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeEditModal();
         });
     </script>
 {% include 'apk_download_modal.html' %}

@@ -100,6 +100,153 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _handleEditUser(Map<String, dynamic> user) async {
+    final int id = user['id'] ?? 0;
+    final nameCtrl = TextEditingController(text: user['name']?.toString() ?? '');
+    final emailCtrl = TextEditingController(text: user['email']?.toString() ?? '');
+    final mobileCtrl = TextEditingController(text: user['mobile']?.toString() ?? '');
+    final passCtrl = TextEditingController();
+    bool isActive = user['is_active'] == true;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1B4B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.edit_note_rounded, color: Color(0xFF818CF8)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Edit User #${id}",
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: const InputDecoration(
+                    labelText: "Username",
+                    labelStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                    prefixIcon: Icon(Icons.person_outline_rounded, color: Color(0xFF818CF8), size: 20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailCtrl,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: "Email Address",
+                    labelStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                    prefixIcon: Icon(Icons.mail_outline_rounded, color: Color(0xFF818CF8), size: 20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: mobileCtrl,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: "Mobile",
+                    labelStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                    prefixIcon: Icon(Icons.phone_outlined, color: Color(0xFF818CF8), size: 20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passCtrl,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Reset Password (Optional)",
+                    hintText: "Leave blank to keep existing",
+                    labelStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                    hintStyle: TextStyle(color: Colors.white30, fontSize: 11),
+                    prefixIcon: Icon(Icons.lock_outline_rounded, color: Color(0xFF818CF8), size: 20),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Account Active", style: TextStyle(color: Colors.white, fontSize: 14)),
+                  value: isActive,
+                  activeColor: AppTheme.accentGreen,
+                  onChanged: (val) {
+                    setDialogState(() {
+                      isActive = val;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel", style: TextStyle(color: Colors.white60)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Save Changes", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != true) return;
+
+    final String newName = nameCtrl.text.trim();
+    final String newEmail = emailCtrl.text.trim();
+    final String newMobile = mobileCtrl.text.trim();
+    final String newPass = passCtrl.text.trim();
+
+    if (newName.isEmpty || newEmail.isEmpty || newMobile.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Name, email, and mobile are required."), backgroundColor: AppTheme.accentRed),
+        );
+      }
+      return;
+    }
+
+    final res = await ApiService.editUser(
+      id: id,
+      name: newName,
+      email: newEmail,
+      mobile: newMobile,
+      isActive: isActive,
+      password: newPass.isNotEmpty ? newPass : null,
+    );
+
+    if (mounted) {
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? "User updated successfully."), backgroundColor: AppTheme.accentGreen),
+        );
+        _loadUsers();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? "Failed to update user."), backgroundColor: AppTheme.accentRed),
+        );
+      }
+    }
+  }
+
   Future<void> _handleDeleteUser(Map<String, dynamic> user) async {
     final int id = user['id'] ?? 0;
 
@@ -463,29 +610,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Text("Mobile: $mobile", style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
             ],
             const SizedBox(height: 14),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
+                OutlinedButton.icon(
+                  onPressed: () => _handleEditUser(user),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF818CF8),
+                    side: const BorderSide(color: Color(0xFF6366F1)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.edit_rounded, size: 15),
+                  label: const Text("Edit", style: TextStyle(fontSize: 12)),
+                ),
                 OutlinedButton.icon(
                   onPressed: () => _handleToggleStatus(user),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isActive ? Colors.amber : AppTheme.accentGreen,
                     side: BorderSide(color: isActive ? Colors.amber : AppTheme.accentGreen),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_rounded, size: 16),
+                  icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_rounded, size: 15),
                   label: Text(isActive ? "Deactivate" : "Activate", style: const TextStyle(fontSize: 12)),
                 ),
-                const SizedBox(width: 10),
                 OutlinedButton.icon(
                   onPressed: () => _handleDeleteUser(user),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.accentRed,
                     side: const BorderSide(color: AppTheme.accentRed),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                  icon: const Icon(Icons.delete_forever_rounded, size: 15),
                   label: const Text("Delete", style: TextStyle(fontSize: 12)),
                 ),
               ],

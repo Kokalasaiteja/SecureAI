@@ -40,6 +40,10 @@ def admin_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.session.get('is_admin'):
+            is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+            if is_json:
+                from django.http import JsonResponse
+                return JsonResponse({'success': False, 'message': 'Admin authentication required.'}, status=403)
             return redirect('admin_login')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -47,18 +51,29 @@ def admin_required(view_func):
 @csrf_exempt
 def register_view(request):
     msg = ''
+    is_error = False
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+
     if request.method == 'POST':
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        mobile = request.POST.get('mobile')
-        password = request.POST.get('password')
+        name = (request.POST.get('name') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        mobile = (request.POST.get('mobile') or '').strip()
+        password = (request.POST.get('password') or '').strip()
         image = request.FILES.get('image')
 
         # Basic validation
         if not (name and email and mobile and password and image):
-            msg = "All fields are required."
-        elif RegisteredUser.objects.filter(name=name).exists():
-            msg = "already exist keep any other username."
+            msg = "All fields are required (including profile image)."
+            is_error = True
+        elif name.lower() == 'admin':
+            msg = "The username 'admin' is reserved. Please choose a different username."
+            is_error = True
+        elif RegisteredUser.objects.filter(name__iexact=name).exists():
+            msg = "Username already exists. Please choose a different username."
+            is_error = True
+        elif RegisteredUser.objects.filter(email__iexact=email).exists():
+            msg = "Email address is already registered. Please choose another email or log in."
+            is_error = True
         else:
             # Read image bytes and encode to base64 Data URI for permanent persistent storage
             b64_str = ''
@@ -82,8 +97,13 @@ def register_view(request):
                 is_active=False
             )
             msg = "Registered successfully! Wait for admin approval."
+            is_error = False
 
-    return render(request, 'register.html', {'msg': msg})
+        if is_json:
+            from django.http import JsonResponse
+            return JsonResponse({'success': not is_error, 'message': msg}, status=400 if is_error else 200)
+
+    return render(request, 'register.html', {'msg': msg, 'is_error': is_error})
 
 from django.utils import timezone
 import pytz
@@ -228,6 +248,131 @@ def delete_user(request, user_id):
         messages.warning(request, "User does not exist or has already been deleted.")
 
     return redirect('admin_dashboard')
+
+@admin_required
+@csrf_exempt
+def edit_user(request, user_id):
+    from django.http import JsonResponse
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+
+    try:
+        user = RegisteredUser.objects.get(id=user_id)
+    except RegisteredUser.DoesNotExist:
+        if is_json:
+            return JsonResponse({'success': False, 'message': 'User not found or has been deleted.'}, status=404)
+        messages.error(request, 'User not found or has been deleted.')
+        return redirect('admin_dashboard')
+
+    if request.method == 'POST':
+        name = (request.POST.get('name') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        mobile = (request.POST.get('mobile') or '').strip()
+        password = (request.POST.get('password') or '').strip()
+        is_active_val = request.POST.get('is_active')
+        image = request.FILES.get('image')
+
+        # Validation
+        if not name or not email or not mobile:
+            err = "Name, email, and mobile are required fields."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return redirect('admin_dashboard')
+
+        if name.lower() == 'admin':
+            err = "The username 'admin' is reserved. Please choose another username."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return redirect('admin_dashboard')
+
+        # Check unique username (exclude self)
+        if RegisteredUser.objects.filter(name__iexact=name).exclude(id=user_id).exists():
+            err = f"Username '{name}' is already taken by another user."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return redirect('admin_dashboard')
+
+        # Check unique email (exclude self)
+        if RegisteredUser.objects.filter(email__iexact=email).exclude(id=user_id).exists():
+            err = f"Email '{email}' is already registered to another user."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return redirect('admin_dashboard')
+
+        user.name = name
+        user.email = email
+        user.mobile = mobile
+
+        if password:
+            user.password = password
+
+        if is_active_val is not None:
+            user.is_active = str(is_active_val).lower() in ('true', '1', 'on', 'yes')
+
+        if image:
+            try:
+                img_bytes = image.read()
+                image.seek(0)
+                content_type = getattr(image, 'content_type', 'image/jpeg') or 'image/jpeg'
+                user.image_base64 = f"data:{content_type};base64," + base64.b64encode(img_bytes).decode('utf-8')
+                user.image = image
+            except Exception:
+                pass
+
+        user.save()
+
+        msg = f"User '{user.name}' updated successfully."
+        if is_json:
+            img_url = ''
+            if user.image:
+                try:
+                    img_url = user.image.url
+                except Exception:
+                    pass
+            if not img_url and user.image_base64:
+                img_url = user.image_base64
+            return JsonResponse({
+                'success': True,
+                'message': msg,
+                'user': {
+                    'id': user.id,
+                    'name': user.name,
+                    'email': user.email,
+                    'mobile': user.mobile,
+                    'image_url': img_url,
+                    'is_active': user.is_active,
+                }
+            })
+
+        messages.success(request, msg)
+        return redirect('admin_dashboard')
+
+    # GET request
+    if is_json:
+        img_url = ''
+        if user.image:
+            try:
+                img_url = user.image.url
+            except Exception:
+                pass
+        if not img_url and user.image_base64:
+            img_url = user.image_base64
+        return JsonResponse({
+            'success': True,
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'mobile': user.mobile,
+                'image_url': img_url,
+                'is_active': user.is_active,
+            }
+        })
+
+    return render(request, 'admin_edit_user.html', {'target_user': user})
 
 def home(request):
     return render(request, 'home.html')

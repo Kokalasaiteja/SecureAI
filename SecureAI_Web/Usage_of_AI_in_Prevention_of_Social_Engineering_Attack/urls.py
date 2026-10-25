@@ -35,6 +35,7 @@ urlpatterns = [
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('activate/<int:user_id>/', views.activate_user, name='activate_user'),
     path('deactivate/<int:user_id>/', views.deactivate_user, name='deactivate_user'),
+    path('admin-edit-user/<int:user_id>/', views.edit_user, name='edit_user'),
     path('delete/<int:user_id>/', views.delete_user, name='delete_user'),
     path('user-logout/', views.user_logout, name='user_logout'),
     path("forgot-password/",views.forgot_password, name="forgot_password"),
