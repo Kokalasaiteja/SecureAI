@@ -1,7 +1,8 @@
 
 from functools import wraps
 from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.contrib import messages
+from django.views.decorators.csrf import csrf_exempt
 from .models import RegisteredUser
 from django.core.files.storage import FileSystemStorage
 
@@ -227,59 +228,6 @@ def delete_user(request, user_id):
         messages.warning(request, "User does not exist or has already been deleted.")
 
     return redirect('admin_dashboard')
-
-@csrf_protect
-@user_required
-def delete_account(request):
-    """
-    Allows the authenticated user to permanently delete their own account.
-    - Strictly identifies the account using request.session['user_id'] (prevents parameter tampering / IDOR).
-    - Requires password verification before proceeding.
-    - Purges the database record, physical profile picture, active sessions, and OTP records.
-    - Flushes the session on completion and invalidates access.
-    """
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
-    from django.http import JsonResponse
-
-    user_id = request.session.get('user_id')
-    user = RegisteredUser.objects.filter(id=user_id).first()
-    if not user:
-        request.session.flush()
-        if is_json:
-            return JsonResponse({'success': False, 'message': 'Account not found or already deleted.'}, status=404)
-        return redirect('user_login')
-
-    if request.method == 'POST':
-        password = (request.POST.get('password') or '').strip()
-        if not password:
-            msg = "Password confirmation is required to permanently delete your account."
-            if is_json:
-                return JsonResponse({'success': False, 'message': msg}, status=400)
-            messages.error(request, msg)
-            return redirect('user_homepage')
-
-        if password != user.password:
-            msg = "Incorrect password. Account deletion aborted."
-            if is_json:
-                return JsonResponse({'success': False, 'message': msg}, status=403)
-            messages.error(request, msg)
-            return redirect('user_homepage')
-
-        from .utils import delete_user_account
-        success, msg = delete_user_account(user, current_request=request, otp_storage_ref=otp_storage)
-        if not success:
-            if is_json:
-                return JsonResponse({'success': False, 'message': msg}, status=500)
-            messages.error(request, msg)
-            return redirect('user_homepage')
-
-        if is_json:
-            return JsonResponse({'success': True, 'message': 'Your account and all associated personal data have been permanently deleted.'})
-
-        messages.success(request, "Your account and all associated personal data have been permanently deleted.")
-        return redirect('user_login')
-
-    return render(request, 'users/delete_account_confirm.html', {'user': user})
 
 def home(request):
     return render(request, 'home.html')

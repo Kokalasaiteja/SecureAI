@@ -1387,29 +1387,4 @@ class ApiService {
       return false;
     }
   }
-
-  static Future<Map<String, dynamic>> deleteAccount(String password) async {
-    try {
-      final uri = Uri.parse('$_activeBaseUrl/delete-account/');
-      final res = await http.post(
-        uri,
-        headers: _getHeaders(refererPath: '/user-homepage/'),
-        body: {'password': password},
-      );
-      _extractCookies(res);
-      if (res.statusCode == 200) {
-        await logout();
-        return {'success': true, 'message': 'Account permanently deleted.'};
-      } else {
-        try {
-          final data = jsonDecode(res.body);
-          return {'success': false, 'message': data['message'] ?? 'Failed to delete account.'};
-        } catch (_) {
-          return {'success': false, 'message': 'Failed to delete account.'};
-        }
-      }
-    } catch (_) {
-      return {'success': false, 'message': 'Network error occurred during deletion.'};
-    }
-  }
 }
