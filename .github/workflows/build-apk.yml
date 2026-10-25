@@ -1,0 +1,56 @@
+name: Build SecureAI Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'SecureAI_Mobile_app/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: SecureAI_Mobile_app
+        run: flutter pub get
+
+      - name: Build Split-per-ABI APKs
+        working-directory: SecureAI_Mobile_app
+        run: flutter build apk --split-per-abi --release
+
+      - name: Build Universal Release APK
+        working-directory: SecureAI_Mobile_app
+        run: flutter build apk --release
+
+      - name: Copy APKs to Web Media Directory
+        run: |
+          mkdir -p SecureAI_Web/media
+          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk SecureAI_Web/media/
+          ls -la SecureAI_Web/media/*.apk
+
+      - name: Upload APKs as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecureAI-Android-APKs
+          path: SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+          retention-days: 7
