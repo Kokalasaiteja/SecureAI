@@ -1,7 +1,7 @@
 
 from functools import wraps
 from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from .models import RegisteredUser
 from django.core.files.storage import FileSystemStorage
 
@@ -9,8 +9,29 @@ from django.core.files.storage import FileSystemStorage
 def user_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if 'user_id' not in request.session:
+        is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+        user_id = request.session.get('user_id')
+        if not user_id:
+            if is_json:
+                from django.http import JsonResponse
+                return JsonResponse({'success': False, 'message': 'Authentication required.'}, status=401)
             return redirect('user_login')
+
+        try:
+            user = RegisteredUser.objects.get(id=user_id)
+            if not user.is_active:
+                request.session.flush()
+                if is_json:
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': False, 'message': 'Account is inactive. Please contact admin.'}, status=403)
+                return redirect('user_login')
+        except RegisteredUser.DoesNotExist:
+            request.session.flush()
+            if is_json:
+                from django.http import JsonResponse
+                return JsonResponse({'success': False, 'message': 'Account no longer exists.'}, status=401)
+            return redirect('user_login')
+
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
@@ -88,10 +109,13 @@ def user_login(request):
                     except Exception:
                         img_url = ''
 
+                active_img = user.image_base64 if user.image_base64 else img_url
+
                 # Save user info in session
                 request.session['user_id'] = user.id
                 request.session['user_name'] = user.name
                 request.session['user_image'] = img_url
+                request.session['user_image_base64'] = user.image_base64
                 request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
 
                 if is_json:
@@ -99,7 +123,7 @@ def user_login(request):
                         'success': True,
                         'message': 'Login successful!',
                         'user_name': user.name,
-                        'user_image': img_url,
+                        'user_image': active_img,
                         'login_time': local_time.strftime('%I:%M:%S %p'),
                     })
 
@@ -147,6 +171,8 @@ def admin_dashboard(request):
                     img_url = u.image.url
                 except Exception:
                     pass
+            if not img_url and u.image_base64:
+                img_url = u.image_base64
             user_list.append({
                 'id': u.id,
                 'name': u.name,
@@ -180,12 +206,80 @@ def deactivate_user(request, user_id):
 
 @admin_required
 def delete_user(request, user_id):
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    from django.http import JsonResponse
     try:
         user = RegisteredUser.objects.get(id=user_id)
-        user.delete()
+        from .utils import delete_user_account
+        success, msg = delete_user_account(user, otp_storage_ref=otp_storage)
+        if not success:
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=500)
+            messages.error(request, f"Failed to delete user: {msg}")
+            return redirect('admin_dashboard')
+
+        if is_json:
+            return JsonResponse({'success': True, 'message': f"User {user_id} deleted successfully."})
+        messages.success(request, f"User {user.name} has been permanently deleted.")
     except RegisteredUser.DoesNotExist:
-        pass
+        if is_json:
+            return JsonResponse({'success': False, 'message': 'User does not exist or has already been deleted.'}, status=404)
+        messages.warning(request, "User does not exist or has already been deleted.")
+
     return redirect('admin_dashboard')
+
+@csrf_protect
+@user_required
+def delete_account(request):
+    """
+    Allows the authenticated user to permanently delete their own account.
+    - Strictly identifies the account using request.session['user_id'] (prevents parameter tampering / IDOR).
+    - Requires password verification before proceeding.
+    - Purges the database record, physical profile picture, active sessions, and OTP records.
+    - Flushes the session on completion and invalidates access.
+    """
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    from django.http import JsonResponse
+
+    user_id = request.session.get('user_id')
+    user = RegisteredUser.objects.filter(id=user_id).first()
+    if not user:
+        request.session.flush()
+        if is_json:
+            return JsonResponse({'success': False, 'message': 'Account not found or already deleted.'}, status=404)
+        return redirect('user_login')
+
+    if request.method == 'POST':
+        password = (request.POST.get('password') or '').strip()
+        if not password:
+            msg = "Password confirmation is required to permanently delete your account."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=400)
+            messages.error(request, msg)
+            return redirect('user_homepage')
+
+        if password != user.password:
+            msg = "Incorrect password. Account deletion aborted."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=403)
+            messages.error(request, msg)
+            return redirect('user_homepage')
+
+        from .utils import delete_user_account
+        success, msg = delete_user_account(user, current_request=request, otp_storage_ref=otp_storage)
+        if not success:
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=500)
+            messages.error(request, msg)
+            return redirect('user_homepage')
+
+        if is_json:
+            return JsonResponse({'success': True, 'message': 'Your account and all associated personal data have been permanently deleted.'})
+
+        messages.success(request, "Your account and all associated personal data have been permanently deleted.")
+        return redirect('user_login')
+
+    return render(request, 'users/delete_account_confirm.html', {'user': user})
 
 def home(request):
     return render(request, 'home.html')
@@ -371,6 +465,7 @@ def detect_spam(request):
     explanation = None
     error = None
     message = ''
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json'
 
     if request.method == 'POST':
         message = request.POST.get('message', '').strip()
@@ -391,6 +486,11 @@ def detect_spam(request):
                 error = str(exc)
             except Exception as exc:
                 error = f"Spam detection failed: {exc}"
+
+        if is_json:
+            if error:
+                return JsonResponse({'success': False, 'message': error}, status=400)
+            return JsonResponse({'success': True, 'result': result, 'explanation': explanation})
 
     return render(request, 'users/detect.html', {
         'result': result,
@@ -465,6 +565,10 @@ def train_anomaly_model(request):
             'fn': int(fn),
             'tp': int(tp),
         })
+
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json'
+    if is_json:
+        return JsonResponse({'success': True, 'models': combined_data})
 
     return render(request, 'users/train_anomaly.html', {'combined_data': combined_data})
 
@@ -620,9 +724,12 @@ def classify_url_with_langchain(url):
 @csrf_exempt
 @user_required
 def qr_scan_view(request):
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json'
     if request.method == 'POST':
         img = request.FILES.get('qr_image')
         if not img:
+            if is_json:
+                return JsonResponse({'success': False, 'message': 'Please select an image file to scan.'}, status=400)
             return render(request, 'users/qr_form.html', {'error': 'Please select an image file to scan.'})
 
         fs = FileSystemStorage()
@@ -636,11 +743,33 @@ def qr_scan_view(request):
             else:
                 classification = "❌ QR Code not detected."
 
+            # Delete the temporary uploaded file to prevent storage leakage
+            try:
+                if os.path.exists(uploaded_file_path):
+                    os.remove(uploaded_file_path)
+            except Exception:
+                pass
+
+            if is_json:
+                return JsonResponse({
+                    'success': True,
+                    'detected': bool(decoded_url),
+                    'url': decoded_url or 'None',
+                    'classification': classification
+                })
+
             return render(request, 'users/qr_result.html', {
                 'qr_data': decoded_url,
                 'classification': classification
             })
         except Exception as exc:
+            try:
+                if os.path.exists(uploaded_file_path):
+                    os.remove(uploaded_file_path)
+            except Exception:
+                pass
+            if is_json:
+                return JsonResponse({'success': False, 'message': f"QR scanning failed: {exc}"}, status=400)
             return render(request, 'users/qr_form.html', {'error': f"QR scanning failed: {exc}"})
 
     return render(request, 'users/qr_form.html')

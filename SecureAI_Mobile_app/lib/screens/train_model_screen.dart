@@ -207,7 +207,7 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
           const SizedBox(height: 12),
 
           // Structured Classification Metrics Table
-          _buildClassificationTable(report),
+          _buildClassificationTable(report, tn: tn, fp: fp, fn: fn, tp: tp),
           const SizedBox(height: 18),
 
           // Confusion Matrix Header
@@ -394,7 +394,7 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
     );
   }
 
-  Widget _buildClassificationTable(String report) {
+  Widget _buildClassificationTable(String report, {int tn = 0, int fp = 0, int fn = 0, int tp = 0}) {
     final List<Map<String, String>> rows = [];
 
     final lines = report
@@ -473,8 +473,75 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
       }
     }
 
+    // Defensive Fallback: If raw text could not be parsed but we have confusion matrix counts, calculate exact metrics
+    if (rows.isEmpty && (tn > 0 || tp > 0 || fp > 0 || fn > 0)) {
+      final total = tn + fp + fn + tp;
+      final nSupport = tn + fp;
+      final aSupport = fn + tp;
+
+      final normPrec = (tn + fn > 0) ? (tn / (tn + fn)) : 0.0;
+      final normRec = (nSupport > 0) ? (tn / nSupport) : 0.0;
+      final normF1 = (normPrec + normRec > 0) ? (2 * normPrec * normRec / (normPrec + normRec)) : 0.0;
+
+      final anomPrec = (tp + fp > 0) ? (tp / (tp + fp)) : 0.0;
+      final anomRec = (aSupport > 0) ? (tp / aSupport) : 0.0;
+      final anomF1 = (anomPrec + anomRec > 0) ? (2 * anomPrec * anomRec / (anomPrec + anomRec)) : 0.0;
+
+      final accuracy = (total > 0) ? ((tn + tp) / total) : 0.0;
+      final macroPrec = (normPrec + anomPrec) / 2;
+      final macroRec = (normRec + anomRec) / 2;
+      final macroF1 = (normF1 + anomF1) / 2;
+
+      final weightedPrec = (total > 0) ? ((normPrec * nSupport + anomPrec * aSupport) / total) : 0.0;
+      final weightedRec = (total > 0) ? ((normRec * nSupport + anomRec * aSupport) / total) : 0.0;
+      final weightedF1 = (total > 0) ? ((normF1 * nSupport + anomF1 * aSupport) / total) : 0.0;
+
+      rows.add({
+        'class': 'Normal',
+        'precision': normPrec.toStringAsFixed(2),
+        'recall': normRec.toStringAsFixed(2),
+        'f1': normF1.toStringAsFixed(2),
+        'support': nSupport.toString(),
+        'isHighlight': 'false',
+      });
+      rows.add({
+        'class': 'Anomaly',
+        'precision': anomPrec.toStringAsFixed(2),
+        'recall': anomRec.toStringAsFixed(2),
+        'f1': anomF1.toStringAsFixed(2),
+        'support': aSupport.toString(),
+        'isHighlight': 'false',
+      });
+      rows.add({
+        'class': 'Accuracy',
+        'precision': '-',
+        'recall': '-',
+        'f1': accuracy.toStringAsFixed(2),
+        'support': total.toString(),
+        'isHighlight': 'true',
+      });
+      rows.add({
+        'class': 'Macro Avg',
+        'precision': macroPrec.toStringAsFixed(2),
+        'recall': macroRec.toStringAsFixed(2),
+        'f1': macroF1.toStringAsFixed(2),
+        'support': total.toString(),
+        'isHighlight': 'false',
+      });
+      rows.add({
+        'class': 'Weighted Avg',
+        'precision': weightedPrec.toStringAsFixed(2),
+        'recall': weightedRec.toStringAsFixed(2),
+        'f1': weightedF1.toStringAsFixed(2),
+        'support': total.toString(),
+        'isHighlight': 'false',
+      });
+    }
+
     if (rows.isEmpty) {
-      // Fallback in case raw text cannot be parsed
+      if (report.trim().isEmpty) {
+        return const SizedBox.shrink();
+      }
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(12),

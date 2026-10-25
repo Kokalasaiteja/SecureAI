@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
@@ -315,29 +317,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildUserAvatar(String name, String imageUrl) {
     if (imageUrl.isNotEmpty) {
-      return Image.network(
-        imageUrl,
-        width: 40,
-        height: 40,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildLocalOrUiAvatar(name),
-      );
-    }
-    return _buildLocalOrUiAvatar(name);
-  }
-
-  Widget _buildLocalOrUiAvatar(String name) {
-    final lower = name.toLowerCase();
-    final bool isKokalaUser = lower.contains('kokala') || lower.contains('sai') || lower.contains('manikanta');
-
-    if (isKokalaUser) {
-      return Image.asset(
-        'assets/images/user_avatar.jpg',
-        width: 40,
-        height: 40,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildUiAvatar(name),
-      );
+      if (imageUrl.startsWith('data:image') || imageUrl.contains(';base64,')) {
+        try {
+          final base64Data = imageUrl.contains(',') ? imageUrl.split(',').last : imageUrl;
+          final Uint8List bytes = base64Decode(base64Data);
+          return Image.memory(
+            bytes,
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildUiAvatar(name),
+          );
+        } catch (_) {}
+      } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return Image.network(
+          imageUrl,
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildUiAvatar(name),
+        );
+      } else if (imageUrl.length > 100 && !imageUrl.contains(' ')) {
+        try {
+          final Uint8List bytes = base64Decode(imageUrl);
+          return Image.memory(
+            bytes,
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildUiAvatar(name),
+          );
+        } catch (_) {}
+      }
     }
     return _buildUiAvatar(name);
   }

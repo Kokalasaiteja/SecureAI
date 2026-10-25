@@ -31,6 +31,48 @@ class ApiService {
     return 'https://ui-avatars.com/api/?name=$safeName&background=$background&color=fff&size=$size&bold=true&format=png';
   }
 
+  /// Unescapes HTML entities such as &#27, &#27;, &#39;, &#x27;, &quot;, &amp;, etc.
+  static String unescapeHtml(String text) {
+    if (text.isEmpty) return text;
+    var result = text
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#34;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&#39;', "'")
+        .replaceAll('&#x27;', "'")
+        .replaceAll('&#x27', "'")
+        .replaceAll('&#27;', "'")
+        .replaceAll('&#27', "'") // Resolves incomplete/unterminated entity for single quote
+        .replaceAll('&amp;', '&')
+        .replaceAll('&#38;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&#60;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&#62;', '>')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&#160;', ' ');
+
+    // Match decimal entities &#NNN;
+    result = result.replaceAllMapped(RegExp(r'&#(\d+);?'), (match) {
+      final code = int.tryParse(match.group(1)!);
+      if (code != null && code > 0) {
+        return String.fromCharCode(code);
+      }
+      return match.group(0)!;
+    });
+
+    // Match hex entities &#xHH;
+    result = result.replaceAllMapped(RegExp(r'&#x([0-9a-fA-F]+);?'), (match) {
+      final code = int.tryParse(match.group(1)!, radix: 16);
+      if (code != null && code > 0) {
+        return String.fromCharCode(code);
+      }
+      return match.group(0)!;
+    });
+
+    return result;
+  }
+
   static Future<String?> getCurrentUserImageUrl() async {
     final prefs = await SharedPreferences.getInstance();
     String? cached = prefs.getString('user_image_url');
@@ -50,7 +92,9 @@ class ApiService {
             final json = jsonDecode(res.body);
             if (json is Map && json['user_image'] != null && json['user_image'].toString().isNotEmpty) {
               String img = json['user_image'].toString();
-              if (!img.startsWith('http')) img = '$_activeBaseUrl$img';
+              if (!img.startsWith('http') && !img.startsWith('data:image')) {
+                img = '$_activeBaseUrl$img';
+              }
               await prefs.setString('user_image_url', img);
               return img;
             }
@@ -59,7 +103,9 @@ class ApiService {
           final match = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(res.body);
           if (match != null) {
             String img = match.group(1)!;
-            if (!img.startsWith('http')) img = '$_activeBaseUrl$img';
+            if (!img.startsWith('http') && !img.startsWith('data:image')) {
+              img = '$_activeBaseUrl$img';
+            }
             await prefs.setString('user_image_url', img);
             return img;
           }
@@ -494,7 +540,10 @@ class ApiService {
           uri,
           headers: _getHeaders(
             refererPath: '/detect_spam/',
-            extraHeaders: {'Content-Type': 'application/x-www-form-urlencoded'},
+            extraHeaders: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
           ),
           body: bodyFields,
         );
@@ -513,6 +562,23 @@ class ApiService {
 
         if (response.statusCode == 200) {
           final body = response.body;
+
+          // Attempt JSON response parsing first
+          try {
+            final json = jsonDecode(body);
+            if (json is Map && json['success'] == true) {
+              final String resStr = json['result']?.toString() ?? 'Ham';
+              final bool isSpam = resStr.toLowerCase() == 'spam';
+              final String rawExp = json['explanation']?.toString() ?? 'Analyzed by AI Spam Detection.';
+              return {
+                'success': true,
+                'result': isSpam ? 'Spam' : 'Ham (Safe)',
+                'is_spam': isSpam,
+                'body': unescapeHtml(rawExp),
+              };
+            }
+          } catch (_) {}
+
           bool isSpam = false;
           String explanation = "Analyzed by AI Spam Detection.";
 
@@ -539,7 +605,7 @@ class ApiService {
             'success': true,
             'result': isSpam ? 'Spam' : 'Ham (Safe)',
             'is_spam': isSpam,
-            'body': explanation,
+            'body': unescapeHtml(explanation),
           };
         }
         return {'success': false, 'message': 'Detection failed with code ${response.statusCode}'};
@@ -810,7 +876,10 @@ class ApiService {
 
         final uri = Uri.parse('$_activeBaseUrl/scan-qr/');
         final request = http.MultipartRequest('POST', uri);
-        request.headers.addAll(_getHeaders(refererPath: '/scan-qr/'));
+        request.headers.addAll(_getHeaders(
+          refererPath: '/scan-qr/',
+          extraHeaders: {'Accept': 'application/json'},
+        ));
 
         if (_csrfToken != null && _csrfToken!.isNotEmpty) {
           request.fields['csrfmiddlewaretoken'] = _csrfToken!;
@@ -841,6 +910,19 @@ class ApiService {
 
         if (response.statusCode == 200) {
           final body = response.body;
+
+          // Attempt JSON parse first
+          try {
+            final json = jsonDecode(body);
+            if (json is Map && json['success'] == true) {
+              return {
+                'success': true,
+                'detected': json['detected'] == true,
+                'url': json['url']?.toString() ?? 'None',
+                'classification': json['classification']?.toString() ?? (json['detected'] == true ? '🔗 QR Decoded' : '❌ QR Code not detected.'),
+              };
+            }
+          } catch (_) {}
 
           if (body.contains("QR Code not detected") || body.contains("❌ QR Code not detected")) {
             return {
@@ -904,7 +986,13 @@ class ApiService {
     for (int attempt = 0; attempt < 2; attempt++) {
       try {
         final uri = Uri.parse('$_activeBaseUrl/train-anomaly-model/');
-        final response = await http.get(uri, headers: _getHeaders(refererPath: '/train-anomaly-model/'));
+        final response = await http.get(
+          uri,
+          headers: _getHeaders(
+            refererPath: '/train-anomaly-model/',
+            extraHeaders: {'Accept': 'application/json'},
+          ),
+        );
         _extractCookies(response);
 
         if (response.statusCode == 302 ||
@@ -917,6 +1005,29 @@ class ApiService {
         if (response.statusCode == 200) {
           final body = response.body;
 
+          // Attempt JSON parse first
+          try {
+            final json = jsonDecode(body);
+            if (json is Map && json['success'] == true && json['models'] is List) {
+              final List<Map<String, dynamic>> parsedList = [];
+              for (final m in json['models']) {
+                if (m is Map) {
+                  parsedList.add({
+                    'name': m['name']?.toString() ?? 'Model',
+                    'report': m['report']?.toString() ?? '',
+                    'tn': int.tryParse(m['tn']?.toString() ?? '0') ?? 0,
+                    'fp': int.tryParse(m['fp']?.toString() ?? '0') ?? 0,
+                    'fn': int.tryParse(m['fn']?.toString() ?? '0') ?? 0,
+                    'tp': int.tryParse(m['tp']?.toString() ?? '0') ?? 0,
+                  });
+                }
+              }
+              if (parsedList.isNotEmpty) {
+                return {'success': true, 'models': parsedList};
+              }
+            }
+          } catch (_) {}
+
           // Parse model blocks from HTML
           final List<Map<String, dynamic>> models = [];
           final modelBlocks = RegExp(r'<div class="model-block">(.*?)<\/div>\s*<\/div>\s*<\/div>', dotAll: true).allMatches(body);
@@ -924,7 +1035,7 @@ class ApiService {
           for (final blockMatch in modelBlocks) {
             final block = blockMatch.group(1) ?? '';
             final titleMatch = RegExp(r'<h3 class="model-title"[^>]*>.*?<\/i>\s*([^<\n]+)', dotAll: true).firstMatch(block);
-            final reportMatch = RegExp(r'<pre>(.*?)<\/pre>', dotAll: true).firstMatch(block);
+            final reportMatch = RegExp(r'<pre[^>]*>(.*?)<\/pre>', dotAll: true).firstMatch(block);
 
             int tn = 0, fp = 0, fn = 0, tp = 0;
             final countMatches = RegExp(r'<div class="text-2xl font-extrabold">(\d+)<\/div>').allMatches(block).toList();
@@ -1274,6 +1385,31 @@ class ApiService {
       return res.statusCode == 200 || res.statusCode == 302;
     } catch (_) {
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteAccount(String password) async {
+    try {
+      final uri = Uri.parse('$_activeBaseUrl/delete-account/');
+      final res = await http.post(
+        uri,
+        headers: _getHeaders(refererPath: '/user-homepage/'),
+        body: {'password': password},
+      );
+      _extractCookies(res);
+      if (res.statusCode == 200) {
+        await logout();
+        return {'success': true, 'message': 'Account permanently deleted.'};
+      } else {
+        try {
+          final data = jsonDecode(res.body);
+          return {'success': false, 'message': data['message'] ?? 'Failed to delete account.'};
+        } catch (_) {
+          return {'success': false, 'message': 'Failed to delete account.'};
+        }
+      }
+    } catch (_) {
+      return {'success': false, 'message': 'Network error occurred during deletion.'};
     }
   }
 }

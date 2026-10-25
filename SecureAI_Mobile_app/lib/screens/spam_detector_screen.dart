@@ -40,7 +40,7 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
     final bool hasError = _result != null && _result!['success'] == false;
     final bool hasResult = _result != null && _result!['success'] == true;
     final String resultText = _result?['result']?.toString() ?? 'Safe';
-    final String explanationText = _result?['body']?.toString() ?? 'No malicious indicators detected.';
+    final String explanationText = ApiService.unescapeHtml(_result?['body']?.toString() ?? 'No malicious indicators detected.');
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/detect_spam'),

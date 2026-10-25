@@ -50,6 +50,18 @@
         <span>Email Phishing</span>
       </a>
     </div>
+
+    <!-- Account Actions & Security -->
+    <div class="mt-8 pt-6 border-t border-gray-700/60 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm text-gray-400">
+      <span class="flex items-center space-x-2">
+        <i class="fas fa-shield-alt text-teal-400"></i>
+        <span>Zero-Trust Identity Governance</span>
+      </span>
+      <a href="{% url 'delete_account' %}" class="inline-flex items-center space-x-2 text-red-400 hover:text-red-300 font-semibold px-4 py-2 rounded-xl bg-red-600/10 hover:bg-red-600/25 border border-red-500/30 transition duration-200 shadow-sm">
+        <i class="fas fa-user-slash text-red-400"></i>
+        <span>Delete Account</span>
+      </a>
+    </div>
   </section>
 </div>
 {% endblock %}

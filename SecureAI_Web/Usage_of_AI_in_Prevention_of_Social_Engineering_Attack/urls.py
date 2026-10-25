@@ -36,6 +36,7 @@ urlpatterns = [
     path('activate/<int:user_id>/', views.activate_user, name='activate_user'),
     path('deactivate/<int:user_id>/', views.deactivate_user, name='deactivate_user'),
     path('delete/<int:user_id>/', views.delete_user, name='delete_user'),
+    path('delete-account/', views.delete_account, name='delete_account'),
     path('user-logout/', views.user_logout, name='user_logout'),
     path("forgot-password/",views.forgot_password, name="forgot_password"),
     path("verify-otp/",views.verify_otp, name="verify_otp"),

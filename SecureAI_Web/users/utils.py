@@ -6,7 +6,7 @@ import resend
 logger = logging.getLogger(__name__)
 
 # Initialize safely using the system environment
-resend.api_key = os.environ.get("RESEND_API_KEY", "re_CDmMjbrE_6QrZxx3Wi2bAGxNmRRkbSamg")
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
 
 def generate_six_digit_otp():
     """Generates a secure numeric string for multi-factor checks."""
@@ -46,3 +46,126 @@ def send_secure_otp_email(target_email, otp_code):
     except Exception as error:
         logger.error(f"Resend transaction failed: {str(error)}")
         return False
+
+
+def is_safe_user_image_path(image_name):
+    """
+    Validates that the image file path is strictly within the user_images/ directory
+    and does not point to system assets, parent directories, or shared files.
+    """
+    if not image_name:
+        return False
+
+    norm = os.path.normpath(str(image_name)).replace('\\', '/')
+    # Must not traverse upwards or start with absolute root
+    if '..' in norm or norm.startswith('/'):
+        return False
+
+    # Must be inside user_images directory
+    if not (norm.startswith('user_images/') or norm == 'user_images'):
+        return False
+
+    # Must not be a shared system file or model binary
+    filename = os.path.basename(norm).lower()
+    protected_files = {
+        'app-release.apk', 'app-arm64-v8a-release.apk', 'app-armeabi-v7a-release.apk',
+        'app-x86_64-release.apk', 'behavior_anomaly_dataset.csv', 'favicon.png',
+        'favicon.ico', 'user_avatar.jpg', 'random_forest.pkl',
+        'logistic_regression.pkl', 'xgboost.pkl'
+    }
+    if filename in protected_files or filename.endswith('.apk') or filename.endswith('.pkl'):
+        return False
+
+    return True
+
+
+def delete_user_account(user, current_request=None, otp_storage_ref=None):
+    """
+    Comprehensively and securely deletes a user account and associated personal data:
+    1. Validates the user record.
+    2. Atomically deletes the database row in a transaction (cascading/protecting via Django on_delete).
+    3. Safely removes the physical profile picture from disk and storage if not shared by another user.
+    4. Purges all active sessions for this user from django_session.
+    5. Cleans up in-memory OTP dictionaries and session challenges.
+    6. Flushes the current session if requested by the authenticated user.
+
+    Returns:
+        tuple (bool success, str message)
+    """
+    from pathlib import Path
+    from django.db import transaction, DatabaseError
+    from django.db.models import ProtectedError
+    from django.core.files.storage import default_storage
+    from django.contrib.sessions.models import Session
+    from django.conf import settings
+    from .models import RegisteredUser
+
+    if not user or not user.pk:
+        return False, "Invalid user record provided for deletion."
+
+    user_id = user.id
+    user_email = (user.email or '').strip()
+    image_name = user.image.name if user.image else None
+
+    # Check whether any other user in the database references the same image file
+    other_users_share_image = False
+    if image_name:
+        other_users_share_image = RegisteredUser.objects.exclude(id=user_id).filter(image=image_name).exists()
+
+    # Step 1: Database deletion within an atomic transaction
+    try:
+        with transaction.atomic():
+            user.delete()
+    except ProtectedError as pe:
+        logger.error(f"Cannot delete user {user_id}: protected related records exist ({pe})")
+        return False, "Account cannot be deleted because protected related records exist."
+    except DatabaseError as dbe:
+        logger.error(f"Database error deleting user {user_id}: {dbe}")
+        return False, "Database error occurred while deleting account."
+    except Exception as exc:
+        logger.error(f"Unexpected error deleting user {user_id}: {exc}")
+        return False, f"Deletion failed: {str(exc)}"
+
+    # Step 2: Physical file storage cleanup
+    if image_name and not other_users_share_image and is_safe_user_image_path(image_name):
+        try:
+            # Delete via Django default storage
+            if default_storage.exists(image_name):
+                default_storage.delete(image_name)
+
+            # Also verify and remove disk file if materialized by smart_media_serve
+            disk_path = Path(settings.MEDIA_ROOT) / image_name
+            if disk_path.exists() and disk_path.is_file():
+                try:
+                    disk_path.unlink()
+                except OSError as os_err:
+                    logger.warning(f"Could not remove local file {disk_path}: {os_err}")
+        except Exception as storage_err:
+            logger.warning(f"File storage cleanup warning for {image_name}: {storage_err}")
+
+    # Step 3: Purge in-memory OTP records
+    if otp_storage_ref is not None and isinstance(otp_storage_ref, dict):
+        if user_email:
+            otp_storage_ref.pop(user_email, None)
+
+    # Step 4: Invalidate all active sessions for this user in django_session
+    try:
+        for s in Session.objects.all():
+            try:
+                data = s.get_decoded()
+                if data.get('user_id') == user_id or (user_email and data.get('reset_email') == user_email):
+                    s.delete()
+            except Exception:
+                pass
+    except Exception as sess_err:
+        logger.warning(f"Session cleanup error for user {user_id}: {sess_err}")
+
+    # Step 5: Flush current session if the request belongs to the deleted user
+    if current_request is not None and hasattr(current_request, 'session'):
+        try:
+            current_request.session.flush()
+        except Exception:
+            pass
+
+    return True, "Account successfully deleted."
+

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
@@ -206,31 +208,41 @@ class HomeScreen extends StatelessWidget {
 
   static Widget _buildUserAvatar(String userName, String? imgUrl, String initials) {
     if (imgUrl != null && imgUrl.isNotEmpty) {
-      return Image.network(
-        imgUrl,
-        width: 104,
-        height: 104,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildLocalOrUiAvatar(userName, initials),
-      );
-    }
-    return _buildLocalOrUiAvatar(userName, initials);
-  }
-
-  static Widget _buildLocalOrUiAvatar(String userName, String initials) {
-    final lowerName = userName.toLowerCase();
-    final bool isKokalaUser = lowerName.contains('kokala') || lowerName.contains('manikanta') || lowerName.contains('sai');
-
-    if (isKokalaUser) {
-      return Image.asset(
-        'assets/images/user_avatar.jpg',
-        width: 104,
-        height: 104,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildUiAvatar(userName, initials),
-      );
+      if (imgUrl.startsWith('data:image') || imgUrl.contains(';base64,')) {
+        try {
+          final base64Data = imgUrl.contains(',') ? imgUrl.split(',').last : imgUrl;
+          final Uint8List bytes = base64Decode(base64Data);
+          return Image.memory(
+            bytes,
+            width: 104,
+            height: 104,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                _buildUiAvatar(userName, initials),
+          );
+        } catch (_) {}
+      } else if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+        return Image.network(
+          imgUrl,
+          width: 104,
+          height: 104,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              _buildUiAvatar(userName, initials),
+        );
+      } else if (imgUrl.length > 100 && !imgUrl.contains(' ')) {
+        try {
+          final Uint8List bytes = base64Decode(imgUrl);
+          return Image.memory(
+            bytes,
+            width: 104,
+            height: 104,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) =>
+                _buildUiAvatar(userName, initials),
+          );
+        } catch (_) {}
+      }
     }
     return _buildUiAvatar(userName, initials);
   }

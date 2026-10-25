@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 
@@ -37,6 +38,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _initAndNavigate() async {
     await ApiService.initSession();
+
+    final prefs = await SharedPreferences.getInstance();
+    final resumeRoute = prefs.getString('resume_route');
+    if (resumeRoute != null && resumeRoute.isNotEmpty) {
+      await prefs.remove('resume_route');
+      if (mounted && ApiService.isLoggedIn) {
+        Navigator.pushReplacementNamed(context, resumeRoute);
+        return;
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 2600));
     if (mounted) {
       if (ApiService.isLoggedIn) {

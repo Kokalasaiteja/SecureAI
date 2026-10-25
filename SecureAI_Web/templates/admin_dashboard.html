@@ -252,7 +252,7 @@
                                     </a>
                                     {% endif %}
                                     <span class="text-white/20">|</span>
-                                    <a href="{% url 'delete_user' user.id %}" class="btn-action inline-flex items-center text-red-300 hover:text-white font-medium text-xs bg-red-600/20 hover:bg-red-600/40 px-3 py-1.5 rounded-lg border border-red-500/40 shadow-sm">
+                                    <a href="{% url 'delete_user' user.id %}" onclick="return confirm('Permanently delete user {{ user.name }}? This will remove their account, profile picture, and invalidate all active sessions.');" class="btn-action inline-flex items-center text-red-300 hover:text-white font-medium text-xs bg-red-600/20 hover:bg-red-600/40 px-3 py-1.5 rounded-lg border border-red-500/40 shadow-sm">
                                         <i class="fas fa-trash-alt mr-1 text-red-400"></i> Delete
                                     </a>
                                 </div>

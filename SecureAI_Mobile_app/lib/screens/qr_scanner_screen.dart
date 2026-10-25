@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
@@ -24,14 +25,46 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   String? _errorMessage;
   Map<String, dynamic>? _scanResult;
 
-  Future<void> _pickImage(ImageSource source) async {
+  @override
+  void initState() {
+    super.initState();
+    _retrieveLostData();
+  }
+
+  Future<void> _retrieveLostData() async {
     try {
+      final LostDataResponse response = await _picker.retrieveLostData();
+      if (response.isEmpty) return;
+      if (response.file != null) {
+        final bytes = await response.file!.readAsBytes();
+        setState(() {
+          _selectedFile = File(response.file!.path);
+          _selectedBytes = bytes;
+          _selectedFileName = response.file!.name;
+          _errorMessage = null;
+        });
+      } else if (response.exception != null) {
+        setState(() {
+          _errorMessage = "Camera error: ${response.exception!.message}";
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickImage(ImageSource source, {CameraDevice preferredCamera = CameraDevice.rear}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('resume_route', '/qr_scanner');
+
       final picked = await _picker.pickImage(
         source: source,
+        preferredCameraDevice: preferredCamera,
         maxWidth: 1600,
         maxHeight: 1600,
         imageQuality: 90,
       );
+
+      await prefs.remove('resume_route');
 
       if (picked != null) {
         final bytes = await picked.readAsBytes();
@@ -43,9 +76,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         });
       }
     } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('resume_route');
       setState(() {
         if (source == ImageSource.camera) {
-          _errorMessage = "Camera access denied or camera not available on this device. Please use 'Upload from Gallery'.";
+          _errorMessage = "Camera access error: $e. You can also use 'Upload Image' from gallery.";
         } else {
           _errorMessage = "Failed to select image from storage: $e";
         }
@@ -197,39 +232,41 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             const SizedBox(height: 16),
           ],
 
-          // Camera vs Upload Action Cards
+          // Action Cards (Front Selfie, QR Camera, Gallery Upload)
           Row(
             children: [
-              // Option 1: Live Camera Photo
+              // Option 1: Front Selfie
               Expanded(
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _pickImage(ImageSource.camera),
+                    onTap: () => _pickImage(ImageSource.camera, preferredCamera: CameraDevice.front),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
+                        color: const Color(0xFFEC4899).withValues(alpha: 0.22),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5), width: 1.2),
+                        border: Border.all(color: const Color(0xFFF472B6).withValues(alpha: 0.5), width: 1.2),
                       ),
                       child: Column(
                         children: const [
-                          Icon(Icons.camera_alt_rounded, color: Color(0xFF818CF8), size: 30),
-                          SizedBox(height: 8),
+                          Icon(Icons.camera_front_rounded, color: Color(0xFFF472B6), size: 28),
+                          SizedBox(height: 6),
                           Text(
-                            "Live Camera",
+                            "Front Selfie",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 12.5,
                             ),
                           ),
                           SizedBox(height: 2),
                           Text(
-                            "Capture live photo",
-                            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                            "Front camera",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
                           ),
                         ],
                       ),
@@ -237,9 +274,50 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
 
-              // Option 2: Upload from Storage / Gallery
+              // Option 2: Live Camera / Rear QR
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _pickImage(ImageSource.camera, preferredCamera: CameraDevice.rear),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5), width: 1.2),
+                      ),
+                      child: Column(
+                        children: const [
+                          Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF818CF8), size: 28),
+                          SizedBox(height: 6),
+                          Text(
+                            "QR Camera",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "Rear camera",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Option 3: Upload from Storage / Gallery
               Expanded(
                 child: Material(
                   color: Colors.transparent,
@@ -247,7 +325,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     onTap: () => _pickImage(ImageSource.gallery),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0D9488).withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
@@ -255,20 +333,22 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                       ),
                       child: Column(
                         children: const [
-                          Icon(Icons.photo_library_rounded, color: Color(0xFF2DD4BF), size: 30),
-                          SizedBox(height: 8),
+                          Icon(Icons.photo_library_rounded, color: Color(0xFF2DD4BF), size: 28),
+                          SizedBox(height: 6),
                           Text(
                             "Upload Image",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 12.5,
                             ),
                           ),
                           SizedBox(height: 2),
                           Text(
-                            "From device gallery",
-                            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                            "From gallery",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
                           ),
                         ],
                       ),
