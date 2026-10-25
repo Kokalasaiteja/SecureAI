@@ -950,7 +950,7 @@ class ApiService {
               'success': true,
               'detected': true,
               'url': detectedUrl,
-              'classification': classification ?? 'Safe',
+              'classification': classification ?? 'Unable to analyze / Unknown',
             };
           }
 
