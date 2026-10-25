@@ -69,274 +69,351 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
       appBar: SecureAIAppBar.user(title: "SecureAI Panel"),
       body: ConstellationBackground(
         gradientColors: const [
-          Color(0xFFEAB308), // from-yellow-500
-          Color(0xFFF97316), // via-orange-500
-          Color(0xFFEF4444), // to-red-500
+          Color(0xFF2E130D), // Warm dark maroon/brown matching img 1
+          Color(0xFF1D0D0B),
+          Color(0xFF120807),
         ],
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: GlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Title matching password_analyzer.html
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.shield_rounded, color: Color(0xFFFACC15), size: 26),
-                      SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          "Password Strength & Breach Analyzer",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Title matching password_analyzer.html
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.shield_rounded, color: Color(0xFFFACC15), size: 26),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              "Password Strength & Breach Analyzer",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Subtitle matching web
+                      const Text(
+                        "Enter a password to check its strength and see if it has been exposed in known data breaches.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Color(0xFFD1D5DB), height: 1.4),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "(Uses k-Anonymity with Have I Been Pwned API; your password is secure).",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Error if any
+                      if (_errorMessage != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFFECACA), fontSize: 13)),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Password Input with Eye Icon
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF131B2E), // dark slate
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF334155)),
+                        ),
+                        child: TextField(
+                          controller: _passwordController,
+                          obscureText: _obscureText,
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          decoration: InputDecoration(
+                            hintText: "Type a password to analyze...",
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureText = !_obscureText;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Button: Analyze Password (Amber/Gold matching img 1)
+                      Center(
+                        child: SizedBox(
+                          width: 220,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _analyze,
+                            icon: _isLoading
+                                ? const SizedBox.shrink()
+                                : const Icon(Icons.search_rounded, size: 20),
+                            label: _isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                  )
+                                : const Text(
+                                    "Analyze Password",
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD97706), // amber/gold from img 1
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 4,
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                ),
 
-                  // Subtitle matching web
+                // Results Section matching Image 1
+                if (_result != null) ...[
+                  const SizedBox(height: 28),
                   const Text(
-                    "Enter a password to check its strength and see if it has been exposed in known data breaches.",
+                    "Analysis Results",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Color(0xFFD1D5DB), height: 1.4),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    "(Uses k-Anonymity with Have I Been Pwned API; your password is secure).",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-                  ),
-                  const SizedBox(height: 22),
-
-                  // Error if any
-                  if (_errorMessage != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFFECACA), fontSize: 13)),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                  ),
+                  const SizedBox(height: 18),
 
-                  // Password Input with Eye Icon
+                  // Two Side-by-Side Cards: Strength Rating & Breach Exposure
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Left Card: Strength Rating
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF131B2E), // dark slate navy from img 1
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: const [
+                                    Icon(Icons.fitness_center_rounded, color: Color(0xFFF59E0B), size: 18),
+                                    SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        "Strength Rating",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    strength,
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: strengthColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Right Card: Breach Exposure
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF131B2E), // dark slate navy from img 1
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: const [
+                                    Icon(Icons.dns_rounded, color: Color(0xFF60A5FA), size: 18),
+                                    SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        "Breach Exposure",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    "$breachCount times",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: breachCount > 0 ? const Color(0xFFF87171) : const Color(0xFF22C55E),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  breachCount > 0
+                                      ? "This password is highly vulnerable!"
+                                      : "Safe! Not found in known breaches.",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    height: 1.3,
+                                    color: breachCount > 0 ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bottom Card: Characteristics Checklist Box (Two-column layout matching img 1)
                   Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF111827), // bg-gray-900
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF374151)), // border-gray-700
-                    ),
-                    child: TextField(
-                      controller: _passwordController,
-                      obscureText: _obscureText,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      decoration: InputDecoration(
-                        hintText: "Type a password to analyze...",
-                        hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            color: const Color(0xFF9CA3AF),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureText = !_obscureText;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Button: Analyze Password (Amber/Gold bg-yellow-600)
-                  SizedBox(
                     width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _analyze,
-                      icon: _isLoading
-                          ? const SizedBox.shrink()
-                          : const Icon(Icons.search_rounded, size: 20),
-                      label: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                            )
-                          : const Text(
-                              "Analyze Password",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF131B2E), // dark slate navy from img 1
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.checklist_rounded, color: Color(0xFF2DD4BF), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              "Characteristics",
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCA8A04), // bg-yellow-600
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 4,
-                      ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left Column: 8+ Characters, Lowercase Letter, Special Character
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCharacteristicRow("8+ Characters", hasLength),
+                                  const SizedBox(height: 12),
+                                  _buildCharacteristicRow("Lowercase Letter", hasLower),
+                                  const SizedBox(height: 12),
+                                  _buildCharacteristicRow("Special Character", hasSpecial),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Right Column: Uppercase Letter, Number
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildCharacteristicRow("Uppercase Letter", hasUpper),
+                                  const SizedBox(height: 12),
+                                  _buildCharacteristicRow("Number", hasDigit),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-
-                  // Results Section matching password_analyzer.html
-                  if (_result != null) ...[
-                    const SizedBox(height: 26),
-                    const Divider(color: Color(0xFF374151)),
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      "Analysis Results",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Strength Rating Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111827), // bg-gray-900
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border(
-                          left: BorderSide(color: strengthColor, width: 4),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.fitness_center_rounded, color: Color(0xFFFACC15), size: 16),
-                              SizedBox(width: 8),
-                              Text("Strength Rating", style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            strength,
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: strengthColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Breach Exposure Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111827), // bg-gray-900
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border(
-                          left: BorderSide(
-                            color: breachCount > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
-                            width: 4,
-                          ),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.storage_rounded, color: Color(0xFF60A5FA), size: 16),
-                              SizedBox(width: 8),
-                              Text("Breach Exposure", style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "$breachCount times",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: breachCount > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            breachCount > 0
-                                ? "This password is highly vulnerable!"
-                                : "Safe! Not found in known breaches.",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: breachCount > 0 ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Characteristics Checklist Box
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111827), // bg-gray-900
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF1F2937)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.checklist_rounded, color: Color(0xFF2DD4BF), size: 18),
-                              SizedBox(width: 8),
-                              Text("Characteristics", style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildCharacteristicItem("8+ Characters", hasLength),
-                          const SizedBox(height: 8),
-                          _buildCharacteristicItem("Uppercase Letter", hasUpper),
-                          const SizedBox(height: 8),
-                          _buildCharacteristicItem("Lowercase Letter", hasLower),
-                          const SizedBox(height: 8),
-                          _buildCharacteristicItem("Number", hasDigit),
-                          const SizedBox(height: 8),
-                          _buildCharacteristicItem("Special Character", hasSpecial),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
           ),
         ),
@@ -344,18 +421,25 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
     );
   }
 
-  Widget _buildCharacteristicItem(String label, bool passed) {
+  Widget _buildCharacteristicRow(String label, bool passed) {
     return Row(
       children: [
         Icon(
-          passed ? Icons.check_circle_rounded : Icons.cancel_rounded,
+          passed ? Icons.check_rounded : Icons.close_rounded,
           color: passed ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
           size: 18,
         ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
