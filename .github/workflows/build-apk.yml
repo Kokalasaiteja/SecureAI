@@ -39,15 +39,19 @@ jobs:
         working-directory: SecureAI_Mobile_app
         run: flutter build apk --split-per-abi --release
 
+      - name: Stage Split APKs to Web Media Directory
+        run: |
+          mkdir -p SecureAI_Web/media
+          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk SecureAI_Web/media/
+
       - name: Build Universal Release APK
         working-directory: SecureAI_Mobile_app
         run: flutter build apk --release
 
-      - name: Copy APKs to Web Media Directory
+      - name: Stage Universal APK to Web Media Directory
         run: |
-          mkdir -p SecureAI_Web/media
-          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk SecureAI_Web/media/
-          ls -la SecureAI_Web/media/*.apk
+          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/app-release.apk SecureAI_Web/media/
+          ls -lh SecureAI_Web/media/*.apk
 
       - name: Commit and Push Updated APKs to Repository
         run: |
@@ -61,10 +65,34 @@ jobs:
             git push origin main
           fi
 
-      - name: Upload APKs as Artifacts
+      - name: Upload ARM64-v8a APK (Modern Phones)
         uses: actions/upload-artifact@v4
         with:
-          name: SecureAI-Android-APKs
-          path: SecureAI_Mobile_app/build/app/outputs/flutter-apk/*.apk
+          name: SecureAI-arm64-v8a-release
+          path: SecureAI_Web/media/app-arm64-v8a-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Universal Fat APK (All Devices)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecureAI-Universal-release
+          path: SecureAI_Web/media/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload ARM32-v7a APK (Legacy Phones)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecureAI-armeabi-v7a-release
+          path: SecureAI_Web/media/app-armeabi-v7a-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload x86_64 APK (Emulators)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecureAI-x86_64-release
+          path: SecureAI_Web/media/app-x86_64-release.apk
           if-no-files-found: error
           retention-days: 7
