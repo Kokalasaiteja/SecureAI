@@ -12,19 +12,18 @@ permissions:
 
 jobs:
   build:
-    # Pin to Ubuntu 24.04 LTS to avoid unexpected floating runner changes
     runs-on: ubuntu-24.04
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 1
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - name: Set up Java
+        uses: actions/setup-java@v6
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Set up Flutter
@@ -37,153 +36,130 @@ jobs:
         working-directory: SecureAI_Mobile_app
         run: flutter pub get
 
-      # Requirement 1: Build Universal Release APK (Fat APK containing all ABIs)
-      - name: Build Universal Release APK
-        working-directory: SecureAI_Mobile_app
-        run: flutter build apk --release
-
-      # Requirement 2: Build Split-per-ABI Release APKs
-      - name: Build Split-per-ABI Release APKs
+      - name: Build split release APKs
         working-directory: SecureAI_Mobile_app
         run: flutter build apk --split-per-abi --release
 
-      # Requirement 5: Copy all four APKs into SecureAI_Web/media/ using existing filenames
-      - name: Stage All APKs to Web Media Directory
-        run: |
-          mkdir -p SecureAI_Web/media
-          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/app-release.apk SecureAI_Web/media/app-release.apk
-          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk SecureAI_Web/media/app-arm64-v8a-release.apk
-          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk SecureAI_Web/media/app-armeabi-v7a-release.apk
-          cp SecureAI_Mobile_app/build/app/outputs/flutter-apk/app-x86_64-release.apk SecureAI_Web/media/app-x86_64-release.apk
+      - name: Build universal release APK
+        working-directory: SecureAI_Mobile_app
+        run: flutter build apk --release
 
-      # Requirement 3: Verify Universal APK contains armeabi-v7a, arm64-v8a, and x86_64 native libraries
-      - name: Verify Universal APK Architectures
+      - name: Verify APKs and architectures
+        shell: bash
         run: |
-          echo "========================================================"
-          echo "Verifying native library architectures in Universal APK..."
-          echo "========================================================"
-          UNZIP_OUTPUT=$(unzip -l SecureAI_Web/media/app-release.apk)
-          REQUIRED_ABIS=("armeabi-v7a" "arm64-v8a" "x86_64")
-          ALL_FOUND=true
+          set -euo pipefail
 
-          for abi in "${REQUIRED_ABIS[@]}"; do
-            if echo "$UNZIP_OUTPUT" | grep -q "lib/$abi/"; then
-              echo "  ✅ Found native library architecture: lib/$abi/"
+          APK_DIR="SecureAI_Mobile_app/build/app/outputs/flutter-apk"
+          UNIVERSAL="$APK_DIR/app-release.apk"
+
+          test -s "$UNIVERSAL"
+
+          # Verify native libraries in the universal APK.
+          unzip -Z1 "$UNIVERSAL" > /tmp/secureai-apk-files.txt
+
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            if grep -q "^lib/${abi}/" /tmp/secureai-apk-files.txt; then
+              echo "PASS: Universal APK contains $abi"
             else
-              echo "  ❌ MISSING native library architecture: lib/$abi/ in universal APK!"
-              ALL_FOUND=false
+              echo "FAIL: Universal APK is missing $abi"
+              exit 1
             fi
           done
 
-          if [ "$ALL_FOUND" = false ]; then
-            echo "Universal APK architecture verification failed."
-            exit 1
-          fi
-          echo "All expected architectures verified successfully."
-
-      # Requirement 4: Verify all four APK files exist, are non-empty, and log sizes + SHA-256
-      - name: Verify APK Integrity, Sizes, and SHA-256 Checksums
-        run: |
-          echo "========================================================"
-          echo "Verifying APK files existence, file sizes, and checksums"
-          echo "========================================================"
-          APK_LIST=(
-            "SecureAI_Web/media/app-release.apk"
-            "SecureAI_Web/media/app-arm64-v8a-release.apk"
-            "SecureAI_Web/media/app-armeabi-v7a-release.apk"
-            "SecureAI_Web/media/app-x86_64-release.apk"
-          )
-
-          for apk_path in "${APK_LIST[@]}"; do
-            if [ ! -f "$apk_path" ]; then
-              echo "❌ Error: Required APK file '$apk_path' does not exist!"
+          # Verify all expected APKs exist and are non-empty.
+          for apk in \
+            app-release.apk \
+            app-arm64-v8a-release.apk \
+            app-armeabi-v7a-release.apk \
+            app-x86_64-release.apk
+          do
+            if [ ! -s "$APK_DIR/$apk" ]; then
+              echo "FAIL: Missing or empty APK: $apk"
               exit 1
             fi
 
-            if [ ! -s "$apk_path" ]; then
-              echo "❌ Error: APK file '$apk_path' is empty (0 bytes)!"
-              exit 1
-            fi
-
-            FILE_NAME=$(basename "$apk_path")
-            FILE_SIZE_HUMAN=$(ls -lh "$apk_path" | awk '{print $5}')
-            FILE_SIZE_BYTES=$(wc -c < "$apk_path" | tr -d ' ')
-            SHA256_HASH=$(sha256sum "$apk_path" | awk '{print $1}')
-
-            echo "📦 APK: $FILE_NAME"
-            echo "   Location: $apk_path"
-            echo "   Size: $FILE_SIZE_HUMAN ($FILE_SIZE_BYTES bytes)"
-            echo "   SHA-256: $SHA256_HASH"
-            echo "--------------------------------------------------------"
+            echo "Verified: $apk"
+            ls -lh "$APK_DIR/$apk"
+            sha256sum "$APK_DIR/$apk"
           done
 
-      # Requirement 6: Commit and push updated APK files only when changed, preserving [skip ci]
-      - name: Commit and Push Updated APKs to Repository
+      - name: Stage APKs to web media directory
+        shell: bash
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f SecureAI_Web/media/app-release.apk
-          git add -f SecureAI_Web/media/app-arm64-v8a-release.apk
-          git add -f SecureAI_Web/media/app-armeabi-v7a-release.apk
-          git add -f SecureAI_Web/media/app-x86_64-release.apk
+          set -euo pipefail
 
-          if git diff --staged --quiet; then
-            echo "ℹ️ No changes detected in APK binary files. Skipping commit."
+          mkdir -p SecureAI_Web/media
+
+          APK_DIR="SecureAI_Mobile_app/build/app/outputs/flutter-apk"
+          MEDIA_DIR="SecureAI_Web/media"
+
+          cp "$APK_DIR/app-release.apk" \
+            "$MEDIA_DIR/app-release.apk"
+
+          cp "$APK_DIR/app-arm64-v8a-release.apk" \
+            "$MEDIA_DIR/app-arm64-v8a-release.apk"
+
+          cp "$APK_DIR/app-armeabi-v7a-release.apk" \
+            "$MEDIA_DIR/app-armeabi-v7a-release.apk"
+
+          cp "$APK_DIR/app-x86_64-release.apk" \
+            "$MEDIA_DIR/app-x86_64-release.apk"
+
+          echo "APK files staged:"
+          ls -lh "$MEDIA_DIR"/*.apk
+
+      - name: Commit and push updated APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -f \
+            SecureAI_Web/media/app-release.apk \
+            SecureAI_Web/media/app-arm64-v8a-release.apk \
+            SecureAI_Web/media/app-armeabi-v7a-release.apk \
+            SecureAI_Web/media/app-x86_64-release.apk
+
+          if git diff --cached --quiet; then
+            echo "No APK changes detected. Nothing to commit."
           else
-            echo "Changes detected in APKs. Staging commit..."
-            git pull --rebase origin main
-            git commit -m "Auto-update release APKs in web media and UI [skip ci]"
-            git push origin main
-            echo "✅ Successfully pushed updated APK binaries to GitHub main branch."
+            git commit -m \
+              "Auto-update SecureAI release APKs [skip ci]"
+            git pull --rebase origin main || true
+            git push origin HEAD:main
           fi
 
-      # Requirement 7: Upload each APK as its own artifact with clear naming and error handling
-      - name: Upload Universal Fat APK (All Devices)
-        uses: actions/upload-artifact@v4
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v6
         with:
           name: SecureAI-Universal-release
           path: SecureAI_Web/media/app-release.apk
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload ARM64-v8a APK (Modern Phones)
-        uses: actions/upload-artifact@v4
+      - name: Upload ARM64 APK
+        uses: actions/upload-artifact@v6
         with:
           name: SecureAI-arm64-v8a-release
           path: SecureAI_Web/media/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload ARM32-v7a APK (Legacy Phones)
-        uses: actions/upload-artifact@v4
+      - name: Upload ARMv7 APK
+        uses: actions/upload-artifact@v6
         with:
           name: SecureAI-armeabi-v7a-release
           path: SecureAI_Web/media/app-armeabi-v7a-release.apk
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload x86_64 APK (Emulators)
-        uses: actions/upload-artifact@v4
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v6
         with:
           name: SecureAI-x86_64-release
           path: SecureAI_Web/media/app-x86_64-release.apk
           if-no-files-found: error
           retention-days: 7
-
-      # Requirement 12: Clear distinction between build, repo push, and deployed website serving
-      - name: Publish Step Summary
-        run: |
-          echo "## 📱 SecureAI APK Build & Architecture Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifact Name | Target Architecture | Filename |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **SecureAI-Universal-release** | Universal (All ABIs: arm64-v8a, armeabi-v7a, x86_64) | \`app-release.apk\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **SecureAI-arm64-v8a-release** | 64-bit ARM (Modern Smartphones) | \`app-arm64-v8a-release.apk\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **SecureAI-armeabi-v7a-release** | 32-bit ARM (Older Phones & Android Go) | \`app-armeabi-v7a-release.apk\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **SecureAI-x86_64-release** | 64-bit x86 (Android Emulators & ChromeOS) | \`app-x86_64-release.apk\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ℹ️ Deployment Status Clarification" >> $GITHUB_STEP_SUMMARY
-          echo "- **APK Build**: ✅ Successfully compiled." >> $GITHUB_STEP_SUMMARY
-          echo "- **Architecture Verification**: ✅ Native libraries (\`armeabi-v7a\`, \`arm64-v8a\`, \`x86_64\`) verified." >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository Push**: ✅ Committed and pushed to GitHub \`main\` branch under \`SecureAI_Web/media/\`." >> $GITHUB_STEP_SUMMARY
-          echo "- **Production Website**: 🌐 Hosted at [secureai-7wgj.onrender.com](https://secureai-7wgj.onrender.com). The live web server serves these updated APK files once Render deploys/syncs the updated \`main\` branch commit." >> $GITHUB_STEP_SUMMARY
