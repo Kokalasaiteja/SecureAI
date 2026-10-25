@@ -82,10 +82,17 @@ source ../.venv/bin/activate       # macOS / Linux
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Step 5: Run database migrations
+# Step 5: Configure environment variables (or add in Render Dashboard)
+# Create a .env file inside SecureAI_Web/ or set environment variables:
+# SECUREAI_ADMIN_USERNAME=admin
+# SECUREAI_ADMIN_PASSWORD=your-secure-password
+# RESEND_API_KEY=re_your_api_key
+# GOOGLE_API_KEY=your-gemini-api-key
+
+# Step 6: Run database migrations
 python manage.py migrate
 
-# Step 6: Start the local development server
+# Step 7: Start the local development server
 python manage.py runserver
 ```
 Visit **`http://127.0.0.1:8000/`** in your browser.
@@ -141,9 +148,17 @@ SecureAI provides synchronized threat protection across both the Web portal and 
 - **Interactive Training**: In-app retraining pipeline with real-time confusion matrix heatmap visualizations.
 
 ### 6. 👥 Administrative Governance & Identity Management
-- **Access Control**: Administrative dashboard with user activation, deactivation, and deletion controls.
-- **Live Status Monitoring**: Real-time database heartbeat indicator with pulsating visual alerts.
-- **Zero-Delay OTP**: Password recovery powered by the Resend HTTPS API.
+- **Environment-Driven Authentication**: Hardcoded admin credentials have been eliminated. Administrator login reads `SECUREAI_ADMIN_USERNAME` and `SECUREAI_ADMIN_PASSWORD` from environment variables, verified using `secrets.compare_digest` to prevent timing attacks. Fails closed (503) if unconfigured.
+- **User Management & In-Place Editing**: Administrative dashboard allows viewing all registered users, toggling activation/deactivation status, deleting accounts, and **editing user details** (username, email, active status, new password) via an interactive modal.
+- **Enterprise Password Security**: Passwords are encrypted using Django's PBKDF2 algorithm (`make_password`). A seamless migration layer automatically and transparently upgrades legacy plaintext accounts to PBKDF2 on their first login without disrupting user access.
+- **Duplicate Registration Prevention**: Registration validates uniqueness for both `username` and `email` across web and mobile endpoints to prevent account collisions.
+- **Hardened Zero-Delay OTP Recovery**: Password recovery powered by the Resend HTTPS API (bypassing cloud SMTP blocks), reinforced with:
+  - 60-second rate limiting per email address.
+  - 5-minute (300-second) OTP expiration TTL.
+  - Maximum 3 verification attempts before automatic OTP invalidation.
+  - Mandatory verified OTP session token required before password reset is permitted.
+- **Session & CSRF Hardening**: 1-hour session expiration (`SESSION_COOKIE_AGE = 3600`), expire on browser close, HttpOnly flags, and automatic HTTPS-only secure cookies (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`) with `SECURE_PROXY_SSL_HEADER` in production on Render.
+- **Live Database Status Monitoring**: Real-time database heartbeat indicator with pulsating visual alerts.
 
 ---
 
@@ -160,6 +175,17 @@ Why do we provide both a **Universal Fat APK** and a **Split ABI APK**?
 
 > [!TIP]
 > **Recommendation**: If you are unsure of your Android device's processor architecture, download **[`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk)** to ensure guaranteed installation across all phone brands and Android versions. For modern phones with fast downloads, **[`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)** is 60% lighter!
+
+---
+
+## ⚙️ Automated CI/CD & APK Publishing Pipeline
+
+SecureAI employs an automated GitHub Actions pipeline ([`.github/workflows/build-apk.yml`](./.github/workflows/build-apk.yml)) configured on Ubuntu 24.04:
+- **Triggers**: On code push to `SecureAI_Mobile_app/**` or manual `workflow_dispatch`.
+- **Dual Build Matrix**: Compiles both split-per-abi (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and universal release APKs.
+- **Integrity Verification**: Inspects native library inclusions inside the universal APK and logs SHA-256 checksums and file sizes.
+- **Automated Media Publishing**: Copies all four APKs to `SecureAI_Web/media/` and commits/pushes updated binaries directly to the repository (using `[skip ci]`), keeping the web download links permanently synchronized.
+- **Artifact Archiving**: Uploads discrete GitHub build artifacts for arm64-v8a, armeabi-v7a, x86_64, and universal packages.
 
 ---
 

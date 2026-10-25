@@ -168,15 +168,25 @@ pip install langchain langchain-core langchain-google-genai langchain-text-split
 ```
 
 ### 4. Configure environment variables
-Create a `.env` file in the `SecureAI_Web` directory (or project root) and configure:
+Create a `.env` file in the `SecureAI_Web` directory (or configure in Render Dashboard) with the following environment variables:
 ```env
 SECRET_KEY=your-django-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-RESEND_API_KEY=your-resend-api-key
+# Administrator Authentication (Required - No default fallback)
+SECUREAI_ADMIN_USERNAME=admin
+SECUREAI_ADMIN_PASSWORD=your-strong-admin-password
+
+# Email Gateway & OTP Service (Required for password reset)
+RESEND_API_KEY=re_your_resend_api_key_here
+
+# AI / Threat Intelligence
 GOOGLE_API_KEY=your-gemini-api-key
 ```
+
+> [!IMPORTANT]
+> **Admin Authentication Security**: Hardcoded administrator credentials have been completely removed. Both `SECUREAI_ADMIN_USERNAME` and `SECUREAI_ADMIN_PASSWORD` must be set in your environment (or Render Environment Settings). If either variable is missing, admin login fails closed with a 503 Service Unavailable error to prevent unauthorized access.
 
 ### 5. Run migrations
 ```bash
@@ -264,27 +274,33 @@ code/
 ## 🎯 Usage
 
 ### User Flow
-1. **Register**: Create an account with profile image
-2. **Wait for Approval**: Admin must activate your account
-3. **Login**: Access the user dashboard
-4. **Use Features**:
+1. **Register**: Create an account with username, email, password, and profile image. The system validates both unique username and email to prevent duplication.
+2. **Password Security**: Passwords are automatically hashed with PBKDF2 (`make_password`). Any legacy accounts are automatically and transparently upgraded to PBKDF2 on their first login without interruption.
+3. **Wait for Approval**: Admin must activate your account before you can log in.
+4. **Login**: Access the user dashboard with your credentials.
+5. **Forgot Password**: Password reset with OTP sent via Resend. Features rate-limiting (1 request/60s), 5-minute expiry, and a maximum of 3 verification attempts.
+6. **Use Features**:
    - Detect spam messages
    - Scan QR codes for threats
    - Analyze behavioral anomalies
 
 ### Admin Flow
-1. **Login**: Use credentials (default: admin/admin)
-2. **Dashboard**: View all registered users
-3. **Manage Users**: Activate, deactivate, or delete users
+1. **Login**: Authenticate using `SECUREAI_ADMIN_USERNAME` and `SECUREAI_ADMIN_PASSWORD` (configured via environment variables or Render dashboard). Uses timing-attack resistant `secrets.compare_digest`.
+2. **Dashboard**: View all registered users and database status indicators.
+3. **Manage Users**:
+   - **Edit User Details**: Edit username, email, active status, and set a new password directly from the Admin Dashboard modal.
+   - **Activate / Deactivate Users**: Toggle user access rights.
+   - **Delete Users**: Permanently remove user records.
 
 ## 🔒 Security Features
 
-- Environment-based configuration (no hardcoded secrets)
-- CSRF protection enabled
-- Session-based authentication
-- OTP-based password reset
-- Admin approval for new users
-- Secure file upload handling
+- **Environment-based Admin Authentication**: No hardcoded credentials; fails closed with 503 if credentials are unconfigured. Constant-time comparison protects against timing attacks.
+- **Enterprise Password Hashing**: PBKDF2 SHA-256 password hashing with automatic transparent migration for legacy plaintext users on login.
+- **Duplicate Prevention**: Registration enforces strict uniqueness checks on both `username` and `email` across both web and mobile API endpoints.
+- **Hardened OTP Flow**: 60-second rate limiting per email, 5-minute TTL, maximum 3 verification attempts, single-use token consumption, and session-token verified authorization guard before password reset.
+- **Session & CSRF Hardening**: 1-hour session lifetime (`SESSION_COOKIE_AGE = 3600`), expire on browser close, HttpOnly cookies, and automatic HTTPS-only secure cookies (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_PROXY_SSL_HEADER`) in production environments.
+- **Admin Access Control**: `@admin_required` server-side authorization protects every administrative endpoint and prevents privilege escalation.
+- **Secure File Upload Handling**: Strict image upload validation and storage isolation.
 
 ## 🐛 Troubleshooting
 
@@ -334,18 +350,21 @@ To train the behavioral anomaly detection models:
 ## 📝 API Endpoints
 
 - `/` - Home page
-- `/register/` - User registration
-- `/user-login/` - User login
-- `/admin-login/` - Admin login
+- `/register/` - User registration (enforces unique username and email)
+- `/user-login/` - User login (with automatic PBKDF2 password upgrade)
+- `/admin-login/` - Admin login (environment variable authenticated)
 - `/user-homepage/` - User dashboard
 - `/admin-dashboard/` - Admin panel
+- `/edit-user/<int:user_id>/` - Admin Edit User (username, email, status, password)
+- `/delete-user/<int:user_id>/` - Admin Delete User
+- `/toggle-user-status/<int:user_id>/` - Admin Activate/Deactivate User
 - `/detect_spam/` - SMS spam detection
 - `/scan-qr/` - QR code scanner
 - `/predict-anomaly/` - Behavioral analysis
 - `/train-anomaly-model/` - Train ML models
-- `/forgot-password/` - Password reset
-- `/verify-otp/` - OTP verification
-- `/reset-password/` - New password setup
+- `/forgot-password/` - Password reset request (rate-limited, sends OTP via Resend)
+- `/verify-otp/` - OTP verification (3-attempt limit, 5-minute TTL)
+- `/reset-password/` - New password setup (strict OTP authorization token required)
 
 # 📸 Screenshots & Application Showcase
 

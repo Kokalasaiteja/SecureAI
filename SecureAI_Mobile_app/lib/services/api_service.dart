@@ -387,13 +387,7 @@ class ApiService {
         if (res['success'] == true) return true;
       }
 
-      // Fallback 1: Verified user account
-      final userRes = await userLogin('testverify123', 'Test@1234');
-      if (userRes['success'] == true) return true;
 
-      // Fallback 2: Admin account
-      final adminRes = await adminLogin('admin', 'admin');
-      if (adminRes['success'] == true) return true;
     } catch (_) {}
     return false;
   }
@@ -488,12 +482,29 @@ class ApiService {
 
         _extractCookies(response);
 
+        try {
+          final data = jsonDecode(response.body);
+          if (data is Map<String, dynamic>) {
+            if (data['success'] == true) {
+              _currentUser = name;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('current_user', name);
+              return {'success': true, 'message': data['message'] ?? 'Admin login successful!'};
+            } else {
+              return {'success': false, 'message': data['message'] ?? 'Invalid admin credentials.'};
+            }
+          }
+        } catch (_) {}
+
         if (response.statusCode == 302 ||
-            (response.statusCode == 200 && !response.body.contains("Invalid admin credentials") && !response.body.contains("403 Forbidden"))) {
-          _currentUser = 'admin';
+            (response.statusCode == 200 && !response.body.contains("Invalid admin credentials") && !response.body.contains("disabled") && !response.body.contains("403 Forbidden"))) {
+          _currentUser = name;
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('current_user', 'admin');
+          await prefs.setString('current_user', name);
           return {'success': true, 'message': 'Admin login successful!'};
+        }
+        if (response.body.contains("disabled")) {
+          return {'success': false, 'message': 'Admin login disabled: credentials not configured on server.'};
         }
         if (response.body.contains("Invalid admin credentials")) {
           return {'success': false, 'message': 'Invalid admin credentials.'};

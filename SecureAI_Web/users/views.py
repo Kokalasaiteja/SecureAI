@@ -1,10 +1,22 @@
-
+import os
+import time
+import secrets
 from functools import wraps
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.contrib.auth.hashers import make_password, check_password
 from django.views.decorators.csrf import csrf_exempt
 from .models import RegisteredUser
 from django.core.files.storage import FileSystemStorage
+
+def get_admin_credentials():
+    """Safely retrieves admin credentials from environment variables.
+    Fails closed by returning (None, None) if either is not configured."""
+    username = os.environ.get('SECUREAI_ADMIN_USERNAME')
+    password = os.environ.get('SECUREAI_ADMIN_PASSWORD')
+    if not username or not password:
+        return None, None
+    return username.strip(), password.strip()
 
 # Authentication Decorators to handle forbidden / unauthorized access cleanly
 def user_required(view_func):
@@ -39,11 +51,12 @@ def user_required(view_func):
 def admin_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if not request.session.get('is_admin'):
+        # Strict server-side verification: must have is_admin True and valid admin session
+        if not request.session.get('is_admin') or not request.session.get('admin_username'):
             is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
             if is_json:
                 from django.http import JsonResponse
-                return JsonResponse({'success': False, 'message': 'Admin authentication required.'}, status=403)
+                return JsonResponse({'success': False, 'message': 'Administrator authentication required.'}, status=403)
             return redirect('admin_login')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -86,12 +99,12 @@ def register_view(request):
                 except Exception:
                     b64_str = ''
 
-            # Save user with is_active=False. Both file on disk and base64 in DB are saved.
+            # Save user with Django PBKDF2 hashed password and is_active=False
             RegisteredUser.objects.create(
                 name=name,
                 email=email,
                 mobile=mobile,
-                password=password,
+                password=make_password(password),
                 image=image,
                 image_base64=b64_str,
                 is_active=False
@@ -113,47 +126,71 @@ def user_login(request):
     msg = ''
     is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == 'POST':
-        name = request.POST.get('name')
-        password = request.POST.get('password')
+        name = (request.POST.get('name') or '').strip()
+        password = (request.POST.get('password') or '').strip()
 
-        try:
-            user = RegisteredUser.objects.get(name=name, password=password)
-            if user.is_active:
-                # Convert current time to IST
-                ist = pytz.timezone('Asia/Kolkata')
-                local_time = timezone.now().astimezone(ist)
+        user = RegisteredUser.objects.filter(name__iexact=name).first()
 
-                img_url = ''
-                if user.image:
-                    try:
-                        img_url = user.image.url
-                    except Exception:
-                        img_url = ''
+        password_valid = False
+        needs_migration = False
 
-                active_img = user.image_base64 if user.image_base64 else img_url
+        if user:
+            try:
+                if check_password(password, user.password):
+                    password_valid = True
+            except Exception:
+                pass
 
-                # Save user info in session
-                request.session['user_id'] = user.id
-                request.session['user_name'] = user.name
-                request.session['user_image'] = img_url
-                request.session['user_image_base64'] = user.image_base64
-                request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
+            # Transparent backward-compatibility & migration for legacy plaintext passwords
+            if not password_valid and user.password == password:
+                password_valid = True
+                needs_migration = True
 
-                if is_json:
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Login successful!',
-                        'user_name': user.name,
-                        'user_image': active_img,
-                        'login_time': local_time.strftime('%I:%M:%S %p'),
-                    })
-
-                return redirect('user_homepage')
-            else:
-                msg = "Your account is not activated yet."
+        if user and password_valid:
+            if not user.is_active:
+                msg = "Your account is not activated yet. Please wait for admin approval."
                 if is_json:
                     return JsonResponse({'success': False, 'message': msg}, status=403)
-        except RegisteredUser.DoesNotExist:
+                return render(request, 'user_login.html', {'msg': msg})
+
+            # Upgrade legacy plaintext password in place to standard PBKDF2 hash
+            if needs_migration:
+                user.password = make_password(password)
+                user.save(update_fields=['password'])
+
+            # Convert current time to IST
+            ist = pytz.timezone('Asia/Kolkata')
+            local_time = timezone.now().astimezone(ist)
+
+            img_url = ''
+            if user.image:
+                try:
+                    img_url = user.image.url
+                except Exception:
+                    img_url = ''
+
+            active_img = user.image_base64 if user.image_base64 else img_url
+
+            # Cycle session key to prevent session fixation attacks
+            request.session.cycle_key()
+            request.session['user_id'] = user.id
+            request.session['user_name'] = user.name
+            request.session['user_image'] = img_url
+            request.session['user_image_base64'] = user.image_base64
+            request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
+            request.session.modified = True
+
+            if is_json:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Login successful!',
+                    'user_name': user.name,
+                    'user_image': active_img,
+                    'login_time': local_time.strftime('%I:%M:%S %p'),
+                })
+
+            return redirect('user_homepage')
+        else:
             msg = "Invalid credentials."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=401)
@@ -163,15 +200,39 @@ def user_login(request):
 @csrf_exempt
 def admin_login(request):
     msg = ''
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        password = request.POST.get('password')
+    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
 
-        if name == 'admin' and password == 'admin':
+    if request.method == 'POST':
+        name = (request.POST.get('name') or '').strip()
+        password = (request.POST.get('password') or '').strip()
+
+        admin_user, admin_pass = get_admin_credentials()
+
+        # If admin credentials are not set in environment, fail closed safely
+        if not admin_user or not admin_pass:
+            err = "Administrator login is disabled: server credentials are not configured in environment."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=503)
+            return render(request, 'admin_login.html', {'msg': err})
+
+        # Constant-time comparison to prevent timing attacks
+        user_valid = secrets.compare_digest(name, admin_user)
+        pass_valid = secrets.compare_digest(password, admin_pass)
+
+        if user_valid and pass_valid:
+            # Secure session initialization
+            request.session.cycle_key()
             request.session['is_admin'] = True
+            request.session['admin_username'] = admin_user
+            request.session.modified = True
+
+            if is_json:
+                return JsonResponse({'success': True, 'message': 'Admin login successful!'})
             return redirect('admin_home')
         else:
             msg = "Invalid admin credentials."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=401)
 
     return render(request, 'admin_login.html', {'msg': msg})
 
@@ -307,7 +368,7 @@ def edit_user(request, user_id):
         user.mobile = mobile
 
         if password:
-            user.password = password
+            user.password = make_password(password)
 
         if is_active_val is not None:
             user.is_active = str(is_active_val).lower() in ('true', '1', 'on', 'yes')
@@ -419,17 +480,36 @@ from django.contrib import messages
 from .models import RegisteredUser
 from django.conf import settings
 
-otp_storage = {}  # Temporary dictionary to store OTPs
+# Enhanced in-memory OTP storage with TTL and attempt tracking
+# Format: email -> {'otp': str, 'created_at': float, 'attempts': int, 'verified': bool, 'verified_at': float}
+otp_storage = {}
+OTP_EXPIRY_SECONDS = 300       # 5 minutes validity
+OTP_RATE_LIMIT_SECONDS = 60    # 1 request per 60 seconds per email
+OTP_MAX_ATTEMPTS = 3           # Max 3 failed attempts
+OTP_RESET_WINDOW_SECONDS = 600 # 10 minutes to reset password after verification
 
 def send_otp(email):
     from .utils import generate_six_digit_otp, send_secure_otp_email
+    now = time.time()
+
+    # Rate limiting: prevent spamming OTP requests within 60 seconds
+    existing = otp_storage.get(email)
+    if existing and (now - existing.get('created_at', 0) < OTP_RATE_LIMIT_SECONDS):
+        wait_seconds = int(OTP_RATE_LIMIT_SECONDS - (now - existing['created_at']))
+        return None, f"Please wait {wait_seconds} seconds before requesting a new OTP."
+
     otp = generate_six_digit_otp()
-    
     success = send_secure_otp_email(email, otp)
     if not success:
         return None, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY)."
-        
-    otp_storage[email] = otp
+
+    otp_storage[email] = {
+        'otp': str(otp),
+        'created_at': now,
+        'attempts': 0,
+        'verified': False,
+        'verified_at': None,
+    }
     return otp, None
 
 @csrf_exempt
@@ -438,21 +518,22 @@ def forgot_password(request):
     if request.method == "POST":
         email = (request.POST.get("email") or '').strip()
 
-        if RegisteredUser.objects.filter(email=email).exists():
+        if RegisteredUser.objects.filter(email__iexact=email).exists():
             otp, error = send_otp(email)
             if error:
+                status_code = 429 if "wait" in error.lower() else 500
                 if is_json:
-                    return JsonResponse({'success': False, 'message': error}, status=500)
+                    return JsonResponse({'success': False, 'message': error}, status=status_code)
                 messages.error(request, error)
             else:
-                request.session["reset_email"] = email  # Store email in session
+                request.session["reset_email"] = email
                 if is_json:
                     return JsonResponse({'success': True, 'message': 'Verification OTP sent to your registered email.'})
                 return redirect("verify_otp")
         else:
             if is_json:
-                return JsonResponse({'success': False, 'message': 'Email not registered!'}, status=404)
-            messages.error(request, "Email not registered!")
+                return JsonResponse({'success': False, 'message': 'Email address not registered!'}, status=404)
+            messages.error(request, "Email address not registered!")
 
     return render(request, "forgot_password.html")
 
@@ -463,14 +544,57 @@ def verify_otp(request):
         otp_entered = (request.POST.get("otp") or '').strip()
         email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
 
-        if otp_storage.get(email) and str(otp_storage[email]) == otp_entered:
+        record = otp_storage.get(email)
+        now = time.time()
+
+        if not record:
+            err = "No active OTP request found for this email. Please request a new OTP."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return render(request, "verify_otp.html")
+
+        # Expiration check (5 minutes)
+        if now - record.get('created_at', 0) > OTP_EXPIRY_SECONDS:
+            otp_storage.pop(email, None)
+            err = "OTP has expired. Please request a new code."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return render(request, "verify_otp.html")
+
+        # Attempt limit check (Max 3 failed attempts)
+        if record.get('attempts', 0) >= OTP_MAX_ATTEMPTS:
+            otp_storage.pop(email, None)
+            err = "Too many incorrect attempts. This OTP has been invalidated. Please request a new code."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=429)
+            messages.error(request, err)
+            return render(request, "verify_otp.html")
+
+        # Constant-time comparison
+        if secrets.compare_digest(str(record.get('otp', '')), otp_entered):
+            record['verified'] = True
+            record['verified_at'] = now
+            request.session['otp_verified_email'] = email
+            request.session['otp_verified_at'] = now
+            request.session.modified = True
+
             if is_json:
                 return JsonResponse({'success': True, 'message': 'OTP verified successfully!'})
             return redirect("reset_password")
         else:
+            record['attempts'] = record.get('attempts', 0) + 1
+            remaining = OTP_MAX_ATTEMPTS - record['attempts']
+            if remaining <= 0:
+                otp_storage.pop(email, None)
+                err = "Incorrect OTP code. Maximum attempts reached. Please request a new code."
+            else:
+                err = f"Invalid OTP code! {remaining} attempt(s) remaining."
+
             if is_json:
-                return JsonResponse({'success': False, 'message': 'Invalid OTP code!'}, status=400)
-            messages.error(request, "Invalid OTP!")
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
 
     return render(request, "verify_otp.html")
 
@@ -481,19 +605,48 @@ def reset_password(request):
         new_password = (request.POST.get("new_password") or '').strip()
         email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
 
-        if RegisteredUser.objects.filter(email=email).exists():
-            user = RegisteredUser.objects.get(email=email)
-            user.password = new_password  # Updating password
-            user.save()
+        # Strict security authorization: Must have verified OTP within window
+        verified_in_session = request.session.get('otp_verified_email') == email
+        otp_rec = otp_storage.get(email, {})
+        verified_in_storage = otp_rec.get('verified') is True
+        now = time.time()
+        verified_time = request.session.get('otp_verified_at') or otp_rec.get('verified_at') or 0
+        within_window = (now - verified_time) <= OTP_RESET_WINDOW_SECONDS
+
+        if not ((verified_in_session or verified_in_storage) and within_window):
+            err = "Unauthorized password reset attempt. You must verify your OTP before setting a new password."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=403)
+            messages.error(request, err)
+            return redirect("forgot_password")
+
+        if not new_password or len(new_password) < 6:
+            err = "New password must be at least 6 characters long."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return render(request, "reset_password.html")
+
+        user = RegisteredUser.objects.filter(email__iexact=email).first()
+        if user:
+            # Hash password using Django PBKDF2
+            user.password = make_password(new_password)
+            user.save(update_fields=['password'])
+
+            # Invalidate OTP state immediately after successful use
             otp_storage.pop(email, None)
+            request.session.pop('reset_email', None)
+            request.session.pop('otp_verified_email', None)
+            request.session.pop('otp_verified_at', None)
+
             if is_json:
                 return JsonResponse({'success': True, 'message': 'Password reset successful! Please log in.'})
             messages.success(request, "Password reset successful! Please log in.")
             return redirect("user_login")
         else:
             if is_json:
-                return JsonResponse({'success': False, 'message': 'User not found or session expired.'}, status=404)
-            messages.error(request, "User not found or session expired.")
+                return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
+            messages.error(request, "User not found.")
 
     return render(request, "reset_password.html")
 

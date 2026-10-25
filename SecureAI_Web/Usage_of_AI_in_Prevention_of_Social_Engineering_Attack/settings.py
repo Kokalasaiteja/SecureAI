@@ -44,6 +44,21 @@ CSRF_TRUSTED_ORIGINS = [
 
 CSRF_FAILURE_VIEW = 'users.views.custom_csrf_failure'
 
+# --- Session & CSRF Security ---
+SESSION_COOKIE_AGE = 3600  # 1-hour session lifetime
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_HTTPONLY = True
+
+# Secure cookies & reverse-proxy SSL header for Render production (HTTPS)
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # Retain HTTP cookie transport for local development
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
 
 # Application definition
 
