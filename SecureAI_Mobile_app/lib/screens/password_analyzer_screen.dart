@@ -4,6 +4,7 @@ import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
 import '../services/api_service.dart';
 import '../widgets/secure_ai_app_bar.dart';
+import '../widgets/http_error_widget.dart';
 
 class PasswordAnalyzerScreen extends StatefulWidget {
   const PasswordAnalyzerScreen({super.key});
@@ -18,12 +19,14 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _result;
   String? _errorMessage;
+  int? _errorStatusCode;
 
   Future<void> _analyze() async {
     final pwd = _passwordController.text;
     if (pwd.isEmpty) {
       setState(() {
         _errorMessage = "Please enter a password to analyze.";
+        _errorStatusCode = 400;
       });
       return;
     }
@@ -31,6 +34,7 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _errorStatusCode = null;
       _result = null;
     });
 
@@ -41,8 +45,11 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
       _isLoading = false;
       if (res['success'] == true) {
         _result = res;
+        _errorMessage = null;
+        _errorStatusCode = null;
       } else {
         _errorMessage = res['message']?.toString() ?? "Analysis failed.";
+        _errorStatusCode = res['statusCode'] as int? ?? 500;
       }
     });
   }
@@ -69,9 +76,9 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
       appBar: SecureAIAppBar.user(title: "SecureAI Panel"),
       body: ConstellationBackground(
         gradientColors: const [
-          Color(0xFF2E130D), // Warm dark maroon/brown matching img 1
-          Color(0xFF1D0D0B),
-          Color(0xFF120807),
+          Color(0xFFEAB308), // from-yellow-500 (color as before)
+          Color(0xFFF97316), // via-orange-500
+          Color(0xFFEF4444), // to-red-500
         ],
         child: SafeArea(
           child: SingleChildScrollView(
@@ -119,17 +126,13 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                       ),
                       const SizedBox(height: 22),
 
-                      // Error if any
+                      // Error if any (Liquid Glass HttpErrorWidget)
                       if (_errorMessage != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
-                          ),
-                          child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFFECACA), fontSize: 13)),
+                        HttpErrorWidget(
+                          statusCode: _errorStatusCode ?? 500,
+                          message: _errorMessage,
+                          onRetry: _analyze,
+                          isCompact: true,
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -137,9 +140,9 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                       // Password Input with Eye Icon
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF131B2E), // dark slate
+                          color: const Color(0xFF111827), // bg-gray-900 (color as before)
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF334155)),
+                          border: Border.all(color: const Color(0xFF374151)), // border-gray-700
                         ),
                         child: TextField(
                           controller: _passwordController,
@@ -147,13 +150,13 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                           style: const TextStyle(color: Colors.white, fontSize: 16),
                           decoration: InputDecoration(
                             hintText: "Type a password to analyze...",
-                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                color: const Color(0xFF94A3B8),
+                                color: const Color(0xFF9CA3AF),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -166,7 +169,7 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Button: Analyze Password (Amber/Gold matching img 1)
+                      // Button: Analyze Password
                       Center(
                         child: SizedBox(
                           width: 220,
@@ -187,7 +190,7 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD97706), // amber/gold from img 1
+                              backgroundColor: const Color(0xFFCA8A04), // bg-yellow-600 (color as before)
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 4,

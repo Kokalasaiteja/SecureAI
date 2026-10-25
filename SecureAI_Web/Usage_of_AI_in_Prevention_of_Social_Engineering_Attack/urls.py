@@ -55,10 +55,13 @@ urlpatterns = [
     path('download-apk/', views.download_apk, name='download_apk'),
     path('media/app-arm64-v8a-release.apk', views.download_apk, {'apk_type': 'v8'}, name='download_apk_direct'),
     path('media/app-release.apk', views.download_apk, {'apk_type': 'universal'}, name='download_apk_universal'),
+    path('503/', views.service_unavailable_view, name='service_unavailable'),
+    path('service-unavailable/', views.service_unavailable_view, name='service_unavailable_alias'),
     re_path(r'^media/(?P<path>.*)$', views.smart_media_serve, name='smart_media_serve'),
 ]
 
 # Custom Error Handlers
+handler400 = 'users.views.custom_400'
 handler403 = 'users.views.custom_403_view'
 handler404 = 'users.views.custom_404_view'
 handler500 = 'users.views.custom_500_view'

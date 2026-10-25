@@ -1311,3 +1311,34 @@ def smart_media_serve(request, path):
                 pass
 
     return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
+def custom_400(request, exception=None):
+    if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        return JsonResponse({'success': False, 'status': 400, 'message': 'Bad request.'}, status=400)
+    return render(request, '403.html', {'exception': 'Bad Request (400)'}, status=400)
+
+def custom_403(request, exception=None):
+    if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        return JsonResponse({'success': False, 'status': 403, 'message': 'Access forbidden or session expired.'}, status=403)
+    return render(request, '403.html', {'exception': exception}, status=403)
+
+def custom_404(request, exception=None):
+    if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        return JsonResponse({'success': False, 'status': 404, 'message': 'Resource not found.'}, status=404)
+    return render(request, '404.html', {'exception': exception}, status=404)
+
+def custom_500(request):
+    if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        return JsonResponse({'success': False, 'status': 500, 'message': 'Internal server error.'}, status=500)
+    return render(request, '500.html', status=500)
+
+def service_unavailable_view(request, exception=None):
+    if request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json':
+        return JsonResponse({'success': False, 'status': 503, 'message': 'Service Temporarily Unavailable.'}, status=503)
+    return render(request, '503.html', {'exception': exception}, status=503)
+
+# Handler name aliases
+custom_403_view = custom_403
+custom_404_view = custom_404
+custom_500_view = custom_500

@@ -1,28 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}500 Server Error - SecureAI{% endblock %}
+{% block title %}500 Internal Server Error - SecureAI{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-2 sm:px-4 py-8 sm:py-12 max-w-xl text-center">
-    <div class="bg-gray-800 bg-opacity-80 rounded-2xl p-6 sm:p-10 shadow-2xl animate-slide-up border border-yellow-500/40">
+<div class="container mx-auto px-3 sm:px-6 py-8 sm:py-16 max-w-2xl text-center">
+    <div class="bg-gray-800/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-2xl animate-slide-up border border-yellow-500/40">
+        <!-- Icon -->
         <div class="mb-6">
             <div class="w-20 h-20 sm:w-24 sm:h-24 bg-yellow-900/40 border-2 border-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/20">
-                <i class="fas fa-server text-yellow-400 text-4xl sm:text-5xl"></i>
+                <i class="fas fa-server text-yellow-400 text-3xl sm:text-4xl"></i>
             </div>
-            <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-2">500 Server Error</h1>
-            <p class="text-yellow-400 font-semibold text-lg mb-4">Internal Processing Exception</p>
+            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 mb-3">
+                HTTP Status 500
+            </span>
+            <h1 class="text-2xl sm:text-4xl font-extrabold text-white mb-2">500 Server Error</h1>
+            <p class="text-yellow-400 font-semibold text-sm sm:text-base">Internal Processing Exception</p>
         </div>
 
-        <p class="text-gray-300 text-sm sm:text-base leading-relaxed mb-8">
-            An unexpected error occurred while processing your request. Please try again or return to the main dashboard.
+        <p class="text-gray-300 text-xs sm:text-sm leading-relaxed mb-6">
+            An unexpected error occurred while processing your request. The security engine has logged this event. Please try again in a few moments.
         </p>
 
-        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <a href="/" class="btn-3d w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300">
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4">
+            <button onclick="window.location.reload()" class="btn-3d w-full sm:w-auto bg-yellow-600 hover:bg-yellow-500 text-white px-7 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300 shadow-lg shadow-yellow-600/30">
+                <i class="fas fa-sync-alt"></i>
+                <span>Retry</span>
+            </button>
+            <a href="/" class="btn-3d w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300 shadow-lg shadow-indigo-600/30">
                 <i class="fas fa-home"></i>
                 <span>Return to Home</span>
             </a>
-            <a href="{% url 'user_homepage' %}" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300">
+            <a href="{% url 'user_homepage' %}" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-500 text-white px-7 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2 transition duration-300 shadow-lg shadow-teal-600/30">
                 <i class="fas fa-user-shield"></i>
                 <span>User Panel</span>
             </a>

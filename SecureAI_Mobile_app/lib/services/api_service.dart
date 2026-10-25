@@ -583,7 +583,15 @@ class ApiService {
             await _ensureCsrfToken('/detect_spam/', true);
             continue;
           }
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
@@ -675,7 +683,15 @@ class ApiService {
             await _ensureCsrfToken('/predict-anomaly/', true);
             continue;
           }
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
@@ -752,7 +768,15 @@ class ApiService {
             await _ensureCsrfToken('/password-analyzer/', true);
             continue;
           }
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
@@ -828,7 +852,15 @@ class ApiService {
             await _ensureCsrfToken('/email-phishing/', true);
             continue;
           }
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
@@ -931,7 +963,15 @@ class ApiService {
             (response.statusCode == 200 && response.body.contains("User Login") && !response.body.contains("QR Code"))) {
           final relogged = await _reloginIfNeeded();
           if (relogged && attempt == 0) continue;
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
@@ -1025,7 +1065,15 @@ class ApiService {
             (response.statusCode == 200 && response.body.contains("User Login") && !response.body.contains("Behavior Anomaly Detection"))) {
           final relogged = await _reloginIfNeeded();
           if (relogged && attempt == 0) continue;
-          return {'success': false, 'message': 'Session expired. Please log in again.'};
+          return {'success': false, 'statusCode': 302, 'message': 'Session expired. Please log in again.'};
+        }
+
+        if (response.statusCode == 403) {
+          return {'success': false, 'statusCode': 403, 'message': 'Access forbidden or verification required (403).'};
+        }
+
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+          return {'success': false, 'statusCode': 503, 'message': 'Cloud backend is waking up from idle (Render cold start). Please retry.'};
         }
 
         if (response.statusCode == 200) {
