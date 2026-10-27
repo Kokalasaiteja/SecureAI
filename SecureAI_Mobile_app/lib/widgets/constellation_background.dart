@@ -11,7 +11,7 @@ class ConstellationBackground extends StatefulWidget {
     super.key,
     required this.child,
     this.gradientColors,
-    this.showFooter = true,
+    this.showFooter = false,
   });
 
   @override

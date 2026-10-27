@@ -209,7 +209,7 @@
                     <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">Admin Login</span>
                     {% if 'admin-login' in request.path or 'admin_login' in request.path %}<span class="w-1.5 h-1.5 rounded-full bg-pink-300 mt-0.5"></span>{% endif %}
                 </a>
-                <a href="/media/app-release.apk" onclick="openApkModal(event)" class="px-3 xl:px-4 py-2 flex flex-col items-center justify-center text-center rounded-xl bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 text-white transition-all duration-300 shadow-md group cursor-pointer" title="Download Android Mobile App APK">
+                <a href="/media/app-arm64-v8a-release.apk" onclick="openApkModal(event)" class="px-3 xl:px-4 py-2 flex flex-col items-center justify-center text-center rounded-xl bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 text-white transition-all duration-300 shadow-md group cursor-pointer" title="Download Android Mobile App APK">
                     <i class="fab fa-android text-lg xl:text-xl mb-1 text-teal-400 group-hover:scale-110 transition-transform"></i>
                     <span class="text-xs xl:text-sm font-semibold whitespace-nowrap">Download Android App</span>
                 </a>
@@ -311,7 +311,7 @@
                 </a>
 
                 <!-- Download APK in Mobile Drawer (below Admin Portal) -->
-                <a href="/media/app-release.apk" onclick="closeDrawer(); openApkModal(event);" class="flex items-center space-x-3.5 px-4 py-3 rounded-xl text-teal-200 hover:text-white bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 transition-all cursor-pointer">
+                <a href="/media/app-arm64-v8a-release.apk" onclick="closeDrawer(); openApkModal(event);" class="flex items-center space-x-3.5 px-4 py-3 rounded-xl text-teal-200 hover:text-white bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 transition-all cursor-pointer">
                     <div class="w-9 h-9 rounded-lg bg-teal-500/30 text-teal-300 flex items-center justify-center text-base">
                         <i class="fab fa-android text-lg"></i>
                     </div>

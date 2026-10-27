@@ -219,3 +219,4 @@ class HttpErrorWidget extends StatelessWidget {
     );
   }
 }
+

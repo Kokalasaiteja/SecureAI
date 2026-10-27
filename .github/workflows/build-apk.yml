@@ -108,6 +108,12 @@ jobs:
           echo "APK files staged:"
           ls -lh "$MEDIA_DIR"/*.apk
 
+      - name: Dynamically update APK sizes in documentation and modal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/update_apk_sizes.py
+
       - name: Commit and push updated APKs
         shell: bash
         run: |
@@ -121,7 +127,9 @@ jobs:
             SecureAI_Web/media/app-release.apk \
             SecureAI_Web/media/app-arm64-v8a-release.apk \
             SecureAI_Web/media/app-armeabi-v7a-release.apk \
-            SecureAI_Web/media/app-x86_64-release.apk
+            SecureAI_Web/media/app-x86_64-release.apk \
+            README.md \
+            SecureAI_Web/templates/apk_download_modal.html
 
           if git diff --cached --quiet; then
             echo "No APK changes detected. Nothing to commit."

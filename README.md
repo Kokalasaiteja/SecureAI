@@ -36,10 +36,10 @@ SecureAI-main/
 │   ├── README.md                  # Detailed Web Platform Documentation & Screenshots
 │   ├── manage.py                  # Django administrative script
 │   ├── media/                     # Stored assets, ML models (.pkl), and APK downloads
-│   │   ├── app-arm64-v8a-release.apk # 64-bit optimized APK build (20.2 MB)
-│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (17.7 MB)
-│   │   ├── app-x86_64-release.apk    # Emulator APK build (21.7 MB)
-│   │   └── app-release.apk           # Universal all-device APK build (54.3 MB)
+│   │   ├── app-arm64-v8a-release.apk # 64-bit optimized APK build (20.6 MB)
+│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (18.0 MB)
+│   │   ├── app-x86_64-release.apk    # Emulator APK build (22.1 MB)
+│   │   └── app-release.apk           # Universal all-device APK build (55.5 MB)
 │   ├── templates/                 # Liquid glass HTML templates
 │   └── users/                     # Security detection views and models
 └── SecureAI_Mobile_app/           # Cross-platform Flutter Android mobile application
@@ -168,10 +168,10 @@ Why do we provide both a **Universal Fat APK** and a **Split ABI APK**?
 
 | APK Package | Size | Architecture (ABI) | Compatible Devices |
 | :--- | :--- | :--- | :--- |
-| **`app-release.apk`** *(Universal Build)* | **~54.3 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
-| **`app-arm64-v8a-release.apk`** *(Targeted Build)* | **~20.2 MB** | **64-bit ARM only** (`arm64-v8a`) | Modern 64-bit Android smartphones (Snapdragon, MediaTek, Exynos, Tensor) |
-| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~17.7 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
-| **`app-x86_64-release.apk`** *(Emulator Build)* | **~21.7 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
+| **`app-release.apk`** *(Universal Build)* | **~55.5 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
+| **`app-arm64-v8a-release.apk`** *(Targeted Build)* | **~20.6 MB** | **64-bit ARM only** (`arm64-v8a`) | Modern 64-bit Android smartphones (Snapdragon, MediaTek, Exynos, Tensor) |
+| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~18.0 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
+| **`app-x86_64-release.apk`** *(Emulator Build)* | **~22.1 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
 
 > [!TIP]
 > **Recommendation**: If you are unsure of your Android device's processor architecture, download **[`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk)** to ensure guaranteed installation across all phone brands and Android versions. For modern phones with fast downloads, **[`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)** is 60% lighter!

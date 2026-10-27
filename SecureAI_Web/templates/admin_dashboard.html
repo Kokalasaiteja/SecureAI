@@ -168,7 +168,7 @@
             </div>
 
             <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                <a href="/media/app-release.apk" onclick="openApkModal(event)" class="w-full sm:w-auto text-center bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 px-3 sm:px-4 py-2.5 rounded-xl text-teal-200 hover:text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 shadow-md group cursor-pointer" title="Download Android App APK">
+                <a href="/media/app-arm64-v8a-release.apk" onclick="openApkModal(event)" class="w-full sm:w-auto text-center bg-teal-600/30 hover:bg-teal-600 border border-teal-500/40 px-3 sm:px-4 py-2.5 rounded-xl text-teal-200 hover:text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 shadow-md group cursor-pointer" title="Download Android App APK">
                     <i class="fab fa-android text-teal-400 group-hover:scale-110 transition-transform"></i>
                     <span>Download App</span>
                 </a>
@@ -337,7 +337,7 @@
                         <i class="fas fa-user-edit text-lg"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-white">Edit User Account</h3>
+                        <h3 class="text-lg font-bold text-white">Edit User</h3>
                         <p class="text-xs text-gray-300">Admin Only • Update credentials & access</p>
                     </div>
                 </div>
@@ -351,7 +351,7 @@
                 <div class="flex items-center space-x-3.5 p-3 rounded-xl bg-gray-950/40 border border-white/5">
                     <img id="editUserAvatar" src="" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-white/20" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=User&background=6366F1&color=fff&size=64&bold=true';">
                     <div>
-                        <span id="editUserBadgeId" class="text-xs text-indigo-400 font-semibold">User #0</span>
+                        <span id="editUserBadgeId" class="text-xs text-indigo-400 font-semibold">User Details</span>
                         <h4 id="editUserBadgeName" class="text-sm font-bold text-white">Loading...</h4>
                     </div>
                 </div>
@@ -406,7 +406,7 @@
             const modal = document.getElementById('editUserModal');
             const form = document.getElementById('editUserForm');
             form.action = `/admin-edit-user/${userId}/`;
-            document.getElementById('editUserBadgeId').textContent = `User #${userId}`;
+            document.getElementById('editUserBadgeId').textContent = 'User Details';
             document.getElementById('editUserBadgeName').textContent = name;
             document.getElementById('modal_name').value = name;
             document.getElementById('modal_email').value = email;

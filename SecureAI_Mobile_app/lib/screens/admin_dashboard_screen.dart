@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
@@ -107,6 +108,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final mobileCtrl = TextEditingController(text: user['mobile']?.toString() ?? '');
     final passCtrl = TextEditingController();
     bool isActive = user['is_active'] == true;
+    final String currentImageUrl = user['image_url']?.toString() ?? '';
+    XFile? pickedImageFile;
+    Uint8List? pickedImageBytes;
+    final picker = ImagePicker();
 
     final result = await showDialog<bool>(
       context: context,
@@ -120,7 +125,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Edit User #${id}",
+                  "Edit User",
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
@@ -131,6 +136,104 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF818CF8), width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: pickedImageBytes != null
+                              ? Image.memory(pickedImageBytes!, width: 76, height: 76, fit: BoxFit.cover)
+                              : _buildUserAvatar(nameCtrl.text.isNotEmpty ? nameCtrl.text : 'User', currentImageUrl),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Material(
+                          color: const Color(0xFF4F46E5),
+                          shape: const CircleBorder(side: BorderSide(color: Colors.white, width: 1.5)),
+                          child: InkWell(
+                            onTap: () async {
+                              try {
+                                final picked = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                  imageQuality: 85,
+                                );
+                                if (picked != null) {
+                                  final bytes = await picked.readAsBytes();
+                                  setDialogState(() {
+                                    pickedImageFile = picked;
+                                    pickedImageBytes = bytes;
+                                  });
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error picking image: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            customBorder: const CircleBorder(),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: GestureDetector(
+                    onTap: () async {
+                      try {
+                        final picked = await picker.pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 85,
+                        );
+                        if (picked != null) {
+                          final bytes = await picked.readAsBytes();
+                          setDialogState(() {
+                            pickedImageFile = picked;
+                            pickedImageBytes = bytes;
+                          });
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error picking image: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: Text(
+                      pickedImageFile != null ? 'Photo selected (${pickedImageFile!.name})' : 'Tap camera icon to change DP',
+                      style: TextStyle(
+                        color: pickedImageFile != null ? const Color(0xFF34D399) : const Color(0xFF818CF8),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: nameCtrl,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -231,6 +334,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       mobile: newMobile,
       isActive: isActive,
       password: newPass.isNotEmpty ? newPass : null,
+      imagePath: pickedImageFile?.path,
+      imageBytes: pickedImageBytes,
+      imageName: pickedImageFile?.name,
     );
 
     if (mounted) {

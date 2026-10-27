@@ -186,7 +186,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
           // Title
           const Text(
-            "📸 QR Code Classifier",
+            "QR Code Threat Scanner",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -197,7 +197,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
           // Subtitle
           const Text(
-            "Powered by Gemini + LangChain for threat detection",
+            "AI-powered URL extraction and quishing prevention (Gemini + LangChain)",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
@@ -232,82 +232,42 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             const SizedBox(height: 16),
           ],
 
-          // Action Cards (Front Selfie, QR Camera, Gallery Upload)
+          // Symmetric Action Cards (Live Camera & Upload Image)
           Row(
             children: [
-              // Option 1: Front Selfie
+              // Option 1: Live Camera (Front or Rear)
               Expanded(
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _pickImage(ImageSource.camera, preferredCamera: CameraDevice.front),
+                    onTap: () => _pickImage(ImageSource.camera),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEC4899).withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFF472B6).withValues(alpha: 0.5), width: 1.2),
-                      ),
-                      child: Column(
-                        children: const [
-                          Icon(Icons.camera_front_rounded, color: Color(0xFFF472B6), size: 28),
-                          SizedBox(height: 6),
-                          Text(
-                            "Front Selfie",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            "Front camera",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Option 2: Live Camera / Rear QR
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _pickImage(ImageSource.camera, preferredCamera: CameraDevice.rear),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5), width: 1.2),
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: const [
-                          Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF818CF8), size: 28),
-                          SizedBox(height: 6),
+                          Icon(Icons.camera_alt_rounded, color: Color(0xFF818CF8), size: 30),
+                          SizedBox(height: 8),
                           Text(
-                            "QR Camera",
+                            "Live Camera",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          SizedBox(height: 3),
                           Text(
-                            "Rear camera",
+                            "Rear or front camera",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
+                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10.5),
                           ),
                         ],
                       ),
@@ -315,9 +275,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
 
-              // Option 3: Upload from Storage / Gallery
+              // Option 2: Upload Image (From gallery)
               Expanded(
                 child: Material(
                   color: Colors.transparent,
@@ -325,30 +285,31 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     onTap: () => _pickImage(ImageSource.gallery),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0D9488).withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.5), width: 1.2),
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: const [
-                          Icon(Icons.photo_library_rounded, color: Color(0xFF2DD4BF), size: 28),
-                          SizedBox(height: 6),
+                          Icon(Icons.photo_library_rounded, color: Color(0xFF2DD4BF), size: 30),
+                          SizedBox(height: 8),
                           Text(
                             "Upload Image",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                              fontSize: 13.5,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          SizedBox(height: 3),
                           Text(
                             "From gallery",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10),
+                            style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 10.5),
                           ),
                         ],
                       ),
