@@ -1,3 +1,4 @@
+import '../widgets/copyright_footer.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/glass_card.dart';
@@ -400,6 +401,7 @@ class IntroductionScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const CopyrightFooter(),
             ],
           ),
         ),
@@ -554,6 +556,7 @@ class ContactScreen extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 16),
+                  const CopyrightFooter(),
                 ],
               ),
             ),

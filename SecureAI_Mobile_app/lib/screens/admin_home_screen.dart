@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../widgets/copyright_footer.dart';
 import 'package:flutter/material.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
@@ -58,9 +59,12 @@ class AdminHomeScreen extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
               physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: GlassCard(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: GlassCard(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
                   borderRadius: 24,
                   child: Column(
@@ -221,10 +225,13 @@ class AdminHomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
+              const CopyrightFooter(),
+            ],
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

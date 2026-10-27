@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
@@ -138,8 +139,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
 
                   const SizedBox(height: 16),
+                  const CopyrightFooter(),
                 ],
-              ),
+              )
             ),
           ),
         ),

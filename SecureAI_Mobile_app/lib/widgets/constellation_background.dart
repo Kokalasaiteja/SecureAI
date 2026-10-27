@@ -96,64 +96,10 @@ class _ConstellationBackgroundState extends State<ConstellationBackground>
           ),
         ),
 
-        // Content with bottom padding so it never collides with fixed footer
+        // Natural page content without artificial bottom offsets or floating overlays
         Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: widget.showFooter ? (44.0 + MediaQuery.of(context).padding.bottom) : 0.0,
-            ),
-            child: widget.child,
-          ),
+          child: widget.child,
         ),
-
-        // Web-Matching Fixed Bottom Footer (Liquid Glass Mode)
-        if (widget.showFooter)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: 10,
-                    bottom: 10 + MediaQuery.of(context).padding.bottom,
-                    left: 16,
-                    right: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xC00F172A), // Translucent frosted smoked glass
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        width: 1.0,
-                      ),
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.06),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "© 2026 SecureAI. All rights reserved.",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }

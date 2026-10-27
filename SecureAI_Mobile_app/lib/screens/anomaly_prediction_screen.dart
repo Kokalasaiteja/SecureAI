@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
@@ -100,7 +101,9 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: GlassCard(
+            child: Column(
+              children: [
+                GlassCard(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -307,9 +310,12 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
                 ],
               ),
             ),
-          ),
+            const CopyrightFooter(),
+          ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

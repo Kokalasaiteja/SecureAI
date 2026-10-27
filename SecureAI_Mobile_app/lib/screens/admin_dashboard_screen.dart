@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../widgets/copyright_footer.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -560,8 +561,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       )),
 
                 const SizedBox(height: 16),
+                const CopyrightFooter(),
               ],
-            ),
+            )
           ),
         ),
       ),

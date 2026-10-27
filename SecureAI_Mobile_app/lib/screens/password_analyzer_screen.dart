@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
@@ -416,6 +417,7 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                     ),
                   ),
                 ],
+                const CopyrightFooter(),
               ],
             ),
           ),

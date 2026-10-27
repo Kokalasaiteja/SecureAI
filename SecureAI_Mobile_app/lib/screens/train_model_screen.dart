@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
@@ -168,6 +169,7 @@ class _TrainModelScreenState extends State<TrainModelScreen> {
                     const SizedBox(height: 16),
                   ],
                 ],
+                const CopyrightFooter(),
               ],
             ),
           ),

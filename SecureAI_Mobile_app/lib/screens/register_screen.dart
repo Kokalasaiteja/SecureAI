@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../widgets/copyright_footer.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
@@ -354,8 +355,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
 
                   const SizedBox(height: 16),
+                  const CopyrightFooter(),
                 ],
-              ),
+              )
             ),
           ),
         ),

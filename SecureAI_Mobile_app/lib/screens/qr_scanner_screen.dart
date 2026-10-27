@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../widgets/copyright_footer.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -153,7 +154,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: _scanResult != null ? _buildResultView() : _buildFormView(),
+            child: Column(
+              children: [
+                _scanResult != null ? _buildResultView() : _buildFormView(),
+                const CopyrightFooter(),
+              ],
+            ),
           ),
         ),
       ),

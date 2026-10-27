@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../widgets/copyright_footer.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -167,8 +168,9 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                const CopyrightFooter(),
               ],
-            ),
+            )
           ),
         ),
       ),
