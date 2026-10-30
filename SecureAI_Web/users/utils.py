@@ -72,7 +72,7 @@ def send_secure_otp_email(target_email, otp_code):
         # If RESEND_API_KEY is not configured at all, treat as requiring direct SMTP fallback
         is_sandbox_error = True
 
-    # 2. If Resend rejected recipient specifically due to sandbox restrictions (or no Resend API key), attempt Gmail SMTP
+    # 2. If Resend rejected recipient specifically due to sandbox restrictions (or no Resend API key)
     if is_sandbox_error:
         raw_user = getattr(settings, 'EMAIL_HOST_USER', None) or os.environ.get('EMAIL_HOST_USER', '')
         raw_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None) or os.environ.get('EMAIL_HOST_PASSWORD', '')
@@ -80,6 +80,43 @@ def send_secure_otp_email(target_email, otp_code):
         clean_user = str(raw_user).strip().strip('"').strip("'")
         clean_pass = str(raw_pass).strip().strip('"').strip("'")
 
+        # Step 2A: HTTPS API Fallback via Brevo (Sends to ANY email over HTTPS Port 443, immune to Render SMTP blocks)
+        brevo_key = (getattr(settings, 'BREVO_API_KEY', None) or os.environ.get('BREVO_API_KEY', '')).strip().strip('"').strip("'")
+        if brevo_key:
+            try:
+                import requests
+                brevo_sender = clean_user if clean_user and '@' in clean_user else 'onboarding@resend.dev'
+                b_url = "https://api.brevo.com/v3/smtp/email"
+                b_headers = {
+                    "accept": "application/json",
+                    "api-key": brevo_key,
+                    "content-type": "application/json"
+                }
+                b_payload = {
+                    "sender": {"name": "SecureAI Gateway", "email": brevo_sender},
+                    "to": [{"email": target_email}],
+                    "subject": f"[{otp_code}] SecureAI Authorization Passcode",
+                    "htmlContent": (
+                        f"<div style='font-family:sans-serif;padding:24px;border-radius:12px;background:#0f172a;color:#fff;border:1px solid #334155;'>"
+                        f"<h2 style='color:#38bdf8;margin-top:0;'>SecureAI Verification Challenge</h2>"
+                        f"<p style='color:#cbd5e1;'>Your single-use authorization passcode is:</p>"
+                        f"<div style='background:#1e293b;padding:16px;border-radius:8px;text-align:center;margin:16px 0;'>"
+                        f"<span style='color:#34d399;font-size:36px;font-weight:bold;letter-spacing:6px;'>{otp_code}</span>"
+                        f"</div>"
+                        f"<p style='color:#94a3b8;font-size:13px;'>This code is valid for 5 minutes. If you did not request this, please ignore.</p>"
+                        f"</div>"
+                    )
+                }
+                b_res = requests.post(b_url, json=b_payload, headers=b_headers, timeout=10)
+                if b_res.status_code in (200, 201):
+                    logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443)")
+                    return True, None
+                else:
+                    logger.warning(f"Brevo HTTPS delivery failed ({b_res.status_code}): {b_res.text}")
+            except Exception as brevo_err:
+                logger.warning(f"Brevo dispatch error: {brevo_err}")
+
+        # Step 2B: Direct SMTP Fallback (Attempts Port 587 then 465)
         # Automatically strip spaces from 16-character Google App Passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
         clean_pass_no_spaces = clean_pass.replace(" ", "")
         if len(clean_pass_no_spaces) == 16 and clean_pass_no_spaces.isalpha():
@@ -91,7 +128,7 @@ def send_secure_otp_email(target_email, otp_code):
             subject = f"[{otp_code}] SecureAI Authorization Passcode"
             plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
 
-            # Strategy: Attempt Port 587 (TLS), fallback to Port 465 (SSL) if port 587 has socket/timeout issues
+            # Strategy: Attempt Port 587 (TLS), fallback to Port 465 (SSL)
             smtp_attempts = [
                 {'port': 587, 'use_tls': True, 'use_ssl': False, 'desc': 'Port 587 (STARTTLS)'},
                 {'port': 465, 'use_tls': False, 'use_ssl': True, 'desc': 'Port 465 (SSL)'},
@@ -138,17 +175,20 @@ def send_secure_otp_email(target_email, otp_code):
                     "Generate one at Google Account > Security > 2-Step Verification > App Passwords, "
                     "and update EMAIL_HOST_PASSWORD in Render."
                 )
-            elif "timeout" in err_str.lower() or "timed out" in err_str.lower() or "refused" in err_str.lower():
+            elif any(k in err_str.lower() for k in ["unreachable", "101", "timeout", "timed out", "refused"]):
                 return False, (
-                    "Failed to deliver verification email via Gmail SMTP: Connection timed out on Render. "
-                    "Please verify Render outbound connectivity or add and verify a custom domain in Resend (resend.com/domains)."
+                    "Render Free Tier blocked outbound SMTP (Errno 101: Network is unreachable). "
+                    "Render Free instances block raw SMTP ports (587 & 465) to prevent spam. "
+                    "To send verification emails to any user, add a free BREVO_API_KEY in Render (works over HTTPS Port 443) "
+                    "or verify a custom domain in Resend (resend.com/domains)."
                 )
             else:
                 return False, f"Failed to deliver verification email via Gmail SMTP: {err_str}"
         else:
             return False, (
                 "Email delivery restricted: Resend free tier only delivers to the owner's email address. "
-                "To deliver to all users, configure EMAIL_HOST_PASSWORD (Google App Password) on Render or verify a domain in Resend."
+                "Render Free blocks raw SMTP ports (587/465). To deliver to all user emails, add BREVO_API_KEY in Render (free HTTPS API) "
+                "or verify a domain in Resend."
             )
 
     # 3. Handle non-sandbox Resend errors appropriately without leaking credentials

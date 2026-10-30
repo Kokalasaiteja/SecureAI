@@ -193,5 +193,6 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'onboarding@resend.dev'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'SecureAI Gateway <onboarding@resend.dev>')
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
 
 
