@@ -1,7 +1,9 @@
 import os
-import random
+import secrets
 import logging
 import resend
+from django.conf import settings
+from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
 
@@ -9,22 +11,24 @@ logger = logging.getLogger(__name__)
 resend.api_key = os.environ.get("RESEND_API_KEY", "")
 
 def generate_six_digit_otp():
-    """Generates a secure numeric string for multi-factor checks."""
-    return str(random.randint(100000, 999999))
+    """Generates a cryptographically secure 6-digit numeric OTP."""
+    return f"{secrets.SystemRandom().randint(100000, 999999)}"
 
 def send_secure_otp_email(target_email, otp_code):
     """
     Dispatches a structured operational email via Resend over Port 443 HTTPS.
-    Falls back gracefully to SMTP if configured or reports accurate sandbox domain errors.
+    Falls back gracefully to Gmail SMTP specifically when Resend rejects the recipient
+    due to sandbox restrictions (unverified recipient with onboarding@resend.dev).
     """
+    api_key = getattr(settings, 'RESEND_API_KEY', None) or os.environ.get("RESEND_API_KEY", "")
+    sender = getattr(settings, 'RESEND_FROM_EMAIL', None) or os.environ.get("RESEND_FROM_EMAIL", "SecureAI Gateway <onboarding@resend.dev>")
     resend_err = None
-    api_key = os.environ.get("RESEND_API_KEY", "")
+    is_sandbox_error = False
 
-    # 1. Attempt delivery via Resend API
+    # 1. Attempt delivery via Resend API if API key is configured
     if api_key:
         try:
             resend.api_key = api_key
-            sender = os.environ.get("RESEND_FROM_EMAIL", "SecureAI Gateway <onboarding@resend.dev>")
             params = {
                 "from": sender,
                 "to": [target_email],
@@ -53,39 +57,59 @@ def send_secure_otp_email(target_email, otp_code):
             resend_err = str(error)
             logger.error(f"Resend transaction failed for {target_email}: {resend_err}")
 
-    # 2. Attempt SMTP fallback if configured
-    from django.conf import settings
-    from django.core.mail import send_mail
-    host_user = getattr(settings, 'EMAIL_HOST_USER', None)
-    host_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
+            lower_err = resend_err.lower()
+            if any(term in lower_err for term in [
+                "only send testing emails",
+                "testing emails to your own email address",
+                "to send to other domains",
+                "verify your domain",
+                "resend.com/domains",
+                "domain is not verified",
+                "validation_error",
+            ]):
+                is_sandbox_error = True
+    else:
+        # If RESEND_API_KEY is not configured at all, treat as requiring direct SMTP fallback
+        is_sandbox_error = True
 
-    if host_user and host_pass and str(host_pass).strip() not in ('', 'None'):
-        try:
-            subject = f"[{otp_code}] SecureAI Authorization Passcode"
-            plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
-            send_mail(
-                subject,
-                plain_msg,
-                host_user,
-                [target_email],
-                fail_silently=False,
+    # 2. If Resend rejected recipient specifically due to sandbox restrictions (or no Resend API key), attempt Gmail SMTP
+    if is_sandbox_error:
+        host_user = getattr(settings, 'EMAIL_HOST_USER', None) or os.environ.get('EMAIL_HOST_USER', '')
+        host_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None) or os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+        if host_user and host_pass and str(host_pass).strip() not in ('', 'None'):
+            try:
+                subject = f"[{otp_code}] SecureAI Authorization Passcode"
+                plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
+                send_mail(
+                    subject=subject,
+                    message=plain_msg,
+                    from_email=host_user,
+                    recipient_list=[target_email],
+                    fail_silently=False,
+                )
+                logger.info(f"OTP email successfully sent via Gmail SMTP fallback to {target_email}")
+                return True, None
+            except Exception as smtp_err:
+                logger.error(f"Gmail SMTP fallback failed for {target_email}: {smtp_err}")
+                return False, "Failed to deliver verification email via Resend and Gmail SMTP. Please verify Render email configuration."
+        else:
+            return False, (
+                "Email delivery restricted: Resend free tier only delivers to the owner's email address. "
+                "To deliver to all users, configure EMAIL_HOST_PASSWORD (Google App Password) on Render or verify a domain in Resend."
             )
-            logger.info(f"OTP email successfully sent via SMTP to {target_email}")
-            return True, None
-        except Exception as smtp_err:
-            logger.error(f"SMTP fallback failed: {smtp_err}")
 
-    # 3. Diagnose and report exact cause
+    # 3. Handle non-sandbox Resend errors appropriately without leaking credentials
     if resend_err:
         lower_err = resend_err.lower()
-        if "only send testing emails" in lower_err or "testing emails to your own email address" in lower_err:
-            return False, (
-                "Resend Sandbox limit: 'onboarding@resend.dev' can only deliver to the account owner (kokalasaiteja@gmail.com). "
-                "To deliver to all user emails (e.g. friends), add & verify a domain in Resend (resend.com/domains) or configure EMAIL_HOST_PASSWORD in Render."
-            )
-        return False, f"Email delivery error: {resend_err}"
+        if "api_key" in lower_err or "unauthorized" in lower_err or "401" in lower_err:
+            return False, "Email service authentication failed. Check RESEND_API_KEY on Render."
+        elif "rate limit" in lower_err or "429" in lower_err:
+            return False, "Email service rate limit reached. Please wait a moment and try again."
+        else:
+            return False, "Email delivery failed due to network error. Please try again."
 
-    return False, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY)." 
+    return False, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY or EMAIL_HOST_PASSWORD)."
 
 
 def is_safe_user_image_path(image_name):

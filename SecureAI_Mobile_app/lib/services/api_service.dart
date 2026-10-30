@@ -1354,6 +1354,7 @@ class ApiService {
         final bodyFields = <String, String>{
           'email': email.trim(),
           'new_password': newPassword.trim(),
+          'confirm_password': newPassword.trim(),
         };
         if (_csrfToken != null && _csrfToken!.isNotEmpty) {
           bodyFields['csrfmiddlewaretoken'] = _csrfToken!;

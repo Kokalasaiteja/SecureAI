@@ -473,15 +473,16 @@ def user_logout(request):
 
 
 
-import random
+import hashlib
+import secrets
 from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from django.contrib import messages
 from .models import RegisteredUser
 from django.conf import settings
 
-# Enhanced in-memory OTP storage with TTL and attempt tracking
-# Format: email -> {'otp': str, 'created_at': float, 'attempts': int, 'verified': bool, 'verified_at': float}
+# Enhanced in-memory OTP storage with salted cryptographic hashing, TTL, and attempt tracking
+# Format: normalized_email -> {'salt': str, 'otp_hash': str, 'created_at': float, 'attempts': int, 'verified': bool, 'verified_at': float}
 otp_storage = {}
 OTP_EXPIRY_SECONDS = 300       # 5 minutes validity
 OTP_RATE_LIMIT_SECONDS = 60    # 1 request per 60 seconds per email
@@ -491,25 +492,31 @@ OTP_RESET_WINDOW_SECONDS = 600 # 10 minutes to reset password after verification
 def send_otp(email):
     from .utils import generate_six_digit_otp, send_secure_otp_email
     now = time.time()
+    normalized_email = (email or '').strip().lower()
 
     # Rate limiting: prevent spamming OTP requests within 60 seconds
-    existing = otp_storage.get(email)
+    existing = otp_storage.get(normalized_email)
     if existing and (now - existing.get('created_at', 0) < OTP_RATE_LIMIT_SECONDS):
         wait_seconds = int(OTP_RATE_LIMIT_SECONDS - (now - existing['created_at']))
         return None, f"Please wait {wait_seconds} seconds before requesting a new OTP."
 
     otp = generate_six_digit_otp()
-    res = send_secure_otp_email(email, otp)
+    res = send_secure_otp_email(normalized_email, otp)
     if isinstance(res, tuple):
         success, err_reason = res
     else:
         success, err_reason = res, None
 
     if not success:
-        return None, (err_reason or "Failed to send email. Check Render Environment Variables (RESEND_API_KEY).")
+        return None, (err_reason or "Failed to send email. Check Render Environment Variables (RESEND_API_KEY or EMAIL_HOST_PASSWORD).")
 
-    otp_storage[email] = {
-        'otp': str(otp),
+    # Cryptographically secure salted hash storage (plaintext OTP is never stored in memory)
+    salt = secrets.token_hex(16)
+    otp_hash = hashlib.sha256(f"{salt}:{otp}".encode('utf-8')).hexdigest()
+
+    otp_storage[normalized_email] = {
+        'salt': salt,
+        'otp_hash': otp_hash,
         'created_at': now,
         'attempts': 0,
         'verified': False,
@@ -522,23 +529,32 @@ def forgot_password(request):
     is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
         email = (request.POST.get("email") or '').strip()
+        normalized_email = email.lower()
+
+        if not email:
+            err = "Please enter your registered email address."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return render(request, "forgot_password.html")
 
         if RegisteredUser.objects.filter(email__iexact=email).exists():
-            otp, error = send_otp(email)
+            otp, error = send_otp(normalized_email)
             if error:
                 status_code = 429 if "wait" in error.lower() else 500
                 if is_json:
                     return JsonResponse({'success': False, 'message': error}, status=status_code)
                 messages.error(request, error)
             else:
-                request.session["reset_email"] = email
+                request.session["reset_email"] = normalized_email
                 if is_json:
                     return JsonResponse({'success': True, 'message': 'Verification OTP sent to your registered email.'})
                 return redirect("verify_otp")
         else:
+            err = "Email address is not registered!"
             if is_json:
-                return JsonResponse({'success': False, 'message': 'Email address not registered!'}, status=404)
-            messages.error(request, "Email address not registered!")
+                return JsonResponse({'success': False, 'message': err}, status=404)
+            messages.error(request, err)
 
     return render(request, "forgot_password.html")
 
@@ -547,12 +563,12 @@ def verify_otp(request):
     is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
         otp_entered = (request.POST.get("otp") or '').strip()
-        email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
+        email = ((request.POST.get("email") or '').strip() or request.session.get("reset_email") or '').lower()
 
         record = otp_storage.get(email)
         now = time.time()
 
-        if not record:
+        if not record or not record.get('salt') or not record.get('otp_hash'):
             err = "No active OTP request found for this email. Please request a new OTP."
             if is_json:
                 return JsonResponse({'success': False, 'message': err}, status=400)
@@ -577,10 +593,14 @@ def verify_otp(request):
             messages.error(request, err)
             return render(request, "verify_otp.html")
 
-        # Constant-time comparison
-        if secrets.compare_digest(str(record.get('otp', '')), otp_entered):
+        # Constant-time comparison using salted SHA-256 hash
+        entered_hash = hashlib.sha256(f"{record['salt']}:{otp_entered}".encode('utf-8')).hexdigest()
+        if secrets.compare_digest(record['otp_hash'], entered_hash):
             record['verified'] = True
             record['verified_at'] = now
+            # Invalidate otp_hash so the same OTP code cannot be re-verified
+            record.pop('otp_hash', None)
+
             request.session['otp_verified_email'] = email
             request.session['otp_verified_at'] = now
             request.session.modified = True
@@ -608,7 +628,8 @@ def reset_password(request):
     is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if request.method == "POST":
         new_password = (request.POST.get("new_password") or '').strip()
-        email = (request.POST.get("email") or '').strip() or request.session.get("reset_email")
+        confirm_password = (request.POST.get("confirm_password") or '').strip()
+        email = ((request.POST.get("email") or '').strip() or request.session.get("reset_email") or '').lower()
 
         # Strict security authorization: Must have verified OTP within window
         verified_in_session = request.session.get('otp_verified_email') == email
@@ -632,9 +653,16 @@ def reset_password(request):
             messages.error(request, err)
             return render(request, "reset_password.html")
 
+        if confirm_password and new_password != confirm_password:
+            err = "Passwords do not match. Please verify."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=400)
+            messages.error(request, err)
+            return render(request, "reset_password.html")
+
         user = RegisteredUser.objects.filter(email__iexact=email).first()
         if user:
-            # Hash password using Django PBKDF2
+            # Hash password securely using Django's password hashing mechanisms
             user.password = make_password(new_password)
             user.save(update_fields=['password'])
 
@@ -650,8 +678,8 @@ def reset_password(request):
             return redirect("user_login")
         else:
             if is_json:
-                return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
-            messages.error(request, "User not found.")
+                return JsonResponse({'success': False, 'message': 'User account not found.'}, status=404)
+            messages.error(request, "User account not found.")
 
     return render(request, "reset_password.html")
 
