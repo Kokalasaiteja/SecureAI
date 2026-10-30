@@ -722,12 +722,30 @@ def detect_spam(request):
                 chain = get_spam_chain()
                 response = chain.invoke({"sms": message}).content
 
-                # Extract classification & explanation
-                if "spam" in response.lower():
+                # Extract classification & explanation accurately
+                raw_text = response.strip()
+                lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
+                first_line = lines[0] if lines else raw_text
+                norm_first = first_line.lower()
+
+                # Robust classification: check classification tokens without false-positives
+                if re.search(r'\b(not\s+spam|no\s+spam|ham|legitimate|safe)\b', norm_first):
+                    result = "Ham"
+                elif re.search(r'\b(spam|smishing|phishing|malicious)\b', norm_first):
+                    result = "Spam"
+                elif "spam" in norm_first and not any(neg in norm_first for neg in ["not", "no", "never", "without"]):
                     result = "Spam"
                 else:
                     result = "Ham"
-                explanation = response.strip()
+
+                # Clean explanation: remove redundant leading "ham:", "spam:", "Classification: Ham", etc.
+                cleaned_exp = re.sub(
+                    r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?',
+                    '',
+                    raw_text,
+                    flags=re.IGNORECASE
+                ).strip()
+                explanation = cleaned_exp if cleaned_exp else raw_text
             except EnvironmentError as exc:
                 error = str(exc)
             except Exception as exc:
@@ -1076,7 +1094,7 @@ def password_analyzer(request):
             'has_special': has_special,
         }
         
-    return render(request, 'users/password_analyzer.html', {'result': result})
+    return render(request, 'users/password_analyzer.html', {'result': result, 'password': password})
 
 # 📌 Global Pages
 def introduction(request):

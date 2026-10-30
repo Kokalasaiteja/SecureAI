@@ -29,3 +29,4 @@ class CopyrightFooter extends StatelessWidget {
     );
   }
 }
+

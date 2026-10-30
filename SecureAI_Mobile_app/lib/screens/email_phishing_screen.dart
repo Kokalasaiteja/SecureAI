@@ -358,8 +358,8 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
         line = line.substring(2).trim();
       }
 
-      // Parse bold segments (**bold**) into TextSpans
-      final parts = RegExp(r'(\b|\B)(\*\*.*?\*\*)(\b|\B)').allMatches(line);
+      // Parse bold and emphasized highlight segments (**bold** or *word*) into TextSpans
+      final parts = RegExp(r'(\*\*.*?\*\*|\*[^*\n]+?\*)').allMatches(line);
       final List<InlineSpan> spans = [];
 
       int lastIndex = 0;
@@ -380,7 +380,7 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
         }
 
         final matchText = match.group(0)!;
-        final boldContent = matchText.replaceAll('**', '').trim();
+        final boldContent = matchText.replaceAll('*', '').trim();
         spans.add(TextSpan(
           text: boldContent.endsWith(':') ? '$boldContent ' : boldContent,
           style: const TextStyle(

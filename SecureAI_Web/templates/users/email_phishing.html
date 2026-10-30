@@ -79,6 +79,15 @@
                 const rawText = rawElem.textContent.trim();
                 if (!rawText) return;
 
+                function formatMarkdown(text) {
+                    if (!text) return '';
+                    // 1. Format double-asterisks **bold** as bold highlighted text
+                    let formatted = text.replace(/\*\*([^\*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
+                    // 2. Format single-asterisk *word* as bold highlighted text (fixes *never* issue)
+                    formatted = formatted.replace(/\*([^\*\s][^\*]*?[^\*\s]|[^\*\s])\*/g, '<strong class="text-white font-bold">$1</strong>');
+                    return formatted;
+                }
+
                 const lines = rawText.split('\n');
                 let outputHtml = '';
 
@@ -94,10 +103,7 @@
 
                     if (bulletMatch) {
                         const heading = bulletMatch[1].replace(/[:\*]/g, '').trim();
-                        let body = bulletMatch[2].trim();
-                        // Strip remaining markdown asterisks inside body
-                        body = body.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
-                        body = body.replace(/\\*([^\*]+)\\*/g, '$1');
+                        let body = formatMarkdown(bulletMatch[2].trim());
 
                         outputHtml += `
                             <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition">
@@ -107,10 +113,9 @@
                                 </div>
                             </div>
                         `;
-                    } else if (trimmed.startsWith('*') || trimmed.startsWith('-')) {
+                    } else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
                         let cleanText = trimmed.replace(/^[\*\-•]\s*/, '').trim();
-                        cleanText = cleanText.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
-                        cleanText = cleanText.replace(/\\*([^\*]+)\\*/g, '$1');
+                        cleanText = formatMarkdown(cleanText);
 
                         outputHtml += `
                             <div class="flex items-start space-x-3 p-2.5 rounded-lg bg-gray-800/30 border border-gray-700/40">
@@ -119,9 +124,7 @@
                             </div>
                         `;
                     } else {
-                        let cleanText = trimmed.replace(/\\*\\*([^\*]+)\\*\\*/g, '<strong class="text-white font-semibold">$1</strong>');
-                        cleanText = cleanText.replace(/\\*([^\*]+)\\*/g, '$1');
-
+                        let cleanText = formatMarkdown(trimmed);
                         outputHtml += `
                             <p class="text-gray-300 text-sm sm:text-base leading-relaxed">${cleanText}</p>
                         `;

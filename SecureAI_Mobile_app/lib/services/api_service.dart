@@ -604,11 +604,13 @@ class ApiService {
               final String resStr = json['result']?.toString() ?? 'Ham';
               final bool isSpam = resStr.toLowerCase() == 'spam';
               final String rawExp = json['explanation']?.toString() ?? 'Analyzed by AI Spam Detection.';
+              // Clean redundant leading "ham:" or "spam:" prefix from explanation
+              final cleanExp = rawExp.replaceFirst(RegExp(r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?', caseSensitive: false), '').trim();
               return {
                 'success': true,
-                'result': isSpam ? 'Spam' : 'Ham (Safe)',
+                'result': isSpam ? 'Spam' : 'Ham',
                 'is_spam': isSpam,
-                'body': unescapeHtml(rawExp),
+                'body': unescapeHtml(cleanExp.isNotEmpty ? cleanExp : rawExp),
               };
             }
           } catch (_) {}
@@ -628,10 +630,19 @@ class ApiService {
                 ? "Flagged as Spam: High-risk promotional patterns and keywords detected (${matchedKeywords.join(', ')})."
                 : "Legitimate SMS message pattern detected. No phishing or spam indicators found.";
           } else {
-            isSpam = body.toLowerCase().contains('spam') && !body.toLowerCase().contains('ham (not spam)');
+            final hasSpam = RegExp(r'Result:\s*<[^>]*>\s*Spam\s*<', caseSensitive: false).hasMatch(body);
+            final hasHam = RegExp(r'Result:\s*<[^>]*>\s*Ham\s*<', caseSensitive: false).hasMatch(body);
+            if (hasHam) {
+              isSpam = false;
+            } else if (hasSpam) {
+              isSpam = true;
+            } else {
+              isSpam = false;
+            }
             final expMatch = RegExp(r'Explanation:<\/strong>\s*(.*?)(?:<\/p>|$)', dotAll: true).firstMatch(body);
             if (expMatch != null) {
-              explanation = expMatch.group(1)?.trim() ?? explanation;
+              final rawFound = expMatch.group(1)?.trim() ?? explanation;
+              explanation = rawFound.replaceFirst(RegExp(r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?', caseSensitive: false), '').trim();
             }
           }
 

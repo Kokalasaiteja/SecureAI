@@ -231,8 +231,10 @@
       <a href="/media/app-arm64-v8a-release.apk" onclick="openApkModal(event)" class="nav-item flex items-center space-x-3 text-base font-medium text-teal-300 hover:text-white p-2.5 rounded-lg transition-colors border border-teal-500/30 bg-teal-600/15 cursor-pointer" title="Download Android App APK">
         <i class="fab fa-android w-5 text-center text-teal-400"></i> <span>Download Android App</span>
       </a>
-      <a href="{% url 'user_logout' %}" class="nav-item flex items-center space-x-3 text-base font-medium text-gray-300 hover:text-red-400 p-2.5 rounded-lg transition-colors mt-2 border-t border-gray-800">
-        <i class="fas fa-sign-out-alt w-5 text-center text-red-400"></i> <span>Logout</span>
+      <!-- User Logout (Mobile App Drawer Style matching Image 3) -->
+      <a href="{% url 'user_logout' %}" class="flex items-center space-x-3 text-base font-semibold text-red-400 hover:text-red-300 p-3 rounded-xl transition-all duration-300 mt-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.25)]">
+        <i class="fas fa-sign-out-alt w-5 text-center text-red-400 text-lg"></i>
+        <span>Logout</span>
       </a>
     </nav>
   </aside>
