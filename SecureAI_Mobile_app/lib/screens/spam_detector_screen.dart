@@ -40,10 +40,10 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
   Widget build(BuildContext context) {
     final bool hasError = _result != null && _result!['success'] == false;
     final bool hasResult = _result != null && _result!['success'] == true;
-    final String resultText = _result?['result']?.toString() ?? 'Safe';
-    final String rawExp = ApiService.unescapeHtml(_result?['body']?.toString() ?? 'No malicious indicators detected.');
+    final String resultText = _result?['result']?.toString() ?? _result?['classification']?.toString() ?? 'Ham';
+    final String rawExp = ApiService.unescapeHtml(_result?['explanation']?.toString() ?? _result?['body']?.toString() ?? 'No malicious indicators detected.');
     final String explanationText = rawExp.replaceFirst(
-      RegExp(r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?', caseSensitive: false),
+      RegExp(r'^(?:(?:classification|result|verdict|status)\s*[:\-\—]\s*)?(?:ham|spam)\s*[:\-\—\.\,]\s*(?:explanation\s*[:\-\—]\s*)?|^(?:explanation\s*[:\-\—]\s*)', caseSensitive: false),
       '',
     ).trim();
 

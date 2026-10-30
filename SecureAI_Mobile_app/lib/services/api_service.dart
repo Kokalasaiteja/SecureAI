@@ -600,17 +600,23 @@ class ApiService {
           // Attempt JSON response parsing first
           try {
             final json = jsonDecode(body);
-            if (json is Map && json['success'] == true) {
-              final String resStr = json['result']?.toString() ?? 'Ham';
+            if (json is Map && (json['success'] == true || json.containsKey('result') || json.containsKey('classification'))) {
+              final String resStr = json['result']?.toString() ?? json['classification']?.toString() ?? 'Ham';
               final bool isSpam = resStr.toLowerCase() == 'spam';
               final String rawExp = json['explanation']?.toString() ?? 'Analyzed by AI Spam Detection.';
               // Clean redundant leading "ham:" or "spam:" prefix from explanation
-              final cleanExp = rawExp.replaceFirst(RegExp(r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?', caseSensitive: false), '').trim();
+              final cleanExp = rawExp.replaceFirst(
+                RegExp(r'^(?:(?:classification|result|verdict|status)\s*[:\-\—]\s*)?(?:ham|spam)\s*[:\-\—\.\,]\s*(?:explanation\s*[:\-\—]\s*)?|^(?:explanation\s*[:\-\—]\s*)', caseSensitive: false),
+                '',
+              ).trim();
+              final finalExp = cleanExp.isNotEmpty ? cleanExp : rawExp;
               return {
                 'success': true,
                 'result': isSpam ? 'Spam' : 'Ham',
+                'classification': isSpam ? 'Spam' : 'Ham',
                 'is_spam': isSpam,
-                'body': unescapeHtml(cleanExp.isNotEmpty ? cleanExp : rawExp),
+                'body': unescapeHtml(finalExp),
+                'explanation': unescapeHtml(finalExp),
               };
             }
           } catch (_) {}
@@ -642,15 +648,20 @@ class ApiService {
             final expMatch = RegExp(r'Explanation:<\/strong>\s*(.*?)(?:<\/p>|$)', dotAll: true).firstMatch(body);
             if (expMatch != null) {
               final rawFound = expMatch.group(1)?.trim() ?? explanation;
-              explanation = rawFound.replaceFirst(RegExp(r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?', caseSensitive: false), '').trim();
+              explanation = rawFound.replaceFirst(
+                RegExp(r'^(?:(?:classification|result|verdict|status)\s*[:\-\—]\s*)?(?:ham|spam)\s*[:\-\—\.\,]\s*(?:explanation\s*[:\-\—]\s*)?|^(?:explanation\s*[:\-\—]\s*)', caseSensitive: false),
+                '',
+              ).trim();
             }
           }
 
           return {
             'success': true,
-            'result': isSpam ? 'Spam' : 'Ham (Safe)',
+            'result': isSpam ? 'Spam' : 'Ham',
+            'classification': isSpam ? 'Spam' : 'Ham',
             'is_spam': isSpam,
             'body': unescapeHtml(explanation),
+            'explanation': unescapeHtml(explanation),
           };
         }
         return {'success': false, 'message': 'Detection failed with code ${response.statusCode}'};

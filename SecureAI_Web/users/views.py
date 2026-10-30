@@ -666,6 +666,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import os
+import json
+import re
 
 # Load environment variables from .env in the project root
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -699,14 +701,100 @@ def get_google_llm(**kwargs):
 def get_spam_chain():
     prompt = PromptTemplate(
         input_variables=["sms"],
-        template="""
-You are an expert spam filter.
-Classify the following SMS message as either 'spam' or 'ham' (not spam).
+        template="""You are an expert SMS spam filter.
+Analyze the following SMS message and classify it strictly as either 'Spam' or 'Ham' (where Ham means legitimate, safe, non-spam).
+
 Message: "{sms}"
-Respond only with 'spam' or 'ham' and give a one-line explanation.
+
+Instructions:
+1. Determine whether the message is 'Spam' or 'Ham'.
+2. Provide a clear, concise explanation of why the message is spam or ham without prepending 'Ham:' or 'Spam:' to the explanation.
+3. Respond ONLY with a valid JSON object with exactly these two keys:
+{{
+  "classification": "Spam" or "Ham",
+  "explanation": "your clear explanation here"
+}}
+Do NOT include markdown formatting, code fences, or any other surrounding text. Return ONLY the JSON object.
 """
     )
     return prompt | get_google_llm()
+
+
+def clean_spam_explanation(explanation_text: str) -> str:
+    """Removes redundant leading labels from explanation while preserving all meaningful words."""
+    if not explanation_text:
+        return ""
+    exp = explanation_text.strip().strip('"`\'')
+    pattern = r'^(?:(?:classification|result|verdict|status)\s*[:\-\—]\s*)?(?:ham|spam)\s*[:\-\—\.\,]\s*(?:explanation\s*[:\-\—]\s*)?|^(?:explanation\s*[:\-\—]\s*)'
+    cleaned = re.sub(pattern, '', exp, flags=re.IGNORECASE).strip()
+    return cleaned if cleaned else exp
+
+
+def parse_spam_response(response_text: str):
+    """
+    Parses LLM response into (classification, explanation, error).
+    Classification is strictly 'Spam' or 'Ham'.
+    Never infers classification from the explanation text.
+    """
+    if not response_text or not response_text.strip():
+        return None, None, "Empty response received from analysis model."
+
+    text = response_text.strip()
+
+    # 1. Try parsing JSON directly or extract JSON block
+    json_candidate = text
+    if '```' in text:
+        match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if match:
+            json_candidate = match.group(1).strip()
+    elif '{' in text and '}' in text:
+        match = re.search(r'(\{.*\})', text, re.DOTALL)
+        if match:
+            json_candidate = match.group(1).strip()
+
+    try:
+        data = json.loads(json_candidate)
+        if isinstance(data, dict):
+            raw_cls = str(data.get('classification', '')).strip()
+            raw_exp = str(data.get('explanation', '')).strip()
+
+            norm_cls = raw_cls.lower().strip('.:,;!*#')
+            final_cls = None
+            if norm_cls == 'spam':
+                final_cls = 'Spam'
+            elif norm_cls in ('ham', 'safe', 'legitimate', 'not spam', 'non-spam'):
+                final_cls = 'Ham'
+
+            if final_cls:
+                clean_exp = clean_spam_explanation(raw_exp)
+                if not clean_exp:
+                    clean_exp = "No additional explanation provided."
+                return final_cls, clean_exp, None
+            else:
+                return "Unknown", clean_spam_explanation(raw_exp), f"Ambiguous classification: '{raw_cls}'"
+    except Exception:
+        pass
+
+    # 2. Fallback parser if JSON decoding failed
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    first_line = lines[0] if lines else text
+
+    verdict_match = re.match(
+        r'^(?:(?:classification|verdict|result)\s*[:\-\—]\s*)?(ham|spam|not\s+spam|legitimate|safe)\b',
+        first_line,
+        flags=re.IGNORECASE
+    )
+    if verdict_match:
+        token = verdict_match.group(1).lower()
+        final_cls = "Spam" if token == "spam" else "Ham"
+        if len(lines) > 1:
+            raw_exp = "\n".join(lines[1:])
+        else:
+            raw_exp = clean_spam_explanation(first_line)
+        clean_exp = clean_spam_explanation(raw_exp)
+        return final_cls, clean_exp if clean_exp else "Analyzed by AI Spam Detection.", None
+
+    return "Unknown", clean_spam_explanation(text), "Unable to determine message classification (ambiguous response)."
 
 
 @csrf_exempt
@@ -726,40 +814,30 @@ def detect_spam(request):
             try:
                 chain = get_spam_chain()
                 response = chain.invoke({"sms": message}).content
-
-                # Extract classification & explanation accurately
-                raw_text = response.strip()
-                lines = [l.strip() for l in raw_text.splitlines() if l.strip()]
-                first_line = lines[0] if lines else raw_text
-                norm_first = first_line.lower()
-
-                # Robust classification: check classification tokens without false-positives
-                if re.search(r'\b(not\s+spam|no\s+spam|ham|legitimate|safe)\b', norm_first):
-                    result = "Ham"
-                elif re.search(r'\b(spam|smishing|phishing|malicious)\b', norm_first):
-                    result = "Spam"
-                elif "spam" in norm_first and not any(neg in norm_first for neg in ["not", "no", "never", "without"]):
-                    result = "Spam"
+                cls, exp, parse_err = parse_spam_response(response)
+                if cls in ('Spam', 'Ham'):
+                    result = cls
+                    explanation = exp
                 else:
-                    result = "Ham"
-
-                # Clean explanation: remove redundant leading "ham:", "spam:", "Classification: Ham", etc.
-                cleaned_exp = re.sub(
-                    r'^(?:classification|result|verdict)?\s*[:\-\—]?\s*(?:ham|spam)\s*[:\-\—\.\,]?\s*(?:explanation\s*[:\-\—]?\s*)?',
-                    '',
-                    raw_text,
-                    flags=re.IGNORECASE
-                ).strip()
-                explanation = cleaned_exp if cleaned_exp else raw_text
+                    result = cls or "Unknown"
+                    explanation = exp
+                    error = parse_err or "Ambiguous analysis response."
             except EnvironmentError as exc:
                 error = str(exc)
             except Exception as exc:
                 error = f"Spam detection failed: {exc}"
 
         if is_json:
-            if error:
+            if error and result not in ('Spam', 'Ham'):
                 return JsonResponse({'success': False, 'message': error}, status=400)
-            return JsonResponse({'success': True, 'result': result, 'explanation': explanation})
+            return JsonResponse({
+                'success': True if result in ('Spam', 'Ham') else False,
+                'result': result,
+                'classification': result,
+                'explanation': explanation,
+                'is_spam': result == 'Spam',
+                'message': error if error else None,
+            })
 
     return render(request, 'users/detect.html', {
         'result': result,
