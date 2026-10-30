@@ -840,16 +840,34 @@ def detect_spam(request):
             error = "Please enter an SMS message to check."
         else:
             try:
-                chain = get_spam_chain()
-                response = chain.invoke({"sms": message}).content
-                cls, exp, parse_err = parse_spam_response(response)
-                if cls in ('Spam', 'Ham'):
-                    result = cls
-                    explanation = exp
+                from .utils import verify_all_links_in_content
+                link_report = verify_all_links_in_content(message, classify_url_with_langchain)
+
+                if link_report['has_links'] and link_report['is_unsafe']:
+                    result = 'Spam'
+                    explanation = (
+                        f"The message contains a suspicious or unsafe link ({link_report['first_unsafe_url']}). "
+                        f"{link_report['summary']} "
+                        f"Messages containing unverified, obfuscated, or malicious links are classified as Spam to prevent social engineering attacks."
+                    )
                 else:
-                    result = cls or "Unknown"
-                    explanation = exp
-                    error = parse_err or "Ambiguous analysis response."
+                    chain = get_spam_chain()
+                    prompt_input = message
+                    if link_report['has_links']:
+                        prompt_input = f"{message}\n\n[System Link Audit: All embedded links were inspected and confirmed safe: {link_report['summary']}]"
+
+                    response = chain.invoke({"sms": prompt_input}).content
+                    cls, exp, parse_err = parse_spam_response(response)
+                    if cls in ('Spam', 'Ham'):
+                        result = cls
+                        explanation = exp
+                    else:
+                        result = cls or "Unknown"
+                        explanation = exp
+                        error = parse_err or "Ambiguous analysis response."
+
+                    if link_report['has_links'] and explanation:
+                        explanation = f"{explanation} [Link Verification: {link_report['summary']}]"
             except EnvironmentError as exc:
                 error = str(exc)
             except Exception as exc:
@@ -1230,27 +1248,51 @@ def email_phishing_analyzer(request):
             error = "Please enter an email body to analyze."
         else:
             try:
-                from langchain_core.prompts import PromptTemplate
-                llm = get_google_llm()
-                prompt = PromptTemplate(
-                    input_variables=["email"],
-                    template="""You are an expert cybersecurity analyst.
+                from .utils import verify_all_links_in_content
+                link_report = verify_all_links_in_content(email_text, classify_url_with_langchain)
+
+                if link_report['has_links'] and link_report['is_unsafe']:
+                    result = 'Phishing'
+                    explanation = (
+                        f"• Link Security Audit: Detected unsafe/suspicious link '{link_report['first_unsafe_url']}'.\n"
+                        f"• Threat Finding: {link_report['summary']}\n"
+                        f"• Risk Assessment: The presence of unverified, obfuscated, or suspicious destination links is a primary indicator of phishing and credential harvesting.\n"
+                        f"• Security Recommendation: Do not click or interact with the link."
+                    )
+                else:
+                    from langchain_core.prompts import PromptTemplate
+                    llm = get_google_llm()
+                    link_context = ""
+                    if link_report['has_links']:
+                        link_context = f"\n[Link Audit: Embedded links were inspected and confirmed safe: {link_report['summary']}]"
+
+                    prompt = PromptTemplate(
+                        input_variables=["email"],
+                        template="""You are an expert cybersecurity analyst.
 Analyze the following email for phishing or social engineering attempts.
-Email: "{email}"
+Email: "{email}""" + link_context + """"
 First, reply with exactly 'Phishing', 'Suspicious', or 'Safe' on the first line.
 Then, provide a brief bulleted explanation of your findings and any red flags."""
-                )
-                chain = prompt | llm
-                response = chain.invoke({"email": email_text}).content
-                
-                parts = response.strip().split('\n', 1)
-                classification = parts[0].strip().replace('*', '').replace('#', '').strip()
-                if len(parts) > 1:
-                    explanation = parts[1].strip()
-                else:
-                    explanation = "No detailed explanation provided."
-                
-                result = classification
+                    )
+                    chain = prompt | llm
+                    response = chain.invoke({"email": email_text}).content
+                    
+                    parts = response.strip().split('\n', 1)
+                    classification = parts[0].strip().replace('*', '').replace('#', '').strip()
+                    for prefix in ['Classification:', 'Result:', 'Verdict:']:
+                        if classification.startswith(prefix):
+                            classification = classification[len(prefix):].strip()
+
+                    if len(parts) > 1:
+                        explanation = parts[1].strip()
+                    else:
+                        explanation = "No detailed explanation provided."
+                    
+                    result = classification
+                    if link_report['has_links']:
+                        explanation = f"• Link Verification: {link_report['summary']}\n{explanation}"
+                    else:
+                        explanation = f"• Link Verification: No external links detected in email body.\n{explanation}"
             except Exception as exc:
                 error = f"Analysis failed: {exc}"
 

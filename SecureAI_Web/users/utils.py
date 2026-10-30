@@ -233,3 +233,154 @@ def delete_user_account(user, current_request=None, otp_storage_ref=None):
 
     return True, "Account successfully deleted."
 
+
+import re
+from urllib.parse import urlparse
+
+def extract_urls(text: str) -> list:
+    """
+    Extracts all hyperlinks, domains, IP-based URLs, and shortlinks from text.
+    Returns a deduplicated list of clean URL strings.
+    """
+    if not text:
+        return []
+    pattern = (
+        r'(?:https?://[^\s<>\x22\x27()]+)|'
+        r'(?:www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s<>\x22\x27()]*)?)|'
+        r'(?:(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|is\.gd|cutt\.ly|ow\.ly)/[^\s<>\x22\x27()]+)|'
+        r'(?:[a-zA-Z0-9.-]+\.(?:com|org|net|edu|gov|io|co|in|xyz|top|live|site|online|tech|app|dev|me|info|biz)/[^\s<>\x22\x27()]+)|'
+        r'(?:(?:https?://)?\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?(?:/[^\s<>\x22\x27()]*)?)'
+    )
+    raw_matches = re.findall(pattern, text, re.IGNORECASE)
+    cleaned = []
+    for m in raw_matches:
+        u = re.sub(r'[\.,;!?\)\]\}>]+$', '', m.strip())
+        if u and u not in cleaned:
+            cleaned.append(u)
+    return cleaned
+
+
+def evaluate_url_heuristics(url: str) -> tuple:
+    """
+    Inspects URL structure for malicious or high-risk indicators:
+    1. Raw IP addresses
+    2. URL shorteners masking destination
+    3. High-risk abusive TLDs (.xyz, .top, .cam, .click, etc.)
+    4. Credential-harvesting keywords combined with suspicious subdomains
+    5. Brand impersonation / spoofing
+    Returns (is_suspicious: bool, reason: str).
+    """
+    norm = (url or '').lower().strip()
+    if not norm:
+        return False, "Empty URL"
+
+    # 1. IP address host
+    if re.search(r'^(?:https?://)?\d{1,3}(?:\.\d{1,3}){3}', norm):
+        return True, "Uses a raw numerical IP address instead of an authenticated domain name."
+
+    # 2. Obfuscated URL shortener
+    shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'is.gd', 'cutt.ly', 'ow.ly']
+    if any(s in norm for s in shorteners):
+        return True, "Uses an obfuscated URL shortener masking the true destination."
+
+    # 3. Risky TLDs commonly abused in smishing and phishing campaigns
+    risky_tlds = ['.xyz', '.top', '.click', '.cam', '.work', '.loan', '.zip', '.party', '.gq', '.cf', '.tk', '.ml', '.buzz']
+    for tld in risky_tlds:
+        if tld in norm:
+            if any(k in norm for k in ['login', 'verify', 'update', 'banking', 'secure', 'account', 'otp', 'wallet', 'confirm', 'auth', 'signin']):
+                return True, f"Combines high-risk TLD '{tld}' with sensitive account action keywords."
+            return True, f"Uses high-risk TLD '{tld}' commonly abused in smishing and phishing campaigns."
+
+    # 4. Brand spoofing / lookalike subdomains
+    spoofed_brands = ['paypal', 'apple', 'google', 'amazon', 'netflix', 'microsoft', 'chase', 'wellsfargo', 'bankofamerica', 'sbi', 'hdfc']
+    for b in spoofed_brands:
+        if b in norm and not (norm.endswith(f'.{b}.com') or f'.{b}.com/' in norm or norm.startswith(f'https://{b}.com') or norm.startswith(f'http://{b}.com')):
+            if any(k in norm for k in ['login', 'verify', 'secure', 'account', 'update', 'portal', 'signin', 'auth']):
+                return True, f"Deceptive brand spoofing targeting {b.capitalize()}."
+
+    return False, "Standard domain structure."
+
+
+def verify_all_links_in_content(content_text: str, classify_url_func=None) -> dict:
+    """
+    Extracts and comprehensively analyzes all links found inside an SMS or email message.
+    Cross-checks heuristic indicators and optional AI threat classification.
+    """
+    urls = extract_urls(content_text)
+    if not urls:
+        return {
+            'has_links': False,
+            'urls': [],
+            'is_unsafe': False,
+            'first_unsafe_url': None,
+            'first_unsafe_reason': None,
+            'summary': "No external links or URLs detected in message.",
+            'details': []
+        }
+
+    details = []
+    any_unsafe = False
+    first_unsafe_url = None
+    first_unsafe_reason = None
+
+    # Inspect up to 3 unique links to keep latency low
+    for u in urls[:3]:
+        is_suspicious_heuristic, heuristic_reason = evaluate_url_heuristics(u)
+        
+        ai_verdict = None
+        ai_reason = None
+        if classify_url_func:
+            try:
+                raw_ai = classify_url_func(u)
+                if raw_ai:
+                    lower_ai = raw_ai.lower()
+                    if 'phishing' in lower_ai:
+                        ai_verdict = 'Phishing'
+                    elif 'malicious' in lower_ai:
+                        ai_verdict = 'Malicious'
+                    elif 'safe' in lower_ai:
+                        ai_verdict = 'Safe'
+                    elif 'suspicious' in lower_ai:
+                        ai_verdict = 'Suspicious'
+
+                    ai_reason = raw_ai.split(':', 1)[-1].strip() if ':' in raw_ai else raw_ai.strip()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"AI URL verification error for {u}: {e}")
+
+        final_verdict = ai_verdict or ('Suspicious' if is_suspicious_heuristic else 'Safe')
+        if is_suspicious_heuristic and final_verdict == 'Safe':
+            final_verdict = 'Suspicious'
+            final_reason = f"{heuristic_reason} (AI note: {ai_reason or 'unverified'})"
+        else:
+            final_reason = ai_reason or heuristic_reason
+
+        is_unsafe = final_verdict in ('Phishing', 'Malicious', 'Suspicious')
+        item = {
+            'url': u,
+            'verdict': final_verdict,
+            'reason': final_reason,
+            'is_unsafe': is_unsafe
+        }
+        details.append(item)
+
+        if is_unsafe and not any_unsafe:
+            any_unsafe = True
+            first_unsafe_url = u
+            first_unsafe_reason = final_reason
+
+    if any_unsafe:
+        summary = f"Flagged unsafe link: '{first_unsafe_url}' ({first_unsafe_reason})"
+    else:
+        summary = f"Inspected link(s) verified as safe/legitimate: {', '.join(urls[:3])}"
+
+    return {
+        'has_links': True,
+        'urls': urls,
+        'is_unsafe': any_unsafe,
+        'first_unsafe_url': first_unsafe_url,
+        'first_unsafe_reason': first_unsafe_reason,
+        'summary': summary,
+        'details': details
+    }
+

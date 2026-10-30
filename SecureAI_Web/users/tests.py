@@ -224,3 +224,58 @@ class ForgotPasswordOTPFlowTests(TestCase):
         }, HTTP_ACCEPT='application/json')
         self.assertEqual(resp.status_code, 400)
         self.assertIn("do not match", resp.json()['message'])
+
+    # 13. URL Extraction & Link Safety Heuristics
+    def test_url_extraction_and_heuristics(self):
+        from users.utils import extract_urls, evaluate_url_heuristics, verify_all_links_in_content
+        
+        msg1 = "Hello, check http://bit.ly/bank-verify now"
+        urls = extract_urls(msg1)
+        self.assertIn("http://bit.ly/bank-verify", urls)
+        
+        is_suspicious, reason = evaluate_url_heuristics("http://bit.ly/bank-verify")
+        self.assertTrue(is_suspicious)
+        self.assertIn("shortener", reason.lower())
+
+        is_suspicious_ip, reason_ip = evaluate_url_heuristics("http://192.168.1.1/login")
+        self.assertTrue(is_suspicious_ip)
+        self.assertIn("numerical ip address", reason_ip.lower())
+
+        report = verify_all_links_in_content(msg1)
+        self.assertTrue(report['has_links'])
+        self.assertTrue(report['is_unsafe'])
+
+    # 14. SMS with Unsafe Link is Classified as Spam
+    def test_sms_with_unsafe_link_classified_as_spam(self):
+        session = self.client.session
+        session['user_id'] = self.user.id
+        session['user_email'] = self.user.email
+        session.save()
+
+        resp = self.client.post('/detect_spam/', {
+            'message': 'Hi there! Please click http://bit.ly/free-gift to claim'
+        }, HTTP_ACCEPT='application/json')
+        
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['result'], 'Spam')
+        self.assertIn('suspicious or unsafe link', data['explanation'])
+        self.assertIn('bit.ly', data['explanation'])
+
+    # 15. Email with Unsafe Link is Classified as Phishing
+    def test_email_with_unsafe_link_classified_as_phishing(self):
+        session = self.client.session
+        session['user_id'] = self.user.id
+        session['user_email'] = self.user.email
+        session.save()
+
+        resp = self.client.post('/email-phishing/', {
+            'email_text': 'Your account security notice. Verify at http://192.168.1.50/auth'
+        }, HTTP_ACCEPT='application/json')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['result'], 'Phishing')
+        self.assertTrue(data['is_phishing'])
+        self.assertIn('Link Security Audit', data['explanation'])
+
