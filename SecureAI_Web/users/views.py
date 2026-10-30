@@ -529,7 +529,7 @@ def send_otp(email, request=None):
         success, err_reason = res, None
 
     if not success:
-        return None, (err_reason or "Failed to send email. Check Render Environment Variables (RESEND_API_KEY or EMAIL_HOST_PASSWORD).")
+        return None, (err_reason or "Failed to send email. Check Render Environment Variables (BREVO_API_KEY or BREVO_SENDER_EMAIL).")
 
     # Cryptographically secure Keyed HMAC storage using Django SECRET_KEY
     salt = secrets.token_hex(16)

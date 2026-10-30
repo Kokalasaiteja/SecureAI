@@ -1,14 +1,9 @@
 import os
 import secrets
 import logging
-import resend
 from django.conf import settings
-from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
-
-# Initialize safely using the system environment
-resend.api_key = os.environ.get("RESEND_API_KEY", "")
 
 def generate_six_digit_otp():
     """Generates a cryptographically secure 6-digit numeric OTP."""
@@ -16,213 +11,71 @@ def generate_six_digit_otp():
 
 def send_secure_otp_email(target_email, otp_code):
     """
-    Dispatches a structured operational email via Resend over Port 443 HTTPS.
-    Falls back gracefully to Gmail SMTP specifically when Resend rejects the recipient
-    due to sandbox restrictions (unverified recipient with onboarding@resend.dev).
+    Dispatches a structured authorization passcode email via Brevo HTTPS API (Port 443).
+    Delivers reliably to all user domains with high delivery rates and no port restrictions.
     """
-    api_key = getattr(settings, 'RESEND_API_KEY', None) or os.environ.get("RESEND_API_KEY", "")
-    sender = getattr(settings, 'RESEND_FROM_EMAIL', None) or os.environ.get("RESEND_FROM_EMAIL", "SecureAI Gateway <onboarding@resend.dev>")
-    resend_err = None
-    is_sandbox_error = False
+    brevo_key = (getattr(settings, 'BREVO_API_KEY', None) or os.environ.get('BREVO_API_KEY', '')).strip().strip('"').strip("'")
+    if not brevo_key:
+        logger.error("BREVO_API_KEY is not configured in environment.")
+        return False, "Email service unconfigured. Check Render Environment Variables (BREVO_API_KEY)."
 
-    # 1. Attempt delivery via Resend API if API key is configured
-    if api_key:
-        try:
-            resend.api_key = api_key
-            params = {
-                "from": sender,
-                "to": [target_email],
-                "subject": f"[{otp_code}] SecureAI Authorization Passcode",
-                "html": f"""
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-                        <div style="text-align: center; margin-bottom: 25px;">
-                            <span style="background: #e0e7ff; color: #4f46e5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">SECUREAI SECURITY ENGINE</span>
-                        </div>
-                        <h2 style="color: #0f172a; font-size: 22px; font-weight: 700; text-align: center; margin-top: 0;">Verification Required</h2>
-                        <p style="color: #475569; font-size: 15px; line-height: 1.6; text-align: center;">A password reset was requested for your account. Use the one-time authentication passcode below to proceed:</p>
-                        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;">
-                            <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #1e1b4b; letter-spacing: 6px; display: inline-block; padding-left: 6px;">{otp_code}</span>
-                        </div>
-                        <p style="color: #64748b; font-size: 12px; text-align: center; margin-bottom: 0; line-height: 1.5;">
-                            This passcode is temporary and expires dynamically in 5 minutes.<br/>
-                            If you did not initiate this request, please audit your dashboard credentials immediately.
-                        </p>
-                    </div>
-                """
-            }
-            response = resend.Emails.send(params)
-            logger.info(f"OTP email systematically fired via Resend. Registry ID: {response.get('id')}")
-            return True, None
-        except Exception as error:
-            resend_err = str(error)
-            logger.error(f"Resend transaction failed for {target_email}: {resend_err}")
+    raw_sender = getattr(settings, 'BREVO_SENDER_EMAIL', None) or os.environ.get('BREVO_SENDER_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '') or os.environ.get('EMAIL_HOST_USER', '')
+    sender_email = str(raw_sender).strip().strip('"').strip("'")
+    if not sender_email or '@' not in sender_email:
+        logger.error("BREVO_SENDER_EMAIL is not configured or invalid.")
+        return False, "Email service sender unconfigured. Check Render Environment Variables (BREVO_SENDER_EMAIL)."
 
-            lower_err = resend_err.lower()
-            if any(term in lower_err for term in [
-                "only send testing emails",
-                "testing emails to your own email address",
-                "to send to other domains",
-                "verify your domain",
-                "resend.com/domains",
-                "domain is not verified",
-                "validation_error",
-            ]):
-                is_sandbox_error = True
-    else:
-        # If RESEND_API_KEY is not configured at all, treat as requiring direct SMTP fallback
-        is_sandbox_error = True
-
-    # 2. If Resend rejected recipient specifically due to sandbox restrictions (or no Resend API key)
-    if is_sandbox_error:
-        raw_user = getattr(settings, 'EMAIL_HOST_USER', None) or os.environ.get('EMAIL_HOST_USER', '')
-        raw_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None) or os.environ.get('EMAIL_HOST_PASSWORD', '')
-
-        clean_user = str(raw_user).strip().strip('"').strip("'")
-        clean_pass = str(raw_pass).strip().strip('"').strip("'")
-
-        # Step 2A: HTTPS API Fallback via Brevo (Sends to ANY email over HTTPS Port 443, immune to Render SMTP blocks)
-        brevo_key = (getattr(settings, 'BREVO_API_KEY', None) or os.environ.get('BREVO_API_KEY', '')).strip().strip('"').strip("'")
-        if brevo_key:
+    try:
+        import requests
+        b_url = "https://api.brevo.com/v3/smtp/email"
+        b_headers = {
+            "accept": "application/json",
+            "api-key": brevo_key,
+            "content-type": "application/json"
+        }
+        b_payload = {
+            "sender": {"name": "SecureAI Gateway", "email": sender_email},
+            "to": [{"email": target_email}],
+            "subject": f"[{otp_code}] SecureAI Authorization Passcode",
+            "htmlContent": (
+                f"<div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">"
+                f"<div style=\"text-align: center; margin-bottom: 25px;\">"
+                f"<span style=\"background: #e0e7ff; color: #4f46e5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;\">SECUREAI SECURITY ENGINE</span>"
+                f"</div>"
+                f"<h2 style=\"color: #0f172a; font-size: 22px; font-weight: 700; text-align: center; margin-top: 0;\">Verification Required</h2>"
+                f"<p style=\"color: #475569; font-size: 15px; line-height: 1.6; text-align: center;\">A password reset was requested for your account. Use the one-time authentication passcode below to proceed:</p>"
+                f"<div style=\"background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;\">"
+                f"<span style=\"font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #1e1b4b; letter-spacing: 6px; display: inline-block; padding-left: 6px;\">{otp_code}</span>"
+                f"</div>"
+                f"<p style=\"color: #64748b; font-size: 12px; text-align: center; margin-bottom: 0; line-height: 1.5;\">"
+                f"This passcode is temporary and expires dynamically in 5 minutes.<br/>"
+                f"If you did not initiate this request, please audit your dashboard credentials immediately."
+                f"</p>"
+                f"</div>"
+            )
+        }
+        b_res = requests.post(b_url, json=b_payload, headers=b_headers, timeout=10)
+        if b_res.status_code in (200, 201):
             try:
-                import requests
-                # Brevo requires the sender address to be an authorized/verified sender in the Brevo account
-                raw_brevo_sender = getattr(settings, 'BREVO_SENDER_EMAIL', None) or os.environ.get('BREVO_SENDER_EMAIL', '')
-                clean_brevo_sender = str(raw_brevo_sender).strip().strip('"').strip("'") if raw_brevo_sender else ''
-                brevo_sender = clean_brevo_sender if (clean_brevo_sender and '@' in clean_brevo_sender) else clean_user
-
-                if not (brevo_sender and '@' in brevo_sender):
-                    logger.warning("Brevo API key is present but no valid sender email is configured (BREVO_SENDER_EMAIL or EMAIL_HOST_USER).")
-                else:
-                    b_url = "https://api.brevo.com/v3/smtp/email"
-                    b_headers = {
-                        "accept": "application/json",
-                        "api-key": brevo_key,
-                        "content-type": "application/json"
-                    }
-                    b_payload = {
-                        "sender": {"name": "SecureAI Gateway", "email": brevo_sender},
-                        "to": [{"email": target_email}],
-                        "subject": f"[{otp_code}] SecureAI Authorization Passcode",
-                        "htmlContent": (
-                            f"<div style='font-family:sans-serif;padding:24px;border-radius:12px;background:#0f172a;color:#fff;border:1px solid #334155;'>"
-                            f"<h2 style='color:#38bdf8;margin-top:0;'>SecureAI Verification Challenge</h2>"
-                            f"<p style='color:#cbd5e1;'>Your single-use authorization passcode is:</p>"
-                            f"<div style='background:#1e293b;padding:16px;border-radius:8px;text-align:center;margin:16px 0;'>"
-                            f"<span style='color:#34d399;font-size:36px;font-weight:bold;letter-spacing:6px;'>{otp_code}</span>"
-                            f"</div>"
-                            f"<p style='color:#94a3b8;font-size:13px;'>This code is valid for 5 minutes. If you did not request this, please ignore.</p>"
-                            f"</div>"
-                        )
-                    }
-                    b_res = requests.post(b_url, json=b_payload, headers=b_headers, timeout=10)
-                    if b_res.status_code in (200, 201):
-                        try:
-                            b_data = b_res.json()
-                            msg_id = b_data.get('messageId', 'confirmed')
-                            logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443). Message ID: {msg_id}")
-                        except Exception:
-                            logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443)")
-                        return True, None
-                    else:
-                        logger.warning(f"Brevo HTTPS delivery failed with status {b_res.status_code}")
-            except Exception as brevo_err:
-                logger.warning(f"Brevo dispatch error: {brevo_err}")
-
-        # Check whether running in a restricted cloud hosting environment like Render Free
-        is_on_render = os.environ.get('RENDER', '').lower() in ('true', '1') or os.environ.get('IS_RENDER', '').lower() in ('true', '1')
-        if is_on_render:
-            logger.info("Render cloud instance detected: Outbound SMTP ports (587/465) are blocked by Render Free tier.")
-            return False, (
-                "Render Free tier blocks outbound raw SMTP ports (587 & 465). "
-                "To deliver verification emails to external accounts, ensure BREVO_API_KEY and a verified sender (BREVO_SENDER_EMAIL or EMAIL_HOST_USER) are configured in Render environment variables."
-            )
-
-        # Step 2B: Direct SMTP Fallback (Attempts Port 587 then 465)
-        # Automatically strip spaces from 16-character Google App Passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
-        clean_pass_no_spaces = clean_pass.replace(" ", "")
-        if len(clean_pass_no_spaces) == 16 and clean_pass_no_spaces.isalpha():
-            clean_pass = clean_pass_no_spaces
-
-        if clean_user and clean_pass and clean_pass not in ('', 'None'):
-            from django.core.mail import get_connection
-
-            subject = f"[{otp_code}] SecureAI Authorization Passcode"
-            plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
-
-            # Strategy: Attempt Port 587 (TLS), fallback to Port 465 (SSL)
-            smtp_attempts = [
-                {'port': 587, 'use_tls': True, 'use_ssl': False, 'desc': 'Port 587 (STARTTLS)'},
-                {'port': 465, 'use_tls': False, 'use_ssl': True, 'desc': 'Port 465 (SSL)'},
-            ]
-
-            last_smtp_err = None
-            for conn_spec in smtp_attempts:
-                try:
-                    conn = get_connection(
-                        backend='django.core.mail.backends.smtp.EmailBackend',
-                        host=getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com') or 'smtp.gmail.com',
-                        port=conn_spec['port'],
-                        username=clean_user,
-                        password=clean_pass,
-                        use_tls=conn_spec['use_tls'],
-                        use_ssl=conn_spec['use_ssl'],
-                        timeout=8,
-                    )
-                    send_mail(
-                        subject=subject,
-                        message=plain_msg,
-                        from_email=clean_user,
-                        recipient_list=[target_email],
-                        connection=conn,
-                        fail_silently=False,
-                    )
-                    logger.info(f"OTP email successfully sent via Gmail SMTP ({conn_spec['desc']}) to {target_email}")
-                    return True, None
-                except Exception as smtp_err:
-                    last_smtp_err = smtp_err
-                    err_text = str(smtp_err)
-                    logger.warning(f"Gmail SMTP via {conn_spec['desc']} failed: {err_text}")
-                    # If authentication failed (wrong password/regular password), secondary port retry will not succeed
-                    if "535" in err_text or "username and password not accepted" in err_text.lower() or "authentication" in err_text.lower():
-                        break
-
-            err_str = str(last_smtp_err or 'Unknown SMTP error')
-            logger.error(f"Gmail SMTP fallback failed for {target_email}: {err_str}")
-
-            if "535" in err_str or "username and password not accepted" in err_str.lower() or "authentication" in err_str.lower():
-                return False, (
-                    "Failed to deliver verification email via Gmail SMTP (Code 535: Authentication Failed). "
-                    "Google requires a 16-character App Password (not your personal Gmail password). "
-                    "Generate one at Google Account > Security > 2-Step Verification > App Passwords, "
-                    "and update EMAIL_HOST_PASSWORD in Render."
-                )
-            elif any(k in err_str.lower() for k in ["unreachable", "101", "timeout", "timed out", "refused"]):
-                return False, (
-                    "Render Free Tier blocked outbound SMTP (Errno 101: Network is unreachable). "
-                    "Render Free instances block raw SMTP ports (587 & 465) to prevent spam. "
-                    "To send verification emails to any user, add a free BREVO_API_KEY in Render (works over HTTPS Port 443) "
-                    "or verify a custom domain in Resend (resend.com/domains)."
-                )
+                b_data = b_res.json()
+                msg_id = b_data.get('messageId', 'confirmed')
+                logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API. Message ID: {msg_id}")
+            except Exception:
+                logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API.")
+            return True, None
+        else:
+            logger.warning(f"Brevo delivery rejected ({b_res.status_code}): {b_res.text}")
+            if b_res.status_code == 401:
+                return False, "Email service authentication failed. Check BREVO_API_KEY on Render."
+            elif b_res.status_code == 400 and ("sender" in b_res.text.lower() or "not allowed" in b_res.text.lower()):
+                return False, "Brevo sender email is unverified. Verify your email in Brevo Senders settings."
+            elif b_res.status_code == 429:
+                return False, "Daily email limit reached on Brevo (300/day). Please try again tomorrow."
             else:
-                return False, f"Failed to deliver verification email via Gmail SMTP: {err_str}"
-        else:
-            return False, (
-                "Email delivery restricted: Resend free tier only delivers to the owner's email address. "
-                "Render Free blocks raw SMTP ports (587/465). To deliver to all user emails, add BREVO_API_KEY in Render (free HTTPS API) "
-                "or verify a domain in Resend."
-            )
-
-    # 3. Handle non-sandbox Resend errors appropriately without leaking credentials
-    if resend_err:
-        lower_err = resend_err.lower()
-        if "api_key" in lower_err or "unauthorized" in lower_err or "401" in lower_err:
-            return False, "Email service authentication failed. Check RESEND_API_KEY on Render."
-        elif "rate limit" in lower_err or "429" in lower_err:
-            return False, "Email service rate limit reached. Please wait a moment and try again."
-        else:
-            return False, "Email delivery failed due to network error. Please try again."
-
-    return False, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY or EMAIL_HOST_PASSWORD)."
+                return False, f"Failed to deliver verification email via Brevo ({b_res.status_code})."
+    except Exception as e:
+        logger.error(f"Brevo dispatch exception: {e}")
+        return False, "Email delivery failed due to network error. Please try again."
 
 
 def is_safe_user_image_path(image_name):

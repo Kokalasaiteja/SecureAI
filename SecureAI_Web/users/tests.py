@@ -32,63 +32,61 @@ class ForgotPasswordOTPFlowTests(TestCase):
     def tearDown(self):
         otp_storage.clear()
 
-    # 1. Resend Success
-    @patch('users.utils.resend.Emails.send')
-    def test_resend_success(self, mock_resend_send):
-        mock_resend_send.return_value = {'id': 'msg_test_12345'}
-        with self.settings(RESEND_API_KEY='re_test_key_valid'):
+    # 1. Brevo HTTPS Dispatch Success
+    @patch('requests.post')
+    def test_brevo_send_success(self, mock_requests_post):
+        mock_res = MagicMock()
+        mock_res.status_code = 201
+        mock_res.json.return_value = {'messageId': '<20261031.test.12345@smtp-relay.mailin.fr>'}
+        mock_requests_post.return_value = mock_res
+
+        with self.settings(BREVO_API_KEY='xkeysib-test-key-12345', BREVO_SENDER_EMAIL='verified@example.com'):
             success, err = send_secure_otp_email("testuser@example.com", "123456")
             self.assertTrue(success)
             self.assertIsNone(err)
-            mock_resend_send.assert_called_once()
+            mock_requests_post.assert_called_once()
+            call_kwargs = mock_requests_post.call_args[1]
+            self.assertEqual(call_kwargs['json']['sender']['email'], 'verified@example.com')
+            self.assertEqual(call_kwargs['json']['to'][0]['email'], 'testuser@example.com')
 
-    # 2. Resend Sandbox Rejection followed by successful Gmail SMTP fallback
-    @patch('users.utils.send_mail')
-    @patch('users.utils.resend.Emails.send')
-    def test_resend_sandbox_rejection_followed_by_smtp_fallback(self, mock_resend_send, mock_send_mail):
-        mock_resend_send.side_effect = Exception("You can only send testing emails to your own email address (owner@example.com).")
-        mock_send_mail.return_value = 1
-        with self.settings(
-            RESEND_API_KEY='re_test_key',
-            EMAIL_HOST_USER='myemail@gmail.com',
-            EMAIL_HOST_PASSWORD='app_password_1234'
-        ):
-            success, err = send_secure_otp_email("friend@example.com", "654321")
-            self.assertTrue(success)
-            self.assertIsNone(err)
-            mock_send_mail.assert_called_once()
-            args, kwargs = mock_send_mail.call_args
-            self.assertEqual(kwargs['recipient_list'], ['friend@example.com'])
+    # 2. Brevo Unverified Sender 400 Rejection
+    @patch('requests.post')
+    def test_brevo_unverified_sender_rejection(self, mock_requests_post):
+        mock_res = MagicMock()
+        mock_res.status_code = 400
+        mock_res.text = "Sender email address is not verified or not allowed."
+        mock_requests_post.return_value = mock_res
 
-    # 3. Resend Failure followed by SMTP failure
-    @patch('users.utils.send_mail')
-    @patch('users.utils.resend.Emails.send')
-    def test_resend_failure_followed_by_smtp_failure(self, mock_resend_send, mock_send_mail):
-        mock_resend_send.side_effect = Exception("You can only send testing emails to your own email address.")
-        mock_send_mail.side_effect = Exception("SMTP server disconnected.")
-        with self.settings(
-            RESEND_API_KEY='re_test_key',
-            EMAIL_HOST_USER='myemail@gmail.com',
-            EMAIL_HOST_PASSWORD='app_password_1234'
-        ):
-            success, err = send_secure_otp_email("friend@example.com", "654321")
+        with self.settings(BREVO_API_KEY='xkeysib-test-key-12345', BREVO_SENDER_EMAIL='unverified@example.com'):
+            success, err = send_secure_otp_email("testuser@example.com", "123456")
             self.assertFalse(success)
-            self.assertIn("Failed to deliver", err)
+            self.assertIn("unverified", err.lower())
 
-    # 4. Invalid API Key (non-sandbox error should NOT trigger SMTP inappropriately)
-    @patch('users.utils.send_mail')
-    @patch('users.utils.resend.Emails.send')
-    def test_invalid_api_key_no_smtp_fallback(self, mock_resend_send, mock_send_mail):
-        mock_resend_send.side_effect = Exception("API_KEY is invalid. 401 Unauthorized.")
-        with self.settings(
-            RESEND_API_KEY='invalid_key',
-            EMAIL_HOST_USER='myemail@gmail.com',
-            EMAIL_HOST_PASSWORD='app_password_1234'
-        ):
-            success, err = send_secure_otp_email("test@example.com", "123456")
+    # 3. Brevo Invalid API Key 401
+    @patch('requests.post')
+    def test_brevo_invalid_api_key_401(self, mock_requests_post):
+        mock_res = MagicMock()
+        mock_res.status_code = 401
+        mock_res.text = "Key not found."
+        mock_requests_post.return_value = mock_res
+
+        with self.settings(BREVO_API_KEY='invalid-key', BREVO_SENDER_EMAIL='verified@example.com'):
+            success, err = send_secure_otp_email("testuser@example.com", "123456")
             self.assertFalse(success)
             self.assertIn("authentication failed", err.lower())
-            mock_send_mail.assert_not_called()
+
+    # 4. Brevo Daily Rate Limit 429
+    @patch('requests.post')
+    def test_brevo_rate_limit_429(self, mock_requests_post):
+        mock_res = MagicMock()
+        mock_res.status_code = 429
+        mock_res.text = "Daily limit reached."
+        mock_requests_post.return_value = mock_res
+
+        with self.settings(BREVO_API_KEY='xkeysib-test-key-12345', BREVO_SENDER_EMAIL='verified@example.com'):
+            success, err = send_secure_otp_email("testuser@example.com", "123456")
+            self.assertFalse(success)
+            self.assertIn("limit reached", err.lower())
 
     # 5. Invalid or Expired OTP
     @patch('users.views.send_otp')
@@ -312,30 +310,8 @@ class ForgotPasswordOTPFlowTests(TestCase):
             'reset_token': 'wrong_forged_token',
         }, HTTP_ACCEPT='application/json')
         self.assertEqual(resp2.status_code, 403)
-    # 16. Brevo HTTPS Fallback on Resend Sandbox Rejection
-    @patch('requests.post')
-    @patch('users.utils.resend.Emails.send')
-    def test_brevo_https_fallback_on_resend_sandbox_rejection(self, mock_resend_send, mock_requests_post):
-        mock_resend_send.side_effect = Exception("You can only send testing emails to your own email address.")
-        mock_response = MagicMock()
-        mock_response.status_code = 201
-        mock_response.json.return_value = {'messageId': '<test-msg-id-12345@smtp-relay.mailin.fr>'}
-        mock_requests_post.return_value = mock_response
 
-        with self.settings(
-            RESEND_API_KEY='re_sandbox_key',
-            BREVO_API_KEY='xkeysib-test-key-12345',
-            BREVO_SENDER_EMAIL='verified-sender@example.com'
-        ):
-            success, err = send_secure_otp_email("external-user@example.com", "789123")
-            self.assertTrue(success)
-            self.assertIsNone(err)
-            mock_requests_post.assert_called_once()
-            call_kwargs = mock_requests_post.call_args[1]
-            self.assertEqual(call_kwargs['json']['sender']['email'], 'verified-sender@example.com')
-            self.assertEqual(call_kwargs['json']['to'][0]['email'], 'external-user@example.com')
-
-    # 17. OTP HMAC fails securely if SECRET_KEY is missing or empty
+    # 16. OTP HMAC fails securely if SECRET_KEY is missing or empty
     def test_get_otp_hmac_fails_without_secret_key(self):
         with self.settings(SECRET_KEY=''):
             with self.assertRaises(RuntimeError) as ctx:
