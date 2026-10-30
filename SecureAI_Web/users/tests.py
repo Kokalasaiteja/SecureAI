@@ -15,7 +15,7 @@ django_context.BaseContext.__copy__ = _patched_copy
 
 from users.models import RegisteredUser
 from users.utils import generate_six_digit_otp, send_secure_otp_email
-from users.views import otp_storage, OTP_EXPIRY_SECONDS, OTP_RATE_LIMIT_SECONDS, OTP_MAX_ATTEMPTS
+from users.views import otp_storage, OTP_EXPIRY_SECONDS, OTP_RATE_LIMIT_SECONDS, OTP_MAX_ATTEMPTS, get_otp_hmac
 
 class ForgotPasswordOTPFlowTests(TestCase):
     def setUp(self):
@@ -119,10 +119,11 @@ class ForgotPasswordOTPFlowTests(TestCase):
     # 6. OTP Reuse Prevention
     def test_otp_reuse_prevented(self):
         salt = secrets.token_hex(16)
-        otp_hash = hashlib.sha256(f"{salt}:888999".encode('utf-8')).hexdigest()
+        otp_hash = get_otp_hmac(salt, 'testuser@example.com', '888999')
         otp_storage['testuser@example.com'] = {
             'salt': salt,
             'otp_hash': otp_hash,
+            'otp_hmac': otp_hash,
             'created_at': time.time(),
             'attempts': 0,
             'verified': False,
@@ -141,10 +142,11 @@ class ForgotPasswordOTPFlowTests(TestCase):
     # 7. Too many OTP attempts
     def test_too_many_otp_attempts(self):
         salt = secrets.token_hex(16)
-        otp_hash = hashlib.sha256(f"{salt}:999888".encode('utf-8')).hexdigest()
+        otp_hash = get_otp_hmac(salt, 'testuser@example.com', '999888')
         otp_storage['testuser@example.com'] = {
             'salt': salt,
             'otp_hash': otp_hash,
+            'otp_hmac': otp_hash,
             'created_at': time.time(),
             'attempts': 0,
             'verified': False,
@@ -172,17 +174,20 @@ class ForgotPasswordOTPFlowTests(TestCase):
 
     # 9. Successful Password Reset & 10. Login with new password
     def test_successful_password_reset_and_login(self):
-        # Manually simulate successful OTP verification
+        # Manually simulate successful OTP verification with reset_token
+        test_token = secrets.token_urlsafe(32)
         otp_storage['testuser@example.com'] = {
             'verified': True,
-            'verified_at': time.time()
+            'verified_at': time.time(),
+            'reset_token': test_token,
         }
 
-        # Reset password
+        # Reset password providing the issued reset_token
         r_resp = self.client.post('/reset-password/', {
             'email': 'testuser@example.com',
             'new_password': 'BrandNewPassword789',
-            'confirm_password': 'BrandNewPassword789'
+            'confirm_password': 'BrandNewPassword789',
+            'reset_token': test_token,
         }, HTTP_ACCEPT='application/json')
         self.assertEqual(r_resp.status_code, 200)
         self.assertTrue(r_resp.json()['success'])
@@ -212,15 +217,18 @@ class ForgotPasswordOTPFlowTests(TestCase):
 
     # 12. Password Mismatch on Reset
     def test_password_mismatch_on_reset(self):
+        test_token = secrets.token_urlsafe(32)
         otp_storage['testuser@example.com'] = {
             'verified': True,
-            'verified_at': time.time()
+            'verified_at': time.time(),
+            'reset_token': test_token,
         }
 
         resp = self.client.post('/reset-password/', {
             'email': 'testuser@example.com',
             'new_password': 'PasswordA',
-            'confirm_password': 'PasswordB'
+            'confirm_password': 'PasswordB',
+            'reset_token': test_token,
         }, HTTP_ACCEPT='application/json')
         self.assertEqual(resp.status_code, 400)
         self.assertIn("do not match", resp.json()['message'])
@@ -278,4 +286,30 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertEqual(data['result'], 'Phishing')
         self.assertTrue(data['is_phishing'])
         self.assertIn('Link Security Audit', data['explanation'])
+
+    # 16. Direct API Password Reset without valid reset_token is blocked
+    def test_direct_api_bypass_without_token_blocked(self):
+        # Even if user was somehow verified, missing or wrong reset_token returns 403
+        otp_storage['testuser@example.com'] = {
+            'verified': True,
+            'verified_at': time.time(),
+            'reset_token': 'correct_token_123',
+        }
+
+        # Missing token
+        resp1 = self.client.post('/reset-password/', {
+            'email': 'testuser@example.com',
+            'new_password': 'AttackerPassword',
+            'confirm_password': 'AttackerPassword',
+        }, HTTP_ACCEPT='application/json')
+        self.assertEqual(resp1.status_code, 403)
+
+        # Forged wrong token
+        resp2 = self.client.post('/reset-password/', {
+            'email': 'testuser@example.com',
+            'new_password': 'AttackerPassword',
+            'confirm_password': 'AttackerPassword',
+            'reset_token': 'wrong_forged_token',
+        }, HTTP_ACCEPT='application/json')
+        self.assertEqual(resp2.status_code, 403)
 

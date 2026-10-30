@@ -71,7 +71,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
           backgroundColor: const Color(0xFF10B981),
         ),
       );
-      Navigator.pushNamed(context, '/reset_password', arguments: email);
+      final resetToken = res['reset_token']?.toString();
+      Navigator.pushNamed(context, '/reset_password', arguments: {
+        'email': email,
+        'reset_token': resetToken,
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -20,12 +20,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _confirmController = TextEditingController();
   bool _isLoading = false;
   String? _targetEmail;
+  String? _resetToken;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is String && args.isNotEmpty && _targetEmail == null) {
+    if (args is Map) {
+      _targetEmail = args['email']?.toString();
+      _resetToken = args['reset_token']?.toString();
+      if (_targetEmail != null && _targetEmail!.isNotEmpty) {
+        _emailController.text = _targetEmail!;
+      }
+    } else if (args is String && args.isNotEmpty && _targetEmail == null) {
       _targetEmail = args;
       _emailController.text = args;
     }
@@ -70,7 +77,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     setState(() => _isLoading = true);
 
-    final res = await ApiService.resetPassword(email, newPassword);
+    final res = await ApiService.resetPassword(
+      email,
+      newPassword,
+      confirmPassword,
+      resetToken: _resetToken,
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);

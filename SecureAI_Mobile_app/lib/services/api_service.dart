@@ -1317,9 +1317,14 @@ class ApiService {
           try {
             final json = jsonDecode(response.body);
             if (json is Map && json.containsKey('success')) {
+              final resetToken = json['reset_token']?.toString();
+              if (resetToken != null && resetToken.isNotEmpty) {
+                _lastResetToken = resetToken;
+              }
               return {
                 'success': json['success'] == true,
                 'message': json['message']?.toString() ?? 'OTP verified successfully!',
+                'reset_token': resetToken,
               };
             }
           } catch (_) {}
@@ -1345,17 +1350,28 @@ class ApiService {
     return {'success': false, 'message': 'Failed to verify OTP.'};
   }
 
-  static Future<Map<String, dynamic>> resetPassword(String email, String newPassword) async {
+  static String? _lastResetToken;
+
+  static Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String newPassword,
+    String confirmPassword, {
+    String? resetToken,
+  }) async {
     for (int attempt = 0; attempt < 2; attempt++) {
       try {
         await _ensureCsrfToken('/reset-password/');
 
         final uri = Uri.parse('$_activeBaseUrl/reset-password/');
+        final tokenToSend = resetToken ?? _lastResetToken;
         final bodyFields = <String, String>{
           'email': email.trim(),
           'new_password': newPassword.trim(),
-          'confirm_password': newPassword.trim(),
+          'confirm_password': confirmPassword.trim(),
         };
+        if (tokenToSend != null && tokenToSend.isNotEmpty) {
+          bodyFields['reset_token'] = tokenToSend;
+        }
         if (_csrfToken != null && _csrfToken!.isNotEmpty) {
           bodyFields['csrfmiddlewaretoken'] = _csrfToken!;
         }
