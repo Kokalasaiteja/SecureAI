@@ -27,13 +27,20 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-qc8g0%&_do4285+4z4y1l
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Allowed Hosts & CSRF Settings
-ALLOWED_HOSTS = [
-    '*',
-    'localhost',
-    '127.0.0.1',
-    '.onrender.com',
-    'secureai-7wgj.onrender.com',
-]
+env_allowed_hosts = os.environ.get('ALLOWED_HOSTS')
+if env_allowed_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in env_allowed_hosts.split(',') if h.strip()]
+    for _dh in ['localhost', '127.0.0.1', '.onrender.com', 'secureai-7wgj.onrender.com']:
+        if _dh not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_dh)
+else:
+    ALLOWED_HOSTS = [
+        '*',
+        'localhost',
+        '127.0.0.1',
+        '.onrender.com',
+        'secureai-7wgj.onrender.com',
+    ]
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
@@ -194,5 +201,6 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'onboarding@resend.dev'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'SecureAI Gateway <onboarding@resend.dev>')
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', '')
 
 

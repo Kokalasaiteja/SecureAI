@@ -494,8 +494,16 @@ def get_otp_hmac(salt: str, email: str, otp: str) -> str:
     """
     Cryptographic Keyed HMAC using Django SECRET_KEY.
     Prevents offline rainbow table / brute force attacks against low-entropy 6-digit numeric OTPs.
+    Fails securely if SECRET_KEY is missing or invalid.
     """
-    secret = (getattr(settings, 'SECRET_KEY', None) or 'secureai-otp-secret-fallback').encode('utf-8')
+    try:
+        raw_secret = getattr(settings, 'SECRET_KEY', None) or os.environ.get('SECRET_KEY')
+    except Exception as exc:
+        raise RuntimeError("Django SECRET_KEY is missing or unconfigured. Cannot securely compute OTP HMAC.") from exc
+
+    if not raw_secret or not str(raw_secret).strip():
+        raise RuntimeError("Django SECRET_KEY is missing or unconfigured. Cannot securely compute OTP HMAC.")
+    secret = str(raw_secret).strip().encode('utf-8')
     data = f"{salt}:{email.lower().strip()}:{otp.strip()}".encode('utf-8')
     return hmac.new(secret, data, hashlib.sha256).hexdigest()
 
@@ -525,7 +533,11 @@ def send_otp(email, request=None):
 
     # Cryptographically secure Keyed HMAC storage using Django SECRET_KEY
     salt = secrets.token_hex(16)
-    otp_hmac = get_otp_hmac(salt, normalized_email, otp)
+    try:
+        otp_hmac = get_otp_hmac(salt, normalized_email, otp)
+    except Exception as e:
+        logger.error(f"Failed to generate OTP HMAC: {e}")
+        return None, "Internal server security error. Please contact administrator."
 
     record = {
         'salt': salt,
@@ -626,7 +638,15 @@ def verify_otp(request):
             return render(request, "verify_otp.html")
 
         # Constant-time comparison using Keyed HMAC-SHA256
-        entered_hmac = get_otp_hmac(record['salt'], email, otp_entered)
+        try:
+            entered_hmac = get_otp_hmac(record['salt'], email, otp_entered)
+        except Exception as e:
+            logger.error(f"Failed to compute OTP HMAC for verification: {e}")
+            err = "Internal server security error. Please contact administrator."
+            if is_json:
+                return JsonResponse({'success': False, 'message': err}, status=500)
+            messages.error(request, err)
+            return render(request, "verify_otp.html")
         expected_hmac = record.get('otp_hmac') or record.get('otp_hash')
 
         if secrets.compare_digest(expected_hmac, entered_hmac):

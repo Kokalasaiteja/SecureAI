@@ -172,7 +172,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertEqual(resp2.status_code, 429)
         self.assertIn("Please wait", resp2.json()['message'])
 
-    # 9. Successful Password Reset & 10. Login with new password
+    # 9. Successful Password Reset and Login
     def test_successful_password_reset_and_login(self):
         # Manually simulate successful OTP verification with reset_token
         test_token = secrets.token_urlsafe(32)
@@ -205,7 +205,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         login_ok = self.client.post('/user-login/', {'name': 'testuser', 'password': 'BrandNewPassword789'}, HTTP_ACCEPT='application/json')
         self.assertTrue(login_ok.json()['success'])
 
-    # 11. Unauthorized Reset without OTP verification
+    # 10. Unauthorized Reset without OTP verification
     def test_unauthorized_reset_without_otp(self):
         resp = self.client.post('/reset-password/', {
             'email': 'testuser@example.com',
@@ -215,7 +215,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertEqual(resp.status_code, 403)
         self.assertIn("Unauthorized", resp.json()['message'])
 
-    # 12. Password Mismatch on Reset
+    # 11. Password Mismatch on Reset
     def test_password_mismatch_on_reset(self):
         test_token = secrets.token_urlsafe(32)
         otp_storage['testuser@example.com'] = {
@@ -233,7 +233,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("do not match", resp.json()['message'])
 
-    # 13. URL Extraction & Link Safety Heuristics
+    # 12. URL Extraction & Link Safety Heuristics
     def test_url_extraction_and_heuristics(self):
         from users.utils import extract_urls, evaluate_url_heuristics, verify_all_links_in_content
         
@@ -253,7 +253,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertTrue(report['has_links'])
         self.assertTrue(report['is_unsafe'])
 
-    # 14. SMS with Unsafe Link is Classified as Spam
+    # 13. SMS with Unsafe Link is Classified as Spam
     def test_sms_with_unsafe_link_classified_as_spam(self):
         session = self.client.session
         session['user_id'] = self.user.id
@@ -270,7 +270,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertIn('suspicious or unsafe link', data['explanation'])
         self.assertIn('bit.ly', data['explanation'])
 
-    # 15. Email with Unsafe Link is Classified as Phishing
+    # 14. Email with Unsafe Link is Classified as Phishing
     def test_email_with_unsafe_link_classified_as_phishing(self):
         session = self.client.session
         session['user_id'] = self.user.id
@@ -287,7 +287,7 @@ class ForgotPasswordOTPFlowTests(TestCase):
         self.assertTrue(data['is_phishing'])
         self.assertIn('Link Security Audit', data['explanation'])
 
-    # 16. Direct API Password Reset without valid reset_token is blocked
+    # 15. Direct API Password Reset without valid reset_token is blocked
     def test_direct_api_bypass_without_token_blocked(self):
         # Even if user was somehow verified, missing or wrong reset_token returns 403
         otp_storage['testuser@example.com'] = {
@@ -312,4 +312,33 @@ class ForgotPasswordOTPFlowTests(TestCase):
             'reset_token': 'wrong_forged_token',
         }, HTTP_ACCEPT='application/json')
         self.assertEqual(resp2.status_code, 403)
+    # 16. Brevo HTTPS Fallback on Resend Sandbox Rejection
+    @patch('requests.post')
+    @patch('users.utils.resend.Emails.send')
+    def test_brevo_https_fallback_on_resend_sandbox_rejection(self, mock_resend_send, mock_requests_post):
+        mock_resend_send.side_effect = Exception("You can only send testing emails to your own email address.")
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {'messageId': '<test-msg-id-12345@smtp-relay.mailin.fr>'}
+        mock_requests_post.return_value = mock_response
+
+        with self.settings(
+            RESEND_API_KEY='re_sandbox_key',
+            BREVO_API_KEY='xkeysib-test-key-12345',
+            BREVO_SENDER_EMAIL='verified-sender@example.com'
+        ):
+            success, err = send_secure_otp_email("external-user@example.com", "789123")
+            self.assertTrue(success)
+            self.assertIsNone(err)
+            mock_requests_post.assert_called_once()
+            call_kwargs = mock_requests_post.call_args[1]
+            self.assertEqual(call_kwargs['json']['sender']['email'], 'verified-sender@example.com')
+            self.assertEqual(call_kwargs['json']['to'][0]['email'], 'external-user@example.com')
+
+    # 17. OTP HMAC fails securely if SECRET_KEY is missing or empty
+    def test_get_otp_hmac_fails_without_secret_key(self):
+        with self.settings(SECRET_KEY=''):
+            with self.assertRaises(RuntimeError) as ctx:
+                get_otp_hmac(secrets.token_hex(16), "test@example.com", "123456")
+            self.assertIn("SECRET_KEY is missing", str(ctx.exception))
 

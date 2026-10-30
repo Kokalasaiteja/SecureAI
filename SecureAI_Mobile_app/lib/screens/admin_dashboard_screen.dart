@@ -284,7 +284,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text("Account Active", style: TextStyle(color: Colors.white, fontSize: 14)),
                   value: isActive,
-                  activeColor: AppTheme.accentGreen,
+                  activeThumbColor: AppTheme.accentGreen,
                   onChanged: (val) {
                     setDialogState(() {
                       isActive = val;

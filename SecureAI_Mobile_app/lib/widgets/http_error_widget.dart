@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class HttpErrorWidget extends StatelessWidget {
   final int statusCode;

@@ -85,36 +85,57 @@ def send_secure_otp_email(target_email, otp_code):
         if brevo_key:
             try:
                 import requests
-                brevo_sender = clean_user if clean_user and '@' in clean_user else 'onboarding@resend.dev'
-                b_url = "https://api.brevo.com/v3/smtp/email"
-                b_headers = {
-                    "accept": "application/json",
-                    "api-key": brevo_key,
-                    "content-type": "application/json"
-                }
-                b_payload = {
-                    "sender": {"name": "SecureAI Gateway", "email": brevo_sender},
-                    "to": [{"email": target_email}],
-                    "subject": f"[{otp_code}] SecureAI Authorization Passcode",
-                    "htmlContent": (
-                        f"<div style='font-family:sans-serif;padding:24px;border-radius:12px;background:#0f172a;color:#fff;border:1px solid #334155;'>"
-                        f"<h2 style='color:#38bdf8;margin-top:0;'>SecureAI Verification Challenge</h2>"
-                        f"<p style='color:#cbd5e1;'>Your single-use authorization passcode is:</p>"
-                        f"<div style='background:#1e293b;padding:16px;border-radius:8px;text-align:center;margin:16px 0;'>"
-                        f"<span style='color:#34d399;font-size:36px;font-weight:bold;letter-spacing:6px;'>{otp_code}</span>"
-                        f"</div>"
-                        f"<p style='color:#94a3b8;font-size:13px;'>This code is valid for 5 minutes. If you did not request this, please ignore.</p>"
-                        f"</div>"
-                    )
-                }
-                b_res = requests.post(b_url, json=b_payload, headers=b_headers, timeout=10)
-                if b_res.status_code in (200, 201):
-                    logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443)")
-                    return True, None
+                # Brevo requires the sender address to be an authorized/verified sender in the Brevo account
+                raw_brevo_sender = getattr(settings, 'BREVO_SENDER_EMAIL', None) or os.environ.get('BREVO_SENDER_EMAIL', '')
+                clean_brevo_sender = str(raw_brevo_sender).strip().strip('"').strip("'") if raw_brevo_sender else ''
+                brevo_sender = clean_brevo_sender if (clean_brevo_sender and '@' in clean_brevo_sender) else clean_user
+
+                if not (brevo_sender and '@' in brevo_sender):
+                    logger.warning("Brevo API key is present but no valid sender email is configured (BREVO_SENDER_EMAIL or EMAIL_HOST_USER).")
                 else:
-                    logger.warning(f"Brevo HTTPS delivery failed ({b_res.status_code}): {b_res.text}")
+                    b_url = "https://api.brevo.com/v3/smtp/email"
+                    b_headers = {
+                        "accept": "application/json",
+                        "api-key": brevo_key,
+                        "content-type": "application/json"
+                    }
+                    b_payload = {
+                        "sender": {"name": "SecureAI Gateway", "email": brevo_sender},
+                        "to": [{"email": target_email}],
+                        "subject": f"[{otp_code}] SecureAI Authorization Passcode",
+                        "htmlContent": (
+                            f"<div style='font-family:sans-serif;padding:24px;border-radius:12px;background:#0f172a;color:#fff;border:1px solid #334155;'>"
+                            f"<h2 style='color:#38bdf8;margin-top:0;'>SecureAI Verification Challenge</h2>"
+                            f"<p style='color:#cbd5e1;'>Your single-use authorization passcode is:</p>"
+                            f"<div style='background:#1e293b;padding:16px;border-radius:8px;text-align:center;margin:16px 0;'>"
+                            f"<span style='color:#34d399;font-size:36px;font-weight:bold;letter-spacing:6px;'>{otp_code}</span>"
+                            f"</div>"
+                            f"<p style='color:#94a3b8;font-size:13px;'>This code is valid for 5 minutes. If you did not request this, please ignore.</p>"
+                            f"</div>"
+                        )
+                    }
+                    b_res = requests.post(b_url, json=b_payload, headers=b_headers, timeout=10)
+                    if b_res.status_code in (200, 201):
+                        try:
+                            b_data = b_res.json()
+                            msg_id = b_data.get('messageId', 'confirmed')
+                            logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443). Message ID: {msg_id}")
+                        except Exception:
+                            logger.info(f"OTP successfully delivered to {target_email} via Brevo HTTPS API (Port 443)")
+                        return True, None
+                    else:
+                        logger.warning(f"Brevo HTTPS delivery failed with status {b_res.status_code}")
             except Exception as brevo_err:
                 logger.warning(f"Brevo dispatch error: {brevo_err}")
+
+        # Check whether running in a restricted cloud hosting environment like Render Free
+        is_on_render = os.environ.get('RENDER', '').lower() in ('true', '1') or os.environ.get('IS_RENDER', '').lower() in ('true', '1')
+        if is_on_render:
+            logger.info("Render cloud instance detected: Outbound SMTP ports (587/465) are blocked by Render Free tier.")
+            return False, (
+                "Render Free tier blocks outbound raw SMTP ports (587 & 465). "
+                "To deliver verification emails to external accounts, ensure BREVO_API_KEY and a verified sender (BREVO_SENDER_EMAIL or EMAIL_HOST_USER) are configured in Render environment variables."
+            )
 
         # Step 2B: Direct SMTP Fallback (Attempts Port 587 then 465)
         # Automatically strip spaces from 16-character Google App Passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
