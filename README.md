@@ -1,212 +1,272 @@
 # 🛡️ SecureAI: AI-Powered Social Engineering Attack Prevention System
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-secureai--7wgj.onrender.com-00C7B7?style=for-the-badge&logo=render&logoColor=white)](https://secureai-7wgj.onrender.com)
-[![Universal APK](https://img.shields.io/badge/Download%20APK-Universal%20(All%20Devices)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://secureai-7wgj.onrender.com/media/app-release.apk)
-[![Demo Video](https://img.shields.io/badge/Watch%20Demo-LinkedIn%20Video-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/posts/sai-teja-kokala-245a12299_ai-cybersecurity-machinelearning-ugcPost-7476167691737714688-QWWw)
-[![Python](https://img.shields.io/badge/Backend-Django%205.0.9%20%7C%20Python%203.10+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![Flutter](https://img.shields.io/badge/Mobile-Flutter%203.x%20%7C%20Dart%203.x-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev/)
-
-An enterprise-grade, dual-platform security analytics framework designed to proactively detect, analyze, and neutralize modern social engineering attacks across both web and mobile environments.
+SecureAI is a dual-platform security analytics system designed to identify and analyze modern social engineering threats across web and Android environments. It combines Artificial Intelligence, Machine Learning, Natural Language Processing, and Computer Vision to help users recognize suspicious messages, phishing emails, malicious QR codes, compromised passwords, and unusual login behavior.
 
 ---
 
 ## 🌐 Quick Access & Live Deployments
 
-- **🌍 Production Website**: [https://secureai-7wgj.onrender.com](https://secureai-7wgj.onrender.com)
-- **📽 Video Demonstration**: [Watch SecureAI in Action on LinkedIn](https://www.linkedin.com/posts/sai-teja-kokala-245a12299_ai-cybersecurity-machinelearning-ugcPost-7476167691737714688-QWWw)
-- **📲 Direct Android App Downloads**:
-  - **Universal Fat APK (Guaranteed for all devices)**: [`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk) | Local: [`SecureAI_Web/media/app-release.apk`](./SecureAI_Web/media/app-release.apk) *(54.3 MB - All ABIs: ARMv7 32-bit, ARM64-v8a, x86_64 across Android 5.0 to 16)*
-  - **Lightweight 64-bit APK (Modern smartphones)**: [`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk) | Local: [`SecureAI_Web/media/app-arm64-v8a-release.apk`](./SecureAI_Web/media/app-arm64-v8a-release.apk) *(20.2 MB - 64-bit ARM smartphones)*
-  - **32-bit Legacy APK (Older phones)**: [`app-armeabi-v7a-release.apk`](https://secureai-7wgj.onrender.com/media/app-armeabi-v7a-release.apk) | Local: [`SecureAI_Web/media/app-armeabi-v7a-release.apk`](./SecureAI_Web/media/app-armeabi-v7a-release.apk) *(17.7 MB - 32-bit ARM smartphones)*
-  - **x86_64 Android Emulator APK**: [`app-x86_64-release.apk`](https://secureai-7wgj.onrender.com/media/app-x86_64-release.apk) | Local: [`SecureAI_Web/media/app-x86_64-release.apk`](./SecureAI_Web/media/app-x86_64-release.apk) *(21.7 MB - Android Studio emulators & ChromeOS)*
+| Resource | Description / Access |
+| :--- | :--- |
+| **🌐 PRODUCTION WEBSITE** | [🚀 OPEN SECUREAI LIVE WEBSITE](https://secureai-7wgj.onrender.com/) |
+| **📽 Video Demonstration** | [Watch SecureAI in Action on LinkedIn](https://www.linkedin.com/posts/sai-teja-kokala-245a12299_ai-cybersecurity-machinelearning-ugcPost-7476167691737714688-QWWw) |
+
+### 📲 Direct Android App Downloads
+Choose the APK compatible with your Android device.
+
+| APK Version | Compatibility | Size | Download |
+| :--- | :--- | :--- | :--- |
+| **Universal APK** ⭐ Recommended | ARMv7, ARM64, x86_64 | 54.3 MB | [⬇️ Download APK](https://secureai-7wgj.onrender.com/media/app-release.apk) |
+| **ARM64 APK** | Modern 64-bit Android smartphones | 20.2 MB | [⬇️ Download APK](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk) |
+| **ARMv7 APK** | Older 32-bit Android smartphones | 17.7 MB | [⬇️ Download APK](https://secureai-7wgj.onrender.com/media/app-armeabi-v7a-release.apk) |
+| **x86_64 APK** | Android Studio emulators and compatible ChromeOS devices | 21.7 MB | [⬇️ Download APK](https://secureai-7wgj.onrender.com/media/app-x86_64-release.apk) |
+
+#### Which APK should you download?
+- **Universal APK**: Choose this if you are unsure about your device's processor architecture.
+- **ARM64 APK**: Choose this for most modern 64-bit Android smartphones.
+- **ARMv7 APK**: Choose this for compatible older 32-bit Android smartphones.
+- **x86_64 APK**: Intended for compatible Android emulators and x86_64 devices.
 
 > [!NOTE]
-> **Cloud Server Spin-Up Latency**: The cloud backend is hosted on Render's free tier. When the server is in an idle sleep state, the initial wake-up request may take approximately **60–75 seconds** (measured cold start: ~75s). Once awake, subsequent requests respond in under **1 second** (measured warm transfer: ~0.77s). The mobile app includes a built-in `ServerWakeOverlay` that monitors connection readiness.
+> **Cloud Server Spin-Up Latency**: The backend is hosted on Render's free tier. After a period of inactivity, the first request may take approximately 60–75 seconds while the server wakes up. Subsequent requests are generally faster. The mobile application includes a `ServerWakeOverlay` to monitor connection readiness.
 
 ---
 
-## 📦 Project Architecture & In-Detail Subsystem Guides
+## 📦 Project Architecture & Subsystem Documentation
 
-The project repository is structured into two dedicated codebases:
+The repository contains two dedicated codebases:
 
 ```
 SecureAI-main/
-├── README.md                      # Root project overview (this file)
-├── SecureAI_Web/                  # Full-stack Django web application & AI pipelines
-│   ├── README.md                  # Detailed Web Platform Documentation & Screenshots
-│   ├── manage.py                  # Django administrative script
-│   ├── media/                     # Stored assets, ML models (.pkl), and APK downloads
-│   │   ├── app-arm64-v8a-release.apk # 64-bit optimized APK build (20.6 MB)
-│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (18.1 MB)
-│   │   ├── app-x86_64-release.apk    # Emulator APK build (22.1 MB)
-│   │   └── app-release.apk           # Universal all-device APK build (55.5 MB)
-│   ├── templates/                 # Liquid glass HTML templates
-│   └── users/                     # Security detection views and models
-└── SecureAI_Mobile_app/           # Cross-platform Flutter Android mobile application
-    ├── README.md                  # Detailed Mobile Application Documentation & Architecture
-    ├── lib/                       # Flutter screens, liquid glass widgets, and themes
-    ├── android/                   # Native Android manifest, mipmaps, and Gradle configuration
-    └── screenshots/               # High-resolution mobile application walkthrough
+│
+├── README.md                          # Root project documentation
+│
+├── SecureAI_Web/                      # Django web application and AI pipelines
+│   ├── README.md                      # Web platform documentation
+│   ├── manage.py
+│   ├── media/                         # ML models, assets and APK downloads
+│   ├── templates/                     # Web application templates
+│   └── users/                         # User management and security modules
+│
+└── SecureAI_Mobile_app/               # Flutter Android application
+    ├── README.md                      # Mobile application documentation
+    ├── lib/                           # Flutter screens and application logic
+    ├── android/                       # Native Android configuration
+    └── screenshots/                   # Mobile application screenshots
 ```
 
-### 📖 Detailed In-Depth Documentation:
-- **For full Web documentation, ML training steps, setup commands, and web screenshots**:  
-  👉 Read the [**SecureAI Web Platform README**](./SecureAI_Web/README.md)
-- **For full Mobile documentation, Flutter architecture, supported Android ABIs, and mobile screenshots**:  
-  👉 Read the [**SecureAI Mobile Application README**](./SecureAI_Mobile_app/README.md)
+### 📖 Detailed Documentation
+- [**SecureAI Web Platform README**](./SecureAI_Web/README.md) — Web application architecture, setup instructions, AI pipelines, and screenshots.
+- [**SecureAI Mobile Application README**](./SecureAI_Mobile_app/README.md) — Flutter architecture, Android compatibility, setup instructions, and mobile screenshots.
 
 ---
 
 ## 🚀 Running from a Fresh Repository Clone
 
-If you just cloned or pulled this repository, follow these quick-start commands for both the web backend and mobile client:
+Follow these instructions to set up the web backend and mobile application locally.
 
-### 1. 🌐 Web Application (Django & AI Engine)
+### 1. 🌐 Web Application — Django & AI Engine
 
 > [!IMPORTANT]
-> **Why `python3 manage.py runserver` fails with `ModuleNotFoundError: No module named 'django'`**:
-> On macOS and Linux, the system global Python (`/usr/bin/python3`) does not include project libraries. Always create and activate your project virtual environment first!
+> Create and activate a Python virtual environment before installing dependencies. Running Django with a system Python installation that does not contain the required packages can result in `ModuleNotFoundError: No module named 'django'`.
 
 ```bash
-# Step 1: Navigate to the web folder
+# Step 1: Navigate to the web application folder
 cd SecureAI-main/SecureAI_Web
 
-# Step 2: Create a virtual environment (one-time setup)
+# Step 2: Create a virtual environment
 python3 -m venv ../.venv
 
 # Step 3: Activate the virtual environment
-source ../.venv/bin/activate       # macOS / Linux
-# On Windows: ..\.venv\Scripts\activate
+# macOS / Linux
+source ../.venv/bin/activate
+# Windows
+..\.venv\Scripts\activate
 
-# Step 4: Install all required Python dependencies
+# Step 4: Upgrade pip and install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Step 5: Configure environment variables (or add in Render Dashboard)
-# Create a .env file inside SecureAI_Web/ or set environment variables:
+# Step 5: Configure environment variables
+# Create a .env file or configure them in your environment.
+# Never commit API keys, passwords, or secret values to GitHub.
+# Example variable names:
+# SECRET_KEY=your-django-secret-key
+# DATABASE_URL=your-database-url
 # SECUREAI_ADMIN_USERNAME=admin
 # SECUREAI_ADMIN_PASSWORD=your-secure-password
-# RESEND_API_KEY=re_your_api_key
+# RESEND_API_KEY=your-resend-api-key
+# BREVO_API_KEY=your-brevo-api-key
+# BREVO_SENDER_EMAIL=your-verified-brevo-sender-email
 # GOOGLE_API_KEY=your-gemini-api-key
 
-# Step 6: Run database migrations
+# Step 6: Apply database migrations
 python manage.py migrate
 
-# Step 7: Start the local development server
+# Step 7: Start the development server
 python manage.py runserver
 ```
-Visit **`http://127.0.0.1:8000/`** in your browser.
 
----
+Open the application at:
+```
+http://127.0.0.1:8000/
+```
 
-### 2. 📱 Mobile Application (Flutter Android Client)
+### 2. 📱 Mobile Application — Flutter Android Client
 
 ```bash
-# Step 1: Navigate to the mobile app folder
+# Step 1: Navigate to the mobile application folder
 cd SecureAI-main/SecureAI_Mobile_app
 
-# Step 2: Fetch Flutter packages
+# Step 2: Install Flutter dependencies
 flutter pub get
 
-# Step 3: Run on connected Android device or emulator
+# Step 3: Run the application
 flutter run
 
-# Step 4 (Optional): Build split release APKs
+# Step 4: Build split release APKs (optional)
 flutter build apk --split-per-abi
 ```
-Generated APK outputs:
-- `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (20.2 MB - 64-bit phones)
-- `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` (17.7 MB - 32-bit legacy)
-- `build/app/outputs/flutter-apk/app-x86_64-release.apk` (21.7 MB - Emulators)
+
+Generated APK files:
+```
+build/app/outputs/flutter-apk/
+├── app-arm64-v8a-release.apk
+├── app-armeabi-v7a-release.apk
+└── app-x86_64-release.apk
+```
 
 ---
 
 ## 🚀 Core Security Features
 
-SecureAI provides synchronized threat protection across both the Web portal and the Android application:
+SecureAI provides threat detection and security analysis across both its web portal and Android application.
 
 ### 1. 📩 SMS Spam & Smishing Detector
-- **AI Engine**: Natural Language Processing via Google Gemini 2.5 Flash.
-- **Capability**: Real-time classification of incoming text messages into **Spam** or **Ham**, providing granular reasoning and identifying smishing tactics.
+- **AI Engine**: Natural Language Processing using Google Gemini 2.5 Flash.
+- **Classification**: Identifies suspicious SMS messages and classifies them as Spam or Ham.
+- **Analysis**: Provides explanations and identifies potential smishing tactics.
 
 ### 2. 🔗 QR Code & Quishing Threat Scanner
-- **Computer Vision & AI**: OpenCV matrix decoding paired with Gemini 2.5 Flash link analysis.
-- **Live Camera & Upload**: Supports live camera capture with real-time viewfinder reticle and automatic device camera detection, with seamless fallback to image upload.
-- **Threat Verdict**: Classifies embedded URLs as **Safe**, **Phishing**, or **Malicious**, alerting users prior to browser navigation.
+- **Computer Vision**: Uses OpenCV to extract QR code content and embedded URLs.
+- **AI Analysis**: Uses Gemini 2.5 Flash to assess URL-related security risks.
+- **Camera & Upload**: Supports live camera capture and image uploads.
+- **Threat Verdict**: Classifies analyzed links as Safe, Phishing, or Malicious before users proceed to the destination.
 
 ### 3. 📧 Email Phishing Analyzer
-- **Psychological Profiling**: Deep analysis of urgency manipulation, false authority, and domain impersonation.
-- **Verdict & Indicators**: Returns confidence scores along with categorized red flag indicators.
+- **AI-Powered Analysis**: Examines email content for suspicious language and potential phishing indicators.
+- **Psychological Indicators**: Identifies urgency manipulation, false authority, and domain impersonation.
+- **Results**: Provides a verdict, confidence information, and categorized warning indicators.
 
 ### 4. 🛡️ Password Strength & Breach Auditor
-- **Zero-Knowledge Security**: SHA-1 k-Anonymity prefix hashing communicating with the "Have I Been Pwned" database.
-- **Comprehensive Audit**: Evaluates character complexity and verifies credentials have not been compromised in global data leaks without transmitting plain-text passwords.
+- **Password Evaluation**: Evaluates password complexity and strength.
+- **Breach Checking**: Uses SHA-1 k-anonymity prefix hashing to communicate with the Have I Been Pwned database.
+- **Privacy**: Avoids transmitting the plain-text password during breach checking.
 
 ### 5. 🧠 User Behavioral Anomaly Profiling
-- **Machine Learning**: Multi-classifier ensemble featuring Logistic Regression, Random Forest, and XGBoost.
-- **Session Intelligence**: Predicts account takeover anomalies by evaluating multidimensional parameters (`login_hour`, `ip_score`).
-- **Interactive Training**: In-app retraining pipeline with real-time confusion matrix heatmap visualizations.
+- **Machine Learning**: Uses a classifier ensemble involving Logistic Regression, Random Forest, and XGBoost.
+- **Session Intelligence**: Evaluates login parameters such as `login_hour` and `ip_score` to identify unusual login behavior.
+- **Interactive Training**: Includes an in-app retraining pipeline and confusion matrix visualizations.
 
 ### 6. 👥 Administrative Governance & Identity Management
-- **Environment-Driven Authentication**: Hardcoded admin credentials have been eliminated. Administrator login reads `SECUREAI_ADMIN_USERNAME` and `SECUREAI_ADMIN_PASSWORD` from environment variables, verified using `secrets.compare_digest` to prevent timing attacks. Fails closed (503) if unconfigured.
-- **User Management & In-Place Editing**: Administrative dashboard allows viewing all registered users, toggling activation/deactivation status, deleting accounts, and **editing user details** (username, email, active status, new password) via an interactive modal.
-- **Enterprise Password Security**: Passwords are encrypted using Django's PBKDF2 algorithm (`make_password`). A seamless migration layer automatically and transparently upgrades legacy plaintext accounts to PBKDF2 on their first login without disrupting user access.
-- **Duplicate Registration Prevention**: Registration validates uniqueness for both `username` and `email` across web and mobile endpoints to prevent account collisions.
-- **Hardened Zero-Delay OTP Recovery**: Password recovery powered by the Resend HTTPS API (bypassing cloud SMTP blocks), reinforced with:
-  - 60-second rate limiting per email address.
-  - 5-minute (300-second) OTP expiration TTL.
-  - Maximum 3 verification attempts before automatic OTP invalidation.
-  - Mandatory verified OTP session token required before password reset is permitted.
-- **Session & CSRF Hardening**: 1-hour session expiration (`SESSION_COOKIE_AGE = 3600`), expire on browser close, HttpOnly flags, and automatic HTTPS-only secure cookies (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`) with `SECURE_PROXY_SSL_HEADER` in production on Render.
-- **Live Database Status Monitoring**: Real-time database heartbeat indicator with pulsating visual alerts.
+- **Environment-Driven Authentication**: Administrator credentials are configured through `SECUREAI_ADMIN_USERNAME` and `SECUREAI_ADMIN_PASSWORD` environment variables rather than hardcoded credentials.
+- **Secure Credential Comparison**: Uses `secrets.compare_digest` for credential comparison and fails closed when administrator credentials are not configured.
+- **User Management**: Supports viewing registered users, activating or deactivating accounts, deleting accounts, and editing user details.
+- **Password Security**: Uses Django's PBKDF2 password hashing through `make_password`.
+- **Legacy Password Migration**: Includes a migration mechanism to upgrade legacy plaintext passwords to PBKDF2 during login.
+- **Duplicate Registration Prevention**: Validates username and email uniqueness across web and mobile registration endpoints.
+- **OTP Password Recovery**: Provides email-based password recovery with the following protections:
+  - 60-second OTP request cooldown.
+  - 5-minute OTP expiration.
+  - Maximum of 3 verification attempts.
+  - Verified reset authorization required before changing a password.
+- **Session & CSRF Protection**: Uses session expiration, HttpOnly cookies, secure cookies in production, and HTTPS proxy configuration.
+- **Database Monitoring**: Includes a database heartbeat indicator in the administration dashboard.
 
 ---
 
 ## 📱 Mobile APK Download Guide & Device Compatibility
 
-Why do we provide both a **Universal Fat APK** and a **Split ABI APK**?
+SecureAI provides universal and architecture-specific APK packages to support different Android environments.
 
-| APK Package | Size | Architecture (ABI) | Compatible Devices |
-| :--- | :--- | :--- | :--- |
-| **`app-release.apk`** *(Universal Build)* | **~55.5 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
-| **`app-arm64-v8a-release.apk`** *(Targeted Build)* | **~20.6 MB** | **64-bit ARM only** (`arm64-v8a`) | Modern 64-bit Android smartphones (Snapdragon, MediaTek, Exynos, Tensor) |
-| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~18.1 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
-| **`app-x86_64-release.apk`** *(Emulator Build)* | **~22.1 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
+| APK Package | Architecture (ABI) | Intended Devices |
+| :--- | :--- | :--- |
+| **`app-release.apk`** | ARMv7, ARM64, x86_64 | Compatible Android phones and devices across the included architectures |
+| **`app-arm64-v8a-release.apk`** | 64-bit ARM | Modern 64-bit Android smartphones |
+| **`app-armeabi-v7a-release.apk`** | 32-bit ARM | Compatible older 32-bit Android smartphones |
+| **`app-x86_64-release.apk`** | 64-bit x86 | Android Studio emulators and compatible x86_64 devices |
 
 > [!TIP]
-> **Recommendation**: If you are unsure of your Android device's processor architecture, download **[`app-release.apk`](https://secureai-7wgj.onrender.com/media/app-release.apk)** to ensure guaranteed installation across all phone brands and Android versions. For modern phones with fast downloads, **[`app-arm64-v8a-release.apk`](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk)** is 60% lighter!
+> **Recommendation**: If you do not know your device's architecture, start with the [Universal APK](https://secureai-7wgj.onrender.com/media/app-release.apk). If you know your device supports ARM64, the [ARM64 APK](https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk) is a smaller download.
 
 ---
 
 ## ⚙️ Automated CI/CD & APK Publishing Pipeline
 
-SecureAI employs an automated GitHub Actions pipeline ([`.github/workflows/build-apk.yml`](./.github/workflows/build-apk.yml)) configured on Ubuntu 24.04:
-- **Triggers**: On code push to `SecureAI_Mobile_app/**` or manual `workflow_dispatch`.
-- **Dual Build Matrix**: Compiles both split-per-abi (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and universal release APKs.
-- **Integrity Verification**: Inspects native library inclusions inside the universal APK and logs SHA-256 checksums and file sizes.
-- **Automated Media Publishing**: Copies all four APKs to `SecureAI_Web/media/` and commits/pushes updated binaries directly to the repository (using `[skip ci]`), keeping the web download links permanently synchronized.
-- **Artifact Archiving**: Uploads discrete GitHub build artifacts for arm64-v8a, armeabi-v7a, x86_64, and universal packages.
+SecureAI uses GitHub Actions to automate Android release builds and APK publishing.
+
+Workflow file:  
+[`.github/workflows/build-apk.yml`](./.github/workflows/build-apk.yml)
+
+### Pipeline Capabilities
+- **Triggers**: Runs when relevant files under `SecureAI_Mobile_app/` are pushed or when manually triggered through `workflow_dispatch`.
+- **Build Automation**: Generates split-per-ABI APKs and a universal release APK.
+- **Architecture Verification**: Checks native library inclusion in the universal APK.
+- **Integrity Verification**: Generates SHA-256 checksums and records APK sizes.
+- **Automated Publishing**: Copies generated APKs into `SecureAI_Web/media/` and pushes updated binaries to the repository.
+- **Artifact Archiving**: Uploads separate GitHub Actions artifacts for ARM64, ARMv7, x86_64, and universal APK builds.
 
 ---
 
-## 🛠️ Technology Stack Summary
+## 🛠️ Technology Stack
 
-- **Web Backend**: Python 3.10+, Django 5.0.9, Gunicorn, WhiteNoise
-- **Web Frontend**: HTML5, Vanilla CSS Glassmorphism, Tailwind CSS, Font Awesome 6
-- **Mobile Client**: Flutter 3.x, Dart 3.x, Google Fonts (Outfit), Custom Constellation Painter
-- **AI & NLP**: Google Gemini 2.5 Flash, LangChain Core
-- **Machine Learning**: Scikit-learn, XGBoost, NumPy, Pandas
-- **Computer Vision**: OpenCV (Python), CameraX / ImagePicker (Mobile)
-- **Databases**: SQLite (Development) & Neon Serverless PostgreSQL (Production)
-- **Email Gateway**: Resend API (HTTPS Port 443)
-- **Hosting**: Render Cloud Platform
+| Category | Technologies |
+| :--- | :--- |
+| **Programming Languages** | Python, Dart, HTML5, CSS, JavaScript |
+| **Web Backend** | Django 5.0.9, Gunicorn, WhiteNoise |
+| **Web Frontend** | HTML5, CSS, Tailwind CSS, Font Awesome 6 |
+| **Mobile Development** | Flutter 3.x, Dart 3.x |
+| **AI & NLP** | Google Gemini 2.5 Flash, LangChain Core |
+| **Machine Learning** | Scikit-learn, XGBoost, NumPy, Pandas |
+| **Computer Vision** | OpenCV, Flutter camera and image picker packages |
+| **Database** | SQLite for development, Neon Serverless PostgreSQL for production |
+| **Email Gateway** | Resend API, Brevo API |
+| **Hosting** | Render |
+| **CI/CD** | GitHub Actions |
+| **Version Control** | Git and GitHub |
 
 ---
 
-## 👥 Authors & Developer
+## 🔐 Environment Configuration & Security
 
-- **Kokala Sai Teja** - Developer, SecureAI Framework
-- *Usage of AI in Prevention of Social Engineering Attacks*
+SecureAI uses environment variables to manage sensitive configuration values.
+
+Example variable names:
+```bash
+SECRET_KEY=your-django-secret-key
+DATABASE_URL=your-database-url
+SECUREAI_ADMIN_USERNAME=admin
+SECUREAI_ADMIN_PASSWORD=your-secure-password
+GOOGLE_API_KEY=your-gemini-api-key
+RESEND_API_KEY=your-resend-api-key
+BREVO_API_KEY=your-brevo-api-key
+BREVO_SENDER_EMAIL=your-verified-email
+```
+
+### Important security practices:
+- Never commit `.env` files or API keys to GitHub.
+- Use strong, unique passwords for administrator accounts.
+- Configure production secrets through the hosting provider's environment settings.
+- Keep API keys private and rotate them if exposed.
+- Use HTTPS for production communication.
+
+---
+
+## 👥 Author & Developer
+
+**Kokala Sai Teja**  
+Developer — SecureAI  
+*Project Theme: Usage of AI in Prevention of Social Engineering Attacks.*
 
 ---
 
