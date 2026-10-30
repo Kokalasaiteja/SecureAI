@@ -37,7 +37,7 @@ SecureAI-main/
 │   ├── manage.py                  # Django administrative script
 │   ├── media/                     # Stored assets, ML models (.pkl), and APK downloads
 │   │   ├── app-arm64-v8a-release.apk # 64-bit optimized APK build (20.6 MB)
-│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (18.0 MB)
+│   │   ├── app-armeabi-v7a-release.apk # 32-bit legacy APK build (18.1 MB)
 │   │   ├── app-x86_64-release.apk    # Emulator APK build (22.1 MB)
 │   │   └── app-release.apk           # Universal all-device APK build (55.5 MB)
 │   ├── templates/                 # Liquid glass HTML templates
@@ -170,7 +170,7 @@ Why do we provide both a **Universal Fat APK** and a **Split ABI APK**?
 | :--- | :--- | :--- | :--- |
 | **`app-release.apk`** *(Universal Build)* | **~55.5 MB** | **All Architectures** (`armeabi-v7a`, `arm64-v8a`, `x86_64`) | **100% of Android devices** (Android 5.0 Lollipop to Android 16), older 32-bit phones, tablets, and emulators |
 | **`app-arm64-v8a-release.apk`** *(Targeted Build)* | **~20.6 MB** | **64-bit ARM only** (`arm64-v8a`) | Modern 64-bit Android smartphones (Snapdragon, MediaTek, Exynos, Tensor) |
-| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~18.0 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
+| **`app-armeabi-v7a-release.apk`** *(Targeted Build)* | **~18.1 MB** | **32-bit ARM only** (`armeabi-v7a`) | Legacy 32-bit smartphones and low-cost Android Go devices |
 | **`app-x86_64-release.apk`** *(Emulator Build)* | **~22.1 MB** | **64-bit x86 only** (`x86_64`) | Android Studio Emulators, Chromebooks (ChromeOS), and Windows Subsystem for Android |
 
 > [!TIP]
