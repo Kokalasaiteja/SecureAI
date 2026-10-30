@@ -15,37 +15,77 @@ def generate_six_digit_otp():
 def send_secure_otp_email(target_email, otp_code):
     """
     Dispatches a structured operational email via Resend over Port 443 HTTPS.
-    Bypasses traditional cloud provider outbound network firewalls.
+    Falls back gracefully to SMTP if configured or reports accurate sandbox domain errors.
     """
-    try:
-        params = {
-            "from": "SecureAI Gateway <onboarding@resend.dev>",
-            "to": [target_email],
-            "subject": f"[{otp_code}] SecureAI Authorization Passcode",
-            "html": f"""
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-                    <div style="text-align: center; margin-bottom: 25px;">
-                        <span style="background: #e0e7ff; color: #4f46e5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">SECUREAI SECURITY ENGINE</span>
+    resend_err = None
+    api_key = os.environ.get("RESEND_API_KEY", "")
+
+    # 1. Attempt delivery via Resend API
+    if api_key:
+        try:
+            resend.api_key = api_key
+            sender = os.environ.get("RESEND_FROM_EMAIL", "SecureAI Gateway <onboarding@resend.dev>")
+            params = {
+                "from": sender,
+                "to": [target_email],
+                "subject": f"[{otp_code}] SecureAI Authorization Passcode",
+                "html": f"""
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <span style="background: #e0e7ff; color: #4f46e5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;">SECUREAI SECURITY ENGINE</span>
+                        </div>
+                        <h2 style="color: #0f172a; font-size: 22px; font-weight: 700; text-align: center; margin-top: 0;">Verification Required</h2>
+                        <p style="color: #475569; font-size: 15px; line-height: 1.6; text-align: center;">A password reset was requested for your account. Use the one-time authentication passcode below to proceed:</p>
+                        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;">
+                            <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #1e1b4b; letter-spacing: 6px; display: inline-block; padding-left: 6px;">{otp_code}</span>
+                        </div>
+                        <p style="color: #64748b; font-size: 12px; text-align: center; margin-bottom: 0; line-height: 1.5;">
+                            This passcode is temporary and expires dynamically in 5 minutes.<br/>
+                            If you did not initiate this request, please audit your dashboard credentials immediately.
+                        </p>
                     </div>
-                    <h2 style="color: #0f172a; font-size: 22px; font-weight: 700; text-align: center; margin-top: 0;">Verification Required</h2>
-                    <p style="color: #475569; font-size: 15px; line-height: 1.6; text-align: center;">A login or administrative check was triggered. Use the one-time authentication passcode below to confirm your context:</p>
-                    <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;">
-                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #1e1b4b; letter-spacing: 6px; display: inline-block; padding-left: 6px;">{otp_code}</span>
-                    </div>
-                    <p style="color: #64748b; font-size: 12px; text-align: center; margin-bottom: 0; line-height: 1.5;">
-                        This passcode is temporary and expires dynamically in 5 minutes.<br/>
-                        If you did not initiate this validation check, please audit your dashboard credentials immediately.
-                    </p>
-                </div>
-            """
-        }
-        
-        response = resend.Emails.send(params)
-        logger.info(f"OTP email systematically fired via Resend. Registry ID: {response.get('id')}")
-        return True
-    except Exception as error:
-        logger.error(f"Resend transaction failed: {str(error)}")
-        return False
+                """
+            }
+            response = resend.Emails.send(params)
+            logger.info(f"OTP email systematically fired via Resend. Registry ID: {response.get('id')}")
+            return True, None
+        except Exception as error:
+            resend_err = str(error)
+            logger.error(f"Resend transaction failed for {target_email}: {resend_err}")
+
+    # 2. Attempt SMTP fallback if configured
+    from django.conf import settings
+    from django.core.mail import send_mail
+    host_user = getattr(settings, 'EMAIL_HOST_USER', None)
+    host_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
+
+    if host_user and host_pass and str(host_pass).strip() not in ('', 'None'):
+        try:
+            subject = f"[{otp_code}] SecureAI Authorization Passcode"
+            plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
+            send_mail(
+                subject,
+                plain_msg,
+                host_user,
+                [target_email],
+                fail_silently=False,
+            )
+            logger.info(f"OTP email successfully sent via SMTP to {target_email}")
+            return True, None
+        except Exception as smtp_err:
+            logger.error(f"SMTP fallback failed: {smtp_err}")
+
+    # 3. Diagnose and report exact cause
+    if resend_err:
+        lower_err = resend_err.lower()
+        if "only send testing emails" in lower_err or "testing emails to your own email address" in lower_err:
+            return False, (
+                "Resend Sandbox limit: 'onboarding@resend.dev' can only deliver to the account owner (kokalasaiteja@gmail.com). "
+                "To deliver to all user emails (e.g. friends), add & verify a domain in Resend (resend.com/domains) or configure EMAIL_HOST_PASSWORD in Render."
+            )
+        return False, f"Email delivery error: {resend_err}"
+
+    return False, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY)." 
 
 
 def is_safe_user_image_path(image_name):

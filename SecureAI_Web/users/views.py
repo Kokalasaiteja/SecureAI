@@ -499,9 +499,14 @@ def send_otp(email):
         return None, f"Please wait {wait_seconds} seconds before requesting a new OTP."
 
     otp = generate_six_digit_otp()
-    success = send_secure_otp_email(email, otp)
+    res = send_secure_otp_email(email, otp)
+    if isinstance(res, tuple):
+        success, err_reason = res
+    else:
+        success, err_reason = res, None
+
     if not success:
-        return None, "Failed to send email. Check Render Environment Variables (RESEND_API_KEY)."
+        return None, (err_reason or "Failed to send email. Check Render Environment Variables (RESEND_API_KEY).")
 
     otp_storage[email] = {
         'otp': str(otp),
@@ -1111,6 +1116,7 @@ def email_phishing_analyzer(request):
     explanation = None
     error = None
     email_text = ''
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json'
 
     if request.method == 'POST':
         email_text = request.POST.get('email_text', '').strip()
@@ -1141,6 +1147,17 @@ Then, provide a brief bulleted explanation of your findings and any red flags.""
                 result = classification
             except Exception as exc:
                 error = f"Analysis failed: {exc}"
+
+        if is_json:
+            if error:
+                return JsonResponse({'success': False, 'message': error}, status=400)
+            return JsonResponse({
+                'success': True,
+                'result': result,
+                'is_phishing': (result or '').lower().startswith('phish'),
+                'explanation': explanation,
+                'email_text': email_text,
+            })
 
     return render(request, 'users/email_phishing.html', {
         'result': result,

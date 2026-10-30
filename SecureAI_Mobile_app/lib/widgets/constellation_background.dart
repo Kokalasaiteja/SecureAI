@@ -43,18 +43,7 @@ class _ConstellationBackgroundState extends State<ConstellationBackground>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
-    )..addListener(() {
-        for (var p in _particles) {
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0) p.x = 1.0;
-          if (p.x > 1.0) p.x = 0.0;
-          if (p.y < 0) p.y = 1.0;
-          if (p.y > 1.0) p.y = 0.0;
-        }
-        setState(() {});
-      })
-      ..repeat();
+    )..repeat();
   }
 
   @override
@@ -92,7 +81,10 @@ class _ConstellationBackgroundState extends State<ConstellationBackground>
         // Constellation / Particles Canvas (Dynamic Material Layer under glass)
         Positioned.fill(
           child: CustomPaint(
-            painter: _ConstellationPainter(particles: _particles),
+            painter: _ConstellationPainter(
+              repaint: _controller,
+              particles: _particles,
+            ),
           ),
         ),
 
@@ -124,10 +116,19 @@ class _Particle {
 class _ConstellationPainter extends CustomPainter {
   final List<_Particle> particles;
 
-  _ConstellationPainter({required this.particles});
+  _ConstellationPainter({required Listenable repaint, required this.particles})
+      : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) {
+    for (var p in particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = 1.0;
+      if (p.x > 1.0) p.x = 0.0;
+      if (p.y < 0) p.y = 1.0;
+      if (p.y > 1.0) p.y = 0.0;
+    }
     final particlePaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.55)
       ..style = PaintingStyle.fill;

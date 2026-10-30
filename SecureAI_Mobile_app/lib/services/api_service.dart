@@ -849,7 +849,10 @@ class ApiService {
           uri,
           headers: _getHeaders(
             refererPath: '/email-phishing/',
-            extraHeaders: {'Content-Type': 'application/x-www-form-urlencoded'},
+            extraHeaders: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
           ),
           body: bodyFields,
         );
@@ -876,6 +879,26 @@ class ApiService {
 
         if (response.statusCode == 200) {
           final body = response.body;
+
+          // 1. Direct JSON response handling from Django
+          try {
+            final json = jsonDecode(body);
+            if (json is Map<String, dynamic> && json.containsKey('result')) {
+              final classification = json['result']?.toString() ?? 'Legitimate';
+              final explanation = json['explanation']?.toString() ?? 'No detailed explanation provided.';
+              final isPhish = json['is_phishing'] == true || classification.toLowerCase().contains('phish');
+              return {
+                'success': true,
+                'is_phishing': isPhish,
+                'classification': classification,
+                'result': classification,
+                'body': explanation,
+              };
+            }
+          } catch (_) {
+            // Not a JSON response, fall through to HTML extraction
+          }
+
           String classification = "Legitimate";
           String explanation = "Analyzed by AI Phishing Classifier.";
 
@@ -906,7 +929,8 @@ class ApiService {
               classification = "Legitimate";
             }
 
-            final expMatch = RegExp(r'<div class="prose[^>]*>(.*?)<\/div>', dotAll: true).firstMatch(body);
+            final expMatch = RegExp(r'<div id="raw-explanation"[^>]*>(.*?)<\/div>', dotAll: true).firstMatch(body) ??
+                RegExp(r'<div class="prose[^>]*>(.*?)<\/div>', dotAll: true).firstMatch(body);
             if (expMatch != null) {
               final raw = expMatch.group(1)?.replaceAll(RegExp(r'<[^>]*>'), '').trim();
               if (raw != null && raw.isNotEmpty) {
