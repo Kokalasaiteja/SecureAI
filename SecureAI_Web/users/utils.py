@@ -74,25 +74,77 @@ def send_secure_otp_email(target_email, otp_code):
 
     # 2. If Resend rejected recipient specifically due to sandbox restrictions (or no Resend API key), attempt Gmail SMTP
     if is_sandbox_error:
-        host_user = getattr(settings, 'EMAIL_HOST_USER', None) or os.environ.get('EMAIL_HOST_USER', '')
-        host_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None) or os.environ.get('EMAIL_HOST_PASSWORD', '')
+        raw_user = getattr(settings, 'EMAIL_HOST_USER', None) or os.environ.get('EMAIL_HOST_USER', '')
+        raw_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', None) or os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-        if host_user and host_pass and str(host_pass).strip() not in ('', 'None'):
-            try:
-                subject = f"[{otp_code}] SecureAI Authorization Passcode"
-                plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
-                send_mail(
-                    subject=subject,
-                    message=plain_msg,
-                    from_email=host_user,
-                    recipient_list=[target_email],
-                    fail_silently=False,
+        clean_user = str(raw_user).strip().strip('"').strip("'")
+        clean_pass = str(raw_pass).strip().strip('"').strip("'")
+
+        # Automatically strip spaces from 16-character Google App Passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
+        clean_pass_no_spaces = clean_pass.replace(" ", "")
+        if len(clean_pass_no_spaces) == 16 and clean_pass_no_spaces.isalpha():
+            clean_pass = clean_pass_no_spaces
+
+        if clean_user and clean_pass and clean_pass not in ('', 'None'):
+            from django.core.mail import get_connection
+
+            subject = f"[{otp_code}] SecureAI Authorization Passcode"
+            plain_msg = f"Your SecureAI verification code is: {otp_code}. Valid for 5 minutes."
+
+            # Strategy: Attempt Port 587 (TLS), fallback to Port 465 (SSL) if port 587 has socket/timeout issues
+            smtp_attempts = [
+                {'port': 587, 'use_tls': True, 'use_ssl': False, 'desc': 'Port 587 (STARTTLS)'},
+                {'port': 465, 'use_tls': False, 'use_ssl': True, 'desc': 'Port 465 (SSL)'},
+            ]
+
+            last_smtp_err = None
+            for conn_spec in smtp_attempts:
+                try:
+                    conn = get_connection(
+                        backend='django.core.mail.backends.smtp.EmailBackend',
+                        host=getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com') or 'smtp.gmail.com',
+                        port=conn_spec['port'],
+                        username=clean_user,
+                        password=clean_pass,
+                        use_tls=conn_spec['use_tls'],
+                        use_ssl=conn_spec['use_ssl'],
+                        timeout=8,
+                    )
+                    send_mail(
+                        subject=subject,
+                        message=plain_msg,
+                        from_email=clean_user,
+                        recipient_list=[target_email],
+                        connection=conn,
+                        fail_silently=False,
+                    )
+                    logger.info(f"OTP email successfully sent via Gmail SMTP ({conn_spec['desc']}) to {target_email}")
+                    return True, None
+                except Exception as smtp_err:
+                    last_smtp_err = smtp_err
+                    err_text = str(smtp_err)
+                    logger.warning(f"Gmail SMTP via {conn_spec['desc']} failed: {err_text}")
+                    # If authentication failed (wrong password/regular password), secondary port retry will not succeed
+                    if "535" in err_text or "username and password not accepted" in err_text.lower() or "authentication" in err_text.lower():
+                        break
+
+            err_str = str(last_smtp_err or 'Unknown SMTP error')
+            logger.error(f"Gmail SMTP fallback failed for {target_email}: {err_str}")
+
+            if "535" in err_str or "username and password not accepted" in err_str.lower() or "authentication" in err_str.lower():
+                return False, (
+                    "Failed to deliver verification email via Gmail SMTP (Code 535: Authentication Failed). "
+                    "Google requires a 16-character App Password (not your personal Gmail password). "
+                    "Generate one at Google Account > Security > 2-Step Verification > App Passwords, "
+                    "and update EMAIL_HOST_PASSWORD in Render."
                 )
-                logger.info(f"OTP email successfully sent via Gmail SMTP fallback to {target_email}")
-                return True, None
-            except Exception as smtp_err:
-                logger.error(f"Gmail SMTP fallback failed for {target_email}: {smtp_err}")
-                return False, "Failed to deliver verification email via Resend and Gmail SMTP. Please verify Render email configuration."
+            elif "timeout" in err_str.lower() or "timed out" in err_str.lower() or "refused" in err_str.lower():
+                return False, (
+                    "Failed to deliver verification email via Gmail SMTP: Connection timed out on Render. "
+                    "Please verify Render outbound connectivity or add and verify a custom domain in Resend (resend.com/domains)."
+                )
+            else:
+                return False, f"Failed to deliver verification email via Gmail SMTP: {err_str}"
         else:
             return False, (
                 "Email delivery restricted: Resend free tier only delivers to the owner's email address. "
