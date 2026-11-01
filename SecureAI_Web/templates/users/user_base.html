@@ -92,12 +92,18 @@
       border-radius: 1.25rem;
     }
 
-    /* Mobile GPU Optimization to prevent tile drops and scroll lag */
+    /* Mobile GPU Optimization to eliminate tile drops and fast scroll lag */
     @media (max-width: 768px) {
-      aside, .glass-panel, .glass-card, .model-block {
-        backdrop-filter: blur(8px) saturate(160%) !important;
-        -webkit-backdrop-filter: blur(8px) saturate(160%) !important;
-        background: rgba(15, 23, 42, 0.88) !important;
+      :not(nav):not(footer).bg-gray-800.bg-opacity-80, 
+      :not(nav):not(footer).bg-gray-900.bg-opacity-90, 
+      aside, .glass-panel, .glass-card, .model-block, section.shadow-2xl {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 25%, transparent 65%, rgba(0, 0, 0, 0.20) 100%), rgba(15, 23, 42, 0.94) !important;
+      }
+      input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
       }
     }
 

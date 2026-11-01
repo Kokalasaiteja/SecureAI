@@ -1261,6 +1261,7 @@ import requests
 @user_required
 def password_analyzer(request):
     result = None
+    password = ''
     if request.method == 'POST':
         password = request.POST.get('password', '')
         

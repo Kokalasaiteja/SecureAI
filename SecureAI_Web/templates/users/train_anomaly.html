@@ -17,9 +17,11 @@
 
     @media (max-width: 768px) {
         .model-block {
-            backdrop-filter: blur(8px) saturate(160%);
-            -webkit-backdrop-filter: blur(8px) saturate(160%);
-            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgba(15, 23, 42, 0.94) !important;
+            content-visibility: auto;
+            contain-intrinsic-size: 450px;
         }
     }
 
@@ -168,16 +170,16 @@
                     <i class="fas fa-th-large mr-2"></i>Confusion Matrix
                 </h4>
                 
-                <div class="w-full max-w-sm sm:max-w-md bg-gray-950/60 px-3.5 sm:px-5 py-4 rounded-2xl border border-gray-700/60 shadow-xl backdrop-blur-sm mx-auto">
-                    <div class="grid grid-cols-[auto_1fr_1fr] gap-2 sm:gap-3 items-center">
+                <div class="w-full max-w-sm sm:max-w-md bg-gray-950/60 p-4 sm:p-5 rounded-2xl border border-gray-700/60 shadow-xl backdrop-blur-sm mx-auto flex flex-col items-center">
+                    <div class="w-fit mx-auto grid grid-cols-[auto_minmax(100px,130px)_minmax(100px,130px)] gap-2.5 sm:gap-3 items-center">
                         <!-- Top Header Row -->
                         <div></div>
-                        <div class="text-center text-xs sm:text-sm font-semibold text-gray-300 pb-1 whitespace-nowrap">Pred Normal</div>
-                        <div class="text-center text-xs sm:text-sm font-semibold text-gray-300 pb-1 whitespace-nowrap">Pred Anomaly</div>
+                        <div class="text-center text-xs sm:text-sm font-semibold text-gray-300 pb-1">Pred Normal</div>
+                        <div class="text-center text-xs sm:text-sm font-semibold text-gray-300 pb-1">Pred Anomaly</div>
 
                         <!-- Row 1: Actual Normal -->
-                        <div class="text-right pr-2 sm:pr-3 text-xs sm:text-sm font-medium text-gray-300 whitespace-nowrap">
-                            Actual Normal
+                        <div class="text-left font-medium text-gray-300 text-xs sm:text-sm leading-tight pr-1 sm:pr-2">
+                            Actual<br class="sm:hidden"> Normal
                         </div>
                         
                         <!-- TN (True Neg) -->
@@ -193,8 +195,8 @@
                         </div>
 
                         <!-- Row 2: Actual Anomaly -->
-                        <div class="text-right pr-2 sm:pr-3 text-xs sm:text-sm font-medium text-gray-300 whitespace-nowrap">
-                            Actual Anomaly
+                        <div class="text-left font-medium text-gray-300 text-xs sm:text-sm leading-tight pr-1 sm:pr-2">
+                            Actual<br class="sm:hidden"> Anomaly
                         </div>
                         
                         <!-- FN (False Neg) -->

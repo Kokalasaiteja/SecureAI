@@ -60,7 +60,7 @@
                 </p>
             </div>
 
-            <div class="bg-gray-900 rounded-xl p-5 sm:p-8 shadow-xl border-l-4 border-blue-500 transform hover:-translate-y-1 transition-all duration-300">
+            <div class="bg-gray-900 rounded-xl p-5 sm:p-8 shadow-xl border-l-4 border-blue-500 transform hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                 <h4 class="text-lg sm:text-xl font-bold text-blue-400 mb-4 flex items-center">
                     <i class="fas fa-shield-alt mr-2 sm:mr-3 text-xl sm:text-2xl"></i> Explanation & Red Flags
                 </h4>
@@ -81,9 +81,11 @@
 
                 function formatMarkdown(text) {
                     if (!text) return '';
-                    // 1. Format double-asterisks **bold** as bold highlighted text
-                    let formatted = text.replace(/\*\*([^\*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
-                    // 2. Format single-asterisk *word* as bold highlighted text (fixes *never* issue)
+                    // 1. Format code blocks or inline backticks `code`
+                    let formatted = text.replace(/`([^`]+)`/g, '<code class="bg-gray-950/80 text-teal-300 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono break-all border border-gray-700/60">$1</code>');
+                    // 2. Format double-asterisks **bold** as bold highlighted text
+                    formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
+                    // 3. Format single-asterisk *word* as bold highlighted text (fixes *never* issue)
                     formatted = formatted.replace(/\*([^\*\s][^\*]*?[^\*\s]|[^\*\s])\*/g, '<strong class="text-white font-bold">$1</strong>');
                     return formatted;
                 }
@@ -106,9 +108,9 @@
                         let body = formatMarkdown(bulletMatch[2].trim());
 
                         outputHtml += `
-                            <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition">
+                            <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition overflow-hidden">
                                 <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/50"></span>
-                                <div class="text-gray-300 text-sm sm:text-base leading-relaxed">
+                                <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">
                                     <strong class="text-white font-bold tracking-wide">${heading}:</strong> ${body}
                                 </div>
                             </div>
@@ -118,15 +120,15 @@
                         cleanText = formatMarkdown(cleanText);
 
                         outputHtml += `
-                            <div class="flex items-start space-x-3 p-2.5 rounded-lg bg-gray-800/30 border border-gray-700/40">
+                            <div class="flex items-start space-x-3 p-2.5 rounded-lg bg-gray-800/30 border border-gray-700/40 overflow-hidden">
                                 <span class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></span>
-                                <div class="text-gray-300 text-sm sm:text-base leading-relaxed">${cleanText}</div>
+                                <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</div>
                             </div>
                         `;
                     } else {
                         let cleanText = formatMarkdown(trimmed);
                         outputHtml += `
-                            <p class="text-gray-300 text-sm sm:text-base leading-relaxed">${cleanText}</p>
+                            <p class="text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</p>
                         `;
                     }
                 }
