@@ -24,7 +24,7 @@
                     <label for="name" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Name</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-user text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="text" name="name" id="name" value="{{ request.POST.name|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="text" name="name" id="name" value="{{ request.POST.name|default:'' }}" placeholder="Enter your full name" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Email Field -->
@@ -32,7 +32,7 @@
                     <label for="email" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Email</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-envelope text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="email" name="email" id="email" value="{{ request.POST.email|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="email" name="email" id="email" value="{{ request.POST.email|default:'' }}" placeholder="Enter your email address" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Mobile Field -->
@@ -40,7 +40,7 @@
                     <label for="mobile" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Mobile</label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-phone text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="text" name="mobile" id="mobile" value="{{ request.POST.mobile|default:'' }}" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                        <input type="text" name="mobile" id="mobile" value="{{ request.POST.mobile|default:'' }}" placeholder="Enter your mobile number" class="w-full p-3 text-sm sm:text-base rounded-lg bg-gray-900 text-white placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
                 </div>
                 <!-- Password Field -->
@@ -49,7 +49,7 @@
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-lock text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
                         <div class="flex-1 relative">
-                            <input type="password" name="password" id="password" class="w-full p-3 pr-12 text-sm sm:text-base rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
+                            <input type="password" name="password" id="password" placeholder="Enter a strong password" class="w-full p-3 pr-12 text-sm sm:text-base rounded-lg bg-gray-900 text-white placeholder-gray-500 border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 z-10 flex items-center justify-center" onclick="const p=document.getElementById('password'); p.type=p.type==='password'?'text':'password'; const icon=this.querySelector('i'); icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash');">
                                 <i class="fas fa-eye text-lg"></i>
                             </span>
