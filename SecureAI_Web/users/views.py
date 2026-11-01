@@ -809,21 +809,24 @@ def get_google_llm(**kwargs):
 
 
 def get_spam_chain():
+    now_str = timezone.now().strftime('%B %d, %Y')
     prompt = PromptTemplate(
         input_variables=["sms"],
-        template="""You are an expert SMS spam filter.
+        template=f"""You are an expert SMS spam filter.
+Current reference date: {now_str}. Any dates occurring on or prior to this date are past/present dates, not future dates.
 Analyze the following SMS message and classify it strictly as either 'Spam' or 'Ham' (where Ham means legitimate, safe, non-spam).
 
-Message: "{sms}"
+Message: "{{sms}}"
 
 Instructions:
 1. Determine whether the message is 'Spam' or 'Ham'.
 2. Provide a clear, concise explanation of why the message is spam or ham without prepending 'Ham:' or 'Spam:' to the explanation.
-3. Respond ONLY with a valid JSON object with exactly these two keys:
-{{
+3. Do not flag dates occurring on or before {now_str} as future dates.
+4. Respond ONLY with a valid JSON object with exactly these two keys:
+{{{{
   "classification": "Spam" or "Ham",
   "explanation": "your clear explanation here"
-}}
+}}}}
 Do NOT include markdown formatting, code fences, or any other surrounding text. Return ONLY the JSON object.
 """
     )
@@ -1348,16 +1351,33 @@ def email_phishing_analyzer(request):
                     if link_report['has_links']:
                         link_context = f"\n[Link Audit: Embedded links were inspected and confirmed safe: {link_report['summary']}]"
 
+                    now_dt = timezone.now()
+                    current_date_str = now_dt.strftime('%B %d, %Y')
+                    current_iso_date = now_dt.strftime('%Y-%m-%d')
+
                     prompt = PromptTemplate(
-                        input_variables=["email"],
+                        input_variables=["email", "current_date", "current_iso_date"],
                         template="""You are an expert cybersecurity analyst.
 Analyze the following email for phishing or social engineering attempts.
+
+Temporal & Date Grounding:
+- Today's reference date is {current_date} ({current_iso_date}).
+- Any transaction, notification, notice, or event date occurring on or prior to {current_date} is in the PAST or PRESENT.
+- Interpret common numerical date formats accurately (e.g., 10/26/2026 is October 26, 2026 in MM/DD/YYYY format, or 26/10/2026 in DD/MM/YYYY; both represent October 26, 2026, which is in the past).
+- Never flag a date occurring on or before {current_date} as a "future transaction date" or red flag.
+- Only flag a date as a future date or anomaly if it is strictly and indisputably after {current_date}.
+
 Email: "{email}""" + link_context + """"
+
 First, reply with exactly 'Phishing', 'Suspicious', or 'Safe' on the first line.
 Then, provide a brief bulleted explanation of your findings and any red flags."""
                     )
                     chain = prompt | llm
-                    response = chain.invoke({"email": email_text}).content
+                    response = chain.invoke({
+                        "email": email_text,
+                        "current_date": current_date_str,
+                        "current_iso_date": current_iso_date,
+                    }).content
                     
                     parts = response.strip().split('\n', 1)
                     classification = parts[0].strip().replace('*', '').replace('#', '').strip()
