@@ -22,7 +22,7 @@ def get_admin_credentials():
 def user_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+        is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         user_id = request.session.get('user_id')
         if not user_id:
             if is_json:
@@ -53,7 +53,7 @@ def admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         # Strict server-side verification: must have is_admin True and valid admin session
         if not request.session.get('is_admin') or not request.session.get('admin_username'):
-            is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+            is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
             if is_json:
                 from django.http import JsonResponse
                 return JsonResponse({'success': False, 'message': 'Administrator authentication required.'}, status=403)
@@ -65,7 +65,7 @@ def admin_required(view_func):
 def register_view(request):
     msg = ''
     is_error = False
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
@@ -124,7 +124,7 @@ import pytz
 @csrf_exempt
 def user_login(request):
     msg = ''
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
         password = (request.POST.get('password') or '').strip()
@@ -133,7 +133,7 @@ def user_login(request):
             msg = "Please enter both username and password."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=400)
-            return render(request, 'user_login.html', {'msg': msg})
+            return render(request, 'user_login.html', {'msg': msg}, status=400)
 
         user = RegisteredUser.objects.filter(name__iexact=name).first()
 
@@ -141,7 +141,7 @@ def user_login(request):
             msg = "Invalid username. Account not registered."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=401)
-            return render(request, 'user_login.html', {'msg': msg})
+            return render(request, 'user_login.html', {'msg': msg}, status=401)
 
         password_valid = False
         needs_migration = False
@@ -161,13 +161,13 @@ def user_login(request):
             msg = "Invalid password. Please try again."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=401)
-            return render(request, 'user_login.html', {'msg': msg})
+            return render(request, 'user_login.html', {'msg': msg}, status=401)
 
         if not user.is_active:
             msg = "Your account is not activated yet. Please wait for admin approval."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=403)
-            return render(request, 'user_login.html', {'msg': msg})
+            return render(request, 'user_login.html', {'msg': msg}, status=403)
 
         # Upgrade legacy plaintext password in place to standard PBKDF2 hash
         if needs_migration:
@@ -212,7 +212,7 @@ def user_login(request):
 @csrf_exempt
 def admin_login(request):
     msg = ''
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
@@ -245,6 +245,7 @@ def admin_login(request):
             msg = "Invalid admin credentials."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=401)
+            return render(request, 'admin_login.html', {'msg': msg}, status=401)
 
     return render(request, 'admin_login.html', {'msg': msg})
 
@@ -259,7 +260,7 @@ def admin_dashboard(request):
     active_users_count = users.filter(is_active=True).count()
     inactive_users_count = total_users_count - active_users_count
 
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_json:
         user_list = []
         for u in users:
@@ -315,7 +316,7 @@ def deactivate_user(request, user_id):
 
 @admin_required
 def delete_user(request, user_id):
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     from django.http import JsonResponse
     try:
         user = RegisteredUser.objects.get(id=user_id)
@@ -341,7 +342,7 @@ def delete_user(request, user_id):
 @csrf_exempt
 def edit_user(request, user_id):
     from django.http import JsonResponse
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     try:
         user = RegisteredUser.objects.get(id=user_id)
@@ -478,7 +479,7 @@ def user_homepage(request):
     active_image = user_image_b64 or user_image
     login_time = request.session.get('login_time')
 
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_json:
         return JsonResponse({
             'success': True,
@@ -587,7 +588,7 @@ def send_otp(email, request=None):
 
 @csrf_exempt
 def forgot_password(request):
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == "POST":
         email = (request.POST.get("email") or '').strip()
         normalized_email = email.lower()
@@ -621,7 +622,7 @@ def forgot_password(request):
 
 @csrf_exempt
 def verify_otp(request):
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == "POST":
         otp_entered = (request.POST.get("otp") or '').strip()
         email = ((request.POST.get("email") or '').strip() or request.session.get("reset_email") or '').lower()
@@ -721,7 +722,7 @@ def verify_otp(request):
 
 @csrf_exempt
 def reset_password(request):
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if request.method == "POST":
         new_password = (request.POST.get("new_password") or '').strip()
         confirm_password = (request.POST.get("confirm_password") or '').strip()
@@ -1082,7 +1083,7 @@ def train_anomaly_model(request):
 @csrf_exempt
 @user_required
 def predict_anomaly(request):
-    is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
+    is_json = 'application/json' in request.headers.get('Accept', '') or request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     import os
     import joblib
     from django.conf import settings

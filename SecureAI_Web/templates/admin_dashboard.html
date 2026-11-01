@@ -197,8 +197,41 @@
         </div>
         {% endif %}
 
-        <!-- Admin Overview Stat Cards (Frosted Glass) -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-slide-up">
+        <!-- Mobile / Tablet User Account Management Card (Matching Flutter Image) -->
+        <div class="block sm:hidden glass-panel p-4 mb-6 animate-slide-up border border-white/20 shadow-xl">
+            <div class="flex items-center justify-between mb-3.5">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600/25 border border-indigo-400/40 flex items-center justify-center text-indigo-300 text-lg shadow-inner">
+                        <i class="fas fa-users-cog"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-white tracking-tight">User Account Management</h2>
+                        <p class="text-[11px] text-gray-400">Directory synchronization & privileges</p>
+                    </div>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/35">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 live-glowing-ball"></span> Live
+                </span>
+            </div>
+            <div class="h-px bg-white/10 mb-3.5"></div>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-indigo-950/60 border border-indigo-500/35 rounded-xl p-2.5 text-center shadow-inner">
+                    <p class="text-[10px] uppercase font-bold text-indigo-300 flex items-center justify-center gap-1">Total Users <i class="fas fa-users text-[9px]"></i></p>
+                    <p class="text-xl font-extrabold text-white mt-0.5 font-mono">{{ total_users_count }}</p>
+                </div>
+                <div class="bg-emerald-950/60 border border-emerald-500/35 rounded-xl p-2.5 text-center shadow-inner">
+                    <p class="text-[10px] uppercase font-bold text-emerald-300 flex items-center justify-center gap-1">Active <i class="fas fa-check-circle text-[9px]"></i></p>
+                    <p class="text-xl font-extrabold text-white mt-0.5 font-mono">{{ active_users_count }}</p>
+                </div>
+                <div class="bg-amber-950/60 border border-amber-500/35 rounded-xl p-2.5 text-center shadow-inner">
+                    <p class="text-[10px] uppercase font-bold text-amber-300 flex items-center justify-center gap-1">Pending <i class="fas fa-clock text-[9px]"></i></p>
+                    <p class="text-xl font-extrabold text-white mt-0.5 font-mono">{{ inactive_users_count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Overview Stat Cards (Frosted Glass - Tablet & Desktop) -->
+        <div class="hidden sm:grid grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-slide-up">
             <!-- Stat 1: Total Users -->
             <div class="glass-panel p-5 sm:p-6 border-l-4 border-indigo-500 relative overflow-hidden group hover:-translate-y-1 transition duration-300">
                 <div class="absolute -right-4 -bottom-4 text-indigo-500/10 text-7xl font-black pointer-events-none group-hover:scale-110 transition-transform">
@@ -277,8 +310,8 @@
                 </div>
             </div>
 
-            <!-- Table Responsive Wrapper -->
-            <div class="overflow-x-auto rounded-xl border border-white/10 bg-gray-950/40">
+            <!-- Desktop Table Responsive Wrapper (Laptops & Desktops: lg and above) -->
+            <div class="hidden lg:block overflow-x-auto rounded-xl border border-white/10 bg-gray-950/40">
                 <table class="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white">
                     <thead class="bg-gray-900/80 text-indigo-300 uppercase font-semibold text-[11px] sm:text-xs tracking-wider">
                         <tr>
@@ -348,6 +381,62 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile & Tablet Responsive Cards (Phones & Tablets: below lg, Matching Flutter Mobile UI/UX) -->
+            <div class="block lg:hidden space-y-4">
+                {% for user in users %}
+                <div class="bg-gray-900/90 rounded-2xl p-4 sm:p-5 border border-white/15 shadow-xl transition-all duration-200 hover:border-indigo-500/50">
+                    <!-- Top Row: Avatar + Name + Status Badge -->
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <img src="{% if user.image %}{{ user.image.url }}{% elif user.image_base64 %}{{ user.image_base64 }}{% endif %}" alt="{{ user.name }}" class="w-11 h-11 rounded-full object-cover border-2 {% if user.is_active %}border-teal-400/60{% else %}border-red-400/60{% endif %} shadow shrink-0" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
+                            <div class="min-w-0">
+                                <h3 class="text-base sm:text-lg font-bold text-white truncate">{{ user.name }}</h3>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shrink-0 {% if user.is_active %}bg-emerald-500/15 text-emerald-300 border border-emerald-500/40{% else %}bg-red-500/15 text-red-300 border border-red-500/40{% endif %}">
+                            {{ user.is_active|yesno:"Active,Inactive" }}
+                        </span>
+                    </div>
+
+                    <!-- Details: Email & Mobile -->
+                    <div class="space-y-1 text-xs sm:text-sm text-gray-300 mb-4 pl-1">
+                        <p class="truncate"><span class="text-gray-400 font-medium">Email:</span> {{ user.email }}</p>
+                        <p><span class="text-gray-400 font-medium">Mobile:</span> {{ user.mobile }}</p>
+                    </div>
+
+                    <!-- Action Buttons matching Flutter Outlined Buttons -->
+                    <div class="flex items-center flex-wrap gap-2.5 pt-2 border-t border-white/10">
+                        <button type="button" onclick="openEditModal('{{ user.id }}', '{{ user.name|escapejs }}', '{{ user.email|escapejs }}', '{{ user.mobile|escapejs }}', {{ user.is_active|yesno:'true,false' }}, '{% if user.image %}{{ user.image.url }}{% elif user.image_base64 %}{{ user.image_base64 }}{% endif %}')" class="flex-1 min-w-[85px] inline-flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border border-indigo-500/60 text-indigo-300 hover:text-white bg-indigo-600/15 hover:bg-indigo-600/30 text-xs font-semibold transition-all shadow-sm">
+                            <i class="fas fa-edit text-indigo-400"></i>
+                            <span>Edit</span>
+                        </button>
+                        {% if not user.is_active %}
+                        <a href="{% url 'activate_user' user.id %}" class="flex-1 min-w-[105px] inline-flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border border-emerald-500/60 text-emerald-300 hover:text-white bg-emerald-600/15 hover:bg-emerald-600/30 text-xs font-semibold transition-all shadow-sm">
+                            <i class="fas fa-check-circle text-emerald-400"></i>
+                            <span>Activate</span>
+                        </a>
+                        {% else %}
+                        <a href="{% url 'deactivate_user' user.id %}" class="flex-1 min-w-[105px] inline-flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border border-amber-500/60 text-amber-300 hover:text-white bg-amber-600/15 hover:bg-amber-600/30 text-xs font-semibold transition-all shadow-sm">
+                            <i class="fas fa-ban text-amber-400"></i>
+                            <span>Deactivate</span>
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'delete_user' user.id %}" onclick="return confirm('Permanently delete user {{ user.name }}? This will remove their account, profile picture, and invalidate all active sessions.');" class="flex-1 min-w-[85px] inline-flex items-center justify-center space-x-1.5 py-2 px-3 rounded-xl border border-red-500/60 text-red-300 hover:text-white bg-red-600/15 hover:bg-red-600/30 text-xs font-semibold transition-all shadow-sm">
+                            <i class="fas fa-trash-alt text-red-400"></i>
+                            <span>Delete</span>
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="py-10 text-center text-gray-400 bg-gray-950/40 rounded-2xl border border-white/10">
+                    <div class="w-12 h-12 rounded-xl bg-white/5 mx-auto flex items-center justify-center mb-3 text-gray-500">
+                        <i class="fas fa-user-slash text-xl"></i>
+                    </div>
+                    <p class="text-sm">No registered users found in the database.</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

@@ -317,4 +317,66 @@ class ForgotPasswordOTPFlowTests(TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 get_otp_hmac(secrets.token_hex(16), "test@example.com", "123456")
             self.assertIn("SECRET_KEY is missing", str(ctx.exception))
+    # 17. User Login Error Differentiation: Missing fields returns 400
+    def test_user_login_missing_fields_400(self):
+        # JSON request (Flutter mobile Accept header)
+        resp = self.client.post('/user-login/', {'name': '', 'password': ''}, HTTP_ACCEPT='application/json, text/html, */*')
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['message'], 'Please enter both username and password.')
+
+        # HTML Form request (website)
+        resp_html = self.client.post('/user-login/', {'name': '', 'password': ''})
+        self.assertEqual(resp_html.status_code, 400)
+        self.assertContains(resp_html, 'Please enter both username and password.', status_code=400)
+
+    # 18. User Login Error Differentiation: Wrong username returns 401
+    def test_user_login_wrong_username_401(self):
+        # JSON request (Flutter mobile Accept header)
+        resp = self.client.post('/user-login/', {'name': 'nonexistent_user_999', 'password': 'password123'}, HTTP_ACCEPT='application/json, text/html, */*')
+        self.assertEqual(resp.status_code, 401)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['message'], 'Invalid username. Account not registered.')
+
+        # HTML Form request (website)
+        resp_html = self.client.post('/user-login/', {'name': 'nonexistent_user_999', 'password': 'password123'})
+        self.assertEqual(resp_html.status_code, 401)
+        self.assertContains(resp_html, 'Invalid username. Account not registered.', status_code=401)
+
+    # 19. User Login Error Differentiation: Wrong password returns 401
+    def test_user_login_wrong_password_401(self):
+        # JSON request (Flutter mobile Accept header)
+        resp = self.client.post('/user-login/', {'name': 'testuser', 'password': 'WrongPassword999'}, HTTP_ACCEPT='application/json, text/html, */*')
+        self.assertEqual(resp.status_code, 401)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['message'], 'Invalid password. Please try again.')
+
+        # HTML Form request (website)
+        resp_html = self.client.post('/user-login/', {'name': 'testuser', 'password': 'WrongPassword999'})
+        self.assertEqual(resp_html.status_code, 401)
+        self.assertContains(resp_html, 'Invalid password. Please try again.', status_code=401)
+
+    # 20. User Login Error Differentiation: Inactive user returns 403
+    def test_user_login_inactive_user_403(self):
+        RegisteredUser.objects.create(
+            name='pendinguser',
+            email='pending@example.com',
+            mobile='9876543211',
+            password=make_password('PendingPassword123'),
+            is_active=False
+        )
+        # JSON request (Flutter mobile Accept header)
+        resp = self.client.post('/user-login/', {'name': 'pendinguser', 'password': 'PendingPassword123'}, HTTP_ACCEPT='application/json, text/html, */*')
+        self.assertEqual(resp.status_code, 403)
+        data = resp.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['message'], 'Your account is not activated yet. Please wait for admin approval.')
+
+        # HTML Form request (website)
+        resp_html = self.client.post('/user-login/', {'name': 'pendinguser', 'password': 'PendingPassword123'})
+        self.assertEqual(resp_html.status_code, 403)
+        self.assertContains(resp_html, 'Your account is not activated yet. Please wait for admin approval.', status_code=403)
 

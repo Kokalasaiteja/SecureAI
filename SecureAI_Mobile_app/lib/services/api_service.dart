@@ -288,7 +288,10 @@ class ApiService {
         request.followRedirects = false;
         request.headers.addAll(_getHeaders(
           refererPath: '/user-login/',
-          extraHeaders: {'Content-Type': 'application/x-www-form-urlencoded'},
+          extraHeaders: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
         ));
 
         final bodyFields = <String, String>{
@@ -305,52 +308,38 @@ class ApiService {
 
         _extractCookies(response);
 
-        if (response.statusCode == 302 ||
-            (response.statusCode == 200 &&
-                !response.body.contains("Invalid credentials") &&
-                !response.body.contains("not activated"))) {
-          _currentUser = name;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('current_user', name);
-          await prefs.setString('auth_username', name);
-          await prefs.setString('auth_password', password);
+        // 1. Prioritize structured JSON response from backend
+        try {
+          final data = jsonDecode(response.body);
+          if (data is Map<String, dynamic>) {
+            if (data['success'] == true) {
+              _currentUser = name;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('current_user', name);
+              await prefs.setString('auth_username', name);
+              await prefs.setString('auth_password', password);
 
-          // Extract and persist profile image URL if available
-          try {
-            String imgUrl = '';
-            try {
-              final jsonBody = jsonDecode(response.body);
-              if (jsonBody is Map && jsonBody['user_image'] != null) {
-                imgUrl = jsonBody['user_image'].toString();
-              }
-            } catch (_) {}
-
-            if (imgUrl.isEmpty) {
-              final homeRes = await http.get(
-                Uri.parse('$_activeBaseUrl/user-homepage/'),
-                headers: _getHeaders(extraHeaders: {'Accept': 'application/json'}),
-              );
-              try {
-                final homeJson = jsonDecode(homeRes.body);
-                if (homeJson is Map && homeJson['user_image'] != null) {
-                  imgUrl = homeJson['user_image'].toString();
+              if (data['user_image'] != null && data['user_image'].toString().isNotEmpty) {
+                String imgUrl = data['user_image'].toString();
+                if (!imgUrl.startsWith('http')) {
+                  imgUrl = '$_activeBaseUrl$imgUrl';
                 }
-              } catch (_) {
-                final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(homeRes.body);
-                if (imgMatch != null) imgUrl = imgMatch.group(1)!;
+                await prefs.setString('user_image_url', imgUrl);
               }
-            }
 
-            if (imgUrl.isNotEmpty) {
-              if (!imgUrl.startsWith('http')) {
-                imgUrl = '$_activeBaseUrl$imgUrl';
-              }
-              await prefs.setString('user_image_url', imgUrl);
+              return {'success': true, 'message': data['message'] ?? 'Login successful!'};
+            } else {
+              return {
+                'success': false,
+                'message': data['message']?.toString() ?? 'Invalid credentials.',
+                'statusCode': response.statusCode,
+              };
             }
-          } catch (_) {}
+          }
+        } catch (_) {}
 
-          return {'success': true, 'message': 'Login successful!'};
-        } else if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
+        // 2. Cold-start retry on 502/503/504
+        if (response.statusCode == 502 || response.statusCode == 503 || response.statusCode == 504) {
           if (attempt < 3) {
             await wakeServerFast();
             continue;
@@ -359,26 +348,36 @@ class ApiService {
             'success': false,
             'message': 'Cloud server is waking up from idle (Render cold start). Please try again in a few seconds.'
           };
-        } else {
-          // Check for specific backend messages
-          try {
-            final jsonBody = jsonDecode(response.body);
-            if (jsonBody is Map && jsonBody['message'] != null) {
-              return {'success': false, 'message': jsonBody['message'].toString()};
-            }
-          } catch (_) {}
+        }
 
-          if (response.body.contains("not activated")) {
-            return {'success': false, 'message': 'Your account is not activated yet. Please wait for admin approval.'};
-          }
-          if (response.body.contains("Invalid username") || response.body.contains("Account not registered")) {
-            return {'success': false, 'message': 'Invalid username. Account not registered.'};
-          }
-          if (response.body.contains("Invalid password")) {
-            return {'success': false, 'message': 'Invalid password. Please try again.'};
-          }
+        // 3. Fallback for 302 Found redirect (legacy HTML login success)
+        if (response.statusCode == 302) {
+          _currentUser = name;
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('current_user', name);
+          await prefs.setString('auth_username', name);
+          await prefs.setString('auth_password', password);
+          return {'success': true, 'message': 'Login successful!'};
+        }
+
+        // 4. Any HTML 200 response means user_login.html was re-rendered due to validation/auth failure
+        if (response.body.contains("not activated")) {
+          return {'success': false, 'message': 'Your account is not activated yet. Please wait for admin approval.'};
+        }
+        if (response.body.contains("Invalid username") || response.body.contains("Account not registered")) {
+          return {'success': false, 'message': 'Invalid username. Account not registered.'};
+        }
+        if (response.body.contains("Invalid password")) {
+          return {'success': false, 'message': 'Invalid password. Please try again.'};
+        }
+        if (response.body.contains("Please enter both username and password")) {
+          return {'success': false, 'message': 'Please enter both username and password.'};
+        }
+        if (response.body.contains("Invalid credentials")) {
           return {'success': false, 'message': 'Invalid credentials.'};
         }
+
+        return {'success': false, 'message': 'Invalid credentials.'};
       } catch (e) {
         if (attempt < 3) {
           await wakeServerFast();
@@ -479,7 +478,10 @@ class ApiService {
         request.followRedirects = false;
         request.headers.addAll(_getHeaders(
           refererPath: '/admin-login/',
-          extraHeaders: {'Content-Type': 'application/x-www-form-urlencoded'},
+          extraHeaders: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
         ));
 
         final bodyFields = <String, String>{
