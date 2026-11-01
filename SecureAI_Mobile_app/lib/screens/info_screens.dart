@@ -98,6 +98,7 @@ class IntroductionScreen extends StatelessWidget {
                         _buildFeatureCard(
                           icon: Icons.qr_code_2_rounded,
                           title: "2. QR Code Threat Scanner",
+                          isStripRight: true,
                           accentColor: const Color(0xFFA855F7), // Purple
                           logic: "Image processing to decode QR matrices followed by rigorous URL threat extraction and analysis.",
                           model: "OpenCV for QR decoding; LangChain combined with Google Gemini 3.5 Flash.",
@@ -151,6 +152,7 @@ class IntroductionScreen extends StatelessWidget {
                         _buildFeatureCard(
                           icon: Icons.shield_rounded,
                           title: "4. Password Strength & Breach Analyzer",
+                          isStripRight: true,
                           accentColor: const Color(0xFFF59E0B), // Yellow/Amber
                           logic: "Combines heuristic complexity checking with secure, zero-knowledge breach verification.",
                           model: "SHA-1 hashing algorithm for k-Anonymity (prefix matching).",
@@ -285,7 +287,111 @@ class IntroductionScreen extends StatelessWidget {
     required String trainingData,
     required String functionality,
     required List<_ExampleItem> examples,
+    bool isStripRight = false,
   }) {
+    final strip = Container(
+      width: 4.5,
+      color: accentColor,
+    );
+
+    final content = Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Circular Icon (matching web)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937), // bg-gray-800
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: accentColor, size: 34),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Title
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Details
+            _buildBullet("Logic", logic),
+            _buildBullet("Model", model),
+            _buildBullet("Training Data", trainingData),
+            _buildBullet("Functionality", functionality),
+            const SizedBox(height: 12),
+
+            // Examples Box
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937), // bg-gray-800
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF374151)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: examples.map((ex) {
+                  final iconData = ex.isWarning
+                      ? Icons.warning_rounded
+                      : (ex.isNegative ? Icons.cancel_rounded : Icons.check_circle_rounded);
+                  final color = ex.isWarning
+                      ? const Color(0xFFFBBF24)
+                      : (ex.isNegative ? const Color(0xFFF87171) : const Color(0xFF4ADE80));
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(iconData, size: 14, color: color),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: const TextStyle(fontSize: 12, height: 1.4),
+                              children: [
+                                TextSpan(
+                                  text: "${ex.label} ",
+                                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                                ),
+                                TextSpan(
+                                  text: ex.content,
+                                  style: const TextStyle(color: Color(0xFFE5E7EB)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: Container(
@@ -300,110 +406,7 @@ class IntroductionScreen extends StatelessWidget {
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Accent colored indicator bar
-              Container(
-                width: 4.5,
-                color: accentColor,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Top Circular Icon (matching web)
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1F2937), // bg-gray-800
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(icon, color: accentColor, size: 34),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Title
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: accentColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Details
-                      _buildBullet("Logic", logic),
-                      _buildBullet("Model", model),
-                      _buildBullet("Training Data", trainingData),
-                      _buildBullet("Functionality", functionality),
-                      const SizedBox(height: 12),
-
-                      // Examples Box
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1F2937), // bg-gray-800
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF374151)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: examples.map((ex) {
-                            final iconData = ex.isWarning
-                                ? Icons.warning_rounded
-                                : (ex.isNegative ? Icons.cancel_rounded : Icons.check_circle_rounded);
-                            final color = ex.isWarning
-                                ? const Color(0xFFFBBF24)
-                                : (ex.isNegative ? const Color(0xFFF87171) : const Color(0xFF4ADE80));
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(iconData, color: color, size: 16),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: RichText(
-                                      text: TextSpan(
-                                        style: const TextStyle(fontSize: 12, height: 1.4),
-                                        children: [
-                                          TextSpan(
-                                            text: "${ex.label} ",
-                                            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                                          ),
-                                          TextSpan(
-                                            text: ex.content,
-                                            style: const TextStyle(color: Color(0xFFE5E7EB)),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            children: isStripRight ? [content, strip] : [strip, content],
           ),
         ),
       ),

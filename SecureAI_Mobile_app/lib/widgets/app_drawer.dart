@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 
@@ -251,54 +250,6 @@ class AppDrawer extends StatelessWidget {
                         ],
                       ),
                       Icon(Icons.shield_outlined, color: Color(0xFFF472B6), size: 18),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Download Android App Button (below Admin Portal)
-              InkWell(
-                onTap: () async {
-                  Navigator.pop(context);
-                  final uri = Uri.parse("http://127.0.0.1:8000/media/app-arm64-v8a-release.apk");
-                  final fallbackUri = Uri.parse("https://secureai-7wgj.onrender.com/media/app-arm64-v8a-release.apk");
-                  try {
-                    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-                    }
-                  } catch (_) {
-                    try {
-                      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-                    } catch (_) {}
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F766E).withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF2DD4BF).withValues(alpha: 0.45)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.android_rounded, color: Color(0xFF2DD4BF), size: 20),
-                          SizedBox(width: 12),
-                          Text(
-                            "Download Android App",
-                            style: TextStyle(
-                              color: Color(0xFF2DD4BF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Icon(Icons.download_rounded, color: Color(0xFF2DD4BF), size: 18),
                     ],
                   ),
                 ),
