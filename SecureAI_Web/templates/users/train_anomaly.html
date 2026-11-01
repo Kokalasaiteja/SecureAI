@@ -170,8 +170,8 @@
                     <i class="fas fa-th-large mr-2"></i>Confusion Matrix
                 </h4>
                 
-                <div class="w-full max-w-sm sm:max-w-md bg-gray-950/60 p-4 sm:p-5 rounded-2xl border border-gray-700/60 shadow-xl backdrop-blur-sm mx-auto flex flex-col items-center">
-                    <div class="w-fit mx-auto grid grid-cols-[auto_minmax(100px,130px)_minmax(100px,130px)] gap-2.5 sm:gap-3 items-center">
+                <div class="w-full max-w-sm sm:max-w-md bg-gray-950/60 p-3.5 sm:p-5 rounded-2xl border border-gray-700/60 shadow-xl backdrop-blur-sm mx-auto">
+                    <div class="w-full grid grid-cols-[auto_1fr_1fr] gap-2 sm:gap-3 items-center">
                         <!-- Top Header Row -->
                         <div></div>
                         <div class="text-center text-xs sm:text-sm font-semibold text-gray-300 pb-1">Pred Normal</div>
@@ -183,15 +183,15 @@
                         </div>
                         
                         <!-- TN (True Neg) -->
-                        <div class="bg-teal-900/70 border border-teal-400/40 text-teal-100 py-2.5 sm:py-3.5 px-2 rounded-xl text-center shadow-inner hover:border-teal-400/70 transition">
-                            <div class="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-teal-50">{{ item.tn }}</div>
-                            <div class="text-[11px] sm:text-xs text-teal-300 font-medium mt-0.5 whitespace-nowrap">True Neg (TN)</div>
+                        <div class="bg-teal-900/70 border border-teal-400/40 text-teal-100 py-2.5 sm:py-3.5 px-1 sm:px-2 rounded-xl text-center shadow-inner hover:border-teal-400/70 transition min-w-0">
+                            <div class="text-lg sm:text-2xl font-extrabold font-mono tracking-tight text-teal-50">{{ item.tn }}</div>
+                            <div class="text-[10px] sm:text-xs text-teal-300 font-medium mt-0.5">True Neg (TN)</div>
                         </div>
                         
                         <!-- FP (False Pos) -->
-                        <div class="bg-rose-950/60 border border-rose-500/35 text-rose-200 py-2.5 sm:py-3.5 px-2 rounded-xl text-center shadow-inner hover:border-rose-400/60 transition">
-                            <div class="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-rose-100">{{ item.fp }}</div>
-                            <div class="text-[11px] sm:text-xs text-rose-300 font-medium mt-0.5 whitespace-nowrap">False Pos (FP)</div>
+                        <div class="bg-rose-950/60 border border-rose-500/35 text-rose-200 py-2.5 sm:py-3.5 px-1 sm:px-2 rounded-xl text-center shadow-inner hover:border-rose-400/60 transition min-w-0">
+                            <div class="text-lg sm:text-2xl font-extrabold font-mono tracking-tight text-rose-100">{{ item.fp }}</div>
+                            <div class="text-[10px] sm:text-xs text-rose-300 font-medium mt-0.5">False Pos (FP)</div>
                         </div>
 
                         <!-- Row 2: Actual Anomaly -->
@@ -200,15 +200,15 @@
                         </div>
                         
                         <!-- FN (False Neg) -->
-                        <div class="bg-rose-950/60 border border-rose-500/35 text-rose-200 py-2.5 sm:py-3.5 px-2 rounded-xl text-center shadow-inner hover:border-rose-400/60 transition">
-                            <div class="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-rose-100">{{ item.fn }}</div>
-                            <div class="text-[11px] sm:text-xs text-rose-300 font-medium mt-0.5 whitespace-nowrap">False Neg (FN)</div>
+                        <div class="bg-rose-950/60 border border-rose-500/35 text-rose-200 py-2.5 sm:py-3.5 px-1 sm:px-2 rounded-xl text-center shadow-inner hover:border-rose-400/60 transition min-w-0">
+                            <div class="text-lg sm:text-2xl font-extrabold font-mono tracking-tight text-rose-100">{{ item.fn }}</div>
+                            <div class="text-[10px] sm:text-xs text-rose-300 font-medium mt-0.5">False Neg (FN)</div>
                         </div>
                         
                         <!-- TP (True Pos) -->
-                        <div class="bg-teal-900/70 border border-teal-400/40 text-teal-100 py-2.5 sm:py-3.5 px-2 rounded-xl text-center shadow-inner hover:border-teal-400/70 transition">
-                            <div class="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-teal-50">{{ item.tp }}</div>
-                            <div class="text-[11px] sm:text-xs text-teal-300 font-medium mt-0.5 whitespace-nowrap">True Pos (TP)</div>
+                        <div class="bg-teal-900/70 border border-teal-400/40 text-teal-100 py-2.5 sm:py-3.5 px-1 sm:px-2 rounded-xl text-center shadow-inner hover:border-teal-400/70 transition min-w-0">
+                            <div class="text-lg sm:text-2xl font-extrabold font-mono tracking-tight text-teal-50">{{ item.tp }}</div>
+                            <div class="text-[10px] sm:text-xs text-teal-300 font-medium mt-0.5">True Pos (TP)</div>
                         </div>
                     </div>
                 </div>
