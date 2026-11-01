@@ -17,21 +17,25 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _users = [];
+  late bool _isLoading;
+  late List<Map<String, dynamic>> _users;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _users = ApiService.cachedAdminUsers ?? [];
+    _isLoading = ApiService.cachedAdminUsers == null;
     _loadUsers();
   }
 
   Future<void> _loadUsers() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_users.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final users = await ApiService.getAdminUsers();
@@ -44,7 +48,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = "Failed to load users: $e";
+          if (_users.isEmpty) {
+            _errorMessage = "Failed to load users: $e";
+          }
           _isLoading = false;
         });
       }
@@ -489,38 +495,104 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               children: [
                 GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  child: Row(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentTeal, size: 24),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          "User Account Management",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.35)),
+                            ),
+                            child: const Icon(Icons.manage_accounts_rounded, color: Color(0xFF818CF8), size: 22),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "User Account Management",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  "Directory synchronization & privileges",
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF4ADE80),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                const Text(
+                                  "Live",
+                                  style: TextStyle(color: Color(0xFF86EFAC), fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentTeal.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.accentTeal.withValues(alpha: 0.4)),
-                        ),
-                        child: Text(
-                          "${_users.length} Users",
-                          style: const TextStyle(
-                            color: AppTheme.accentTeal,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                        height: 1,
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                      const SizedBox(height: 14),
+                      // 3-Metric Counter Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricTile(
+                              label: "Total Users",
+                              value: "${_users.length}",
+                              icon: Icons.people_alt_rounded,
+                              color: const Color(0xFF818CF8),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMetricTile(
+                              label: "Active",
+                              value: "${_users.where((u) => u['is_active'] == true).length}",
+                              icon: Icons.check_circle_rounded,
+                              color: const Color(0xFF34D399),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildMetricTile(
+                              label: "Pending",
+                              value: "${_users.where((u) => u['is_active'] != true).length}",
+                              icon: Icons.pending_actions_rounded,
+                              color: const Color(0xFFFBBF24),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -759,6 +831,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMetricTile({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.9),
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Icon(icon, size: 14, color: color),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

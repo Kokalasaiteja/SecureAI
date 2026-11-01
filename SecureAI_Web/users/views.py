@@ -129,71 +129,83 @@ def user_login(request):
         name = (request.POST.get('name') or '').strip()
         password = (request.POST.get('password') or '').strip()
 
+        if not name or not password:
+            msg = "Please enter both username and password."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=400)
+            return render(request, 'user_login.html', {'msg': msg})
+
         user = RegisteredUser.objects.filter(name__iexact=name).first()
+
+        if not user:
+            msg = "Invalid username. Account not registered."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=401)
+            return render(request, 'user_login.html', {'msg': msg})
 
         password_valid = False
         needs_migration = False
 
-        if user:
-            try:
-                if check_password(password, user.password):
-                    password_valid = True
-            except Exception:
-                pass
-
-            # Transparent backward-compatibility & migration for legacy plaintext passwords
-            if not password_valid and user.password == password:
+        try:
+            if check_password(password, user.password):
                 password_valid = True
-                needs_migration = True
+        except Exception:
+            pass
 
-        if user and password_valid:
-            if not user.is_active:
-                msg = "Your account is not activated yet. Please wait for admin approval."
-                if is_json:
-                    return JsonResponse({'success': False, 'message': msg}, status=403)
-                return render(request, 'user_login.html', {'msg': msg})
+        # Transparent backward-compatibility & migration for legacy plaintext passwords
+        if not password_valid and user.password == password:
+            password_valid = True
+            needs_migration = True
 
-            # Upgrade legacy plaintext password in place to standard PBKDF2 hash
-            if needs_migration:
-                user.password = make_password(password)
-                user.save(update_fields=['password'])
-
-            # Convert current time to IST
-            ist = pytz.timezone('Asia/Kolkata')
-            local_time = timezone.now().astimezone(ist)
-
-            img_url = ''
-            if user.image:
-                try:
-                    img_url = user.image.url
-                except Exception:
-                    img_url = ''
-
-            active_img = user.image_base64 if user.image_base64 else img_url
-
-            # Cycle session key to prevent session fixation attacks
-            request.session.cycle_key()
-            request.session['user_id'] = user.id
-            request.session['user_name'] = user.name
-            request.session['user_image'] = img_url
-            request.session['user_image_base64'] = user.image_base64
-            request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
-            request.session.modified = True
-
-            if is_json:
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Login successful!',
-                    'user_name': user.name,
-                    'user_image': active_img,
-                    'login_time': local_time.strftime('%I:%M:%S %p'),
-                })
-
-            return redirect('user_homepage')
-        else:
-            msg = "Invalid credentials."
+        if not password_valid:
+            msg = "Invalid password. Please try again."
             if is_json:
                 return JsonResponse({'success': False, 'message': msg}, status=401)
+            return render(request, 'user_login.html', {'msg': msg})
+
+        if not user.is_active:
+            msg = "Your account is not activated yet. Please wait for admin approval."
+            if is_json:
+                return JsonResponse({'success': False, 'message': msg}, status=403)
+            return render(request, 'user_login.html', {'msg': msg})
+
+        # Upgrade legacy plaintext password in place to standard PBKDF2 hash
+        if needs_migration:
+            user.password = make_password(password)
+            user.save(update_fields=['password'])
+
+        # Convert current time to IST
+        ist = pytz.timezone('Asia/Kolkata')
+        local_time = timezone.now().astimezone(ist)
+
+        img_url = ''
+        if user.image:
+            try:
+                img_url = user.image.url
+            except Exception:
+                img_url = ''
+
+        active_img = user.image_base64 if user.image_base64 else img_url
+
+        # Cycle session key to prevent session fixation attacks
+        request.session.cycle_key()
+        request.session['user_id'] = user.id
+        request.session['user_name'] = user.name
+        request.session['user_image'] = img_url
+        request.session['user_image_base64'] = user.image_base64
+        request.session['login_time'] = local_time.strftime('%I:%M:%S %p')
+        request.session.modified = True
+
+        if is_json:
+            return JsonResponse({
+                'success': True,
+                'message': 'Login successful!',
+                'user_name': user.name,
+                'user_image': active_img,
+                'login_time': local_time.strftime('%I:%M:%S %p'),
+            })
+
+        return redirect('user_homepage')
 
     return render(request, 'user_login.html', {'msg': msg})
 
@@ -243,6 +255,10 @@ def admin_home(request):
 @admin_required
 def admin_dashboard(request):
     users = RegisteredUser.objects.all().order_by('-id')
+    total_users_count = users.count()
+    active_users_count = users.filter(is_active=True).count()
+    inactive_users_count = total_users_count - active_users_count
+
     is_json = request.headers.get('Accept') == 'application/json' or request.content_type == 'application/json'
     if is_json:
         user_list = []
@@ -263,8 +279,19 @@ def admin_dashboard(request):
                 'image_url': img_url,
                 'is_active': u.is_active,
             })
-        return JsonResponse({'success': True, 'users': user_list})
-    return render(request, 'admin_dashboard.html', {'users': users})
+        return JsonResponse({
+            'success': True,
+            'total_users': total_users_count,
+            'active_users': active_users_count,
+            'inactive_users': inactive_users_count,
+            'users': user_list
+        })
+    return render(request, 'admin_dashboard.html', {
+        'users': users,
+        'total_users_count': total_users_count,
+        'active_users_count': active_users_count,
+        'inactive_users_count': inactive_users_count,
+    })
 
 @admin_required
 def activate_user(request, user_id):

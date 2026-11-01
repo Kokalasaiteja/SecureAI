@@ -360,10 +360,24 @@ class ApiService {
             'message': 'Cloud server is waking up from idle (Render cold start). Please try again in a few seconds.'
           };
         } else {
+          // Check for specific backend messages
+          try {
+            final jsonBody = jsonDecode(response.body);
+            if (jsonBody is Map && jsonBody['message'] != null) {
+              return {'success': false, 'message': jsonBody['message'].toString()};
+            }
+          } catch (_) {}
+
           if (response.body.contains("not activated")) {
-            return {'success': false, 'message': 'Your account is not activated yet. Wait for admin approval.'};
+            return {'success': false, 'message': 'Your account is not activated yet. Please wait for admin approval.'};
           }
-          return {'success': false, 'message': 'Invalid username or password.'};
+          if (response.body.contains("Invalid username") || response.body.contains("Account not registered")) {
+            return {'success': false, 'message': 'Invalid username. Account not registered.'};
+          }
+          if (response.body.contains("Invalid password")) {
+            return {'success': false, 'message': 'Invalid password. Please try again.'};
+          }
+          return {'success': false, 'message': 'Invalid credentials.'};
         }
       } catch (e) {
         if (attempt < 3) {
@@ -489,6 +503,8 @@ class ApiService {
               _currentUser = name;
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('current_user', name);
+              // Start prefetching admin user list in background immediately upon login
+              prefetchAdminUsers();
               return {'success': true, 'message': data['message'] ?? 'Admin login successful!'};
             } else {
               return {'success': false, 'message': data['message'] ?? 'Invalid admin credentials.'};
@@ -501,6 +517,8 @@ class ApiService {
           _currentUser = name;
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('current_user', name);
+          // Start prefetching admin user list in background immediately upon login
+          prefetchAdminUsers();
           return {'success': true, 'message': 'Admin login successful!'};
         }
         if (response.body.contains("disabled")) {
@@ -1420,6 +1438,22 @@ class ApiService {
   }
 
   // --- ADMIN APIs ---
+  static List<Map<String, dynamic>>? cachedAdminUsers;
+  static bool _isPrefetchingAdminUsers = false;
+
+  static Future<void> prefetchAdminUsers() async {
+    if (_isPrefetchingAdminUsers) return;
+    _isPrefetchingAdminUsers = true;
+    try {
+      final users = await getAdminUsers();
+      if (users.isNotEmpty) {
+        cachedAdminUsers = users;
+      }
+    } catch (_) {
+    } finally {
+      _isPrefetchingAdminUsers = false;
+    }
+  }
 
   static Future<List<Map<String, dynamic>>> getAdminUsers() async {
     try {
@@ -1455,7 +1489,10 @@ class ApiService {
                 'is_active': u['is_active'] ?? false,
               });
             }
-            if (parsedList.isNotEmpty) return parsedList;
+            if (parsedList.isNotEmpty) {
+              cachedAdminUsers = parsedList;
+              return parsedList;
+            }
           }
         } catch (_) {}
 

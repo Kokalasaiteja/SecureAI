@@ -5,8 +5,20 @@ import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../services/api_service.dart';
 
-class AdminHomeScreen extends StatelessWidget {
+class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
+
+  @override
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Warm up the admin user list in cache as soon as admin lands on Home
+    ApiService.prefetchAdminUsers();
+  }
 
   @override
   Widget build(BuildContext context) {

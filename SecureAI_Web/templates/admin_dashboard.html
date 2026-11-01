@@ -197,6 +197,66 @@
         </div>
         {% endif %}
 
+        <!-- Admin Overview Stat Cards (Frosted Glass) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-slide-up">
+            <!-- Stat 1: Total Users -->
+            <div class="glass-panel p-5 sm:p-6 border-l-4 border-indigo-500 relative overflow-hidden group hover:-translate-y-1 transition duration-300">
+                <div class="absolute -right-4 -bottom-4 text-indigo-500/10 text-7xl font-black pointer-events-none group-hover:scale-110 transition-transform">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider font-semibold text-indigo-300">Total Registered Users</p>
+                        <h3 class="text-3xl sm:text-4xl font-extrabold text-white mt-1 font-mono tracking-tight">{{ total_users_count }}</h3>
+                        <p class="text-[11px] sm:text-xs text-gray-400 mt-1 flex items-center">
+                            <i class="fas fa-database text-indigo-400 mr-1.5"></i>Synced directory accounts
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600/25 border border-indigo-400/40 flex items-center justify-center text-indigo-300 text-xl shadow-inner">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stat 2: Active Users -->
+            <div class="glass-panel p-5 sm:p-6 border-l-4 border-emerald-500 relative overflow-hidden group hover:-translate-y-1 transition duration-300">
+                <div class="absolute -right-4 -bottom-4 text-emerald-500/10 text-7xl font-black pointer-events-none group-hover:scale-110 transition-transform">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider font-semibold text-emerald-300">Active Accounts</p>
+                        <h3 class="text-3xl sm:text-4xl font-extrabold text-white mt-1 font-mono tracking-tight">{{ active_users_count }}</h3>
+                        <p class="text-[11px] sm:text-xs text-gray-400 mt-1 flex items-center">
+                            <i class="fas fa-shield-check text-emerald-400 mr-1.5"></i>Authorized & active logins
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-600/25 border border-emerald-400/40 flex items-center justify-center text-emerald-300 text-xl shadow-inner">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stat 3: Inactive / Pending -->
+            <div class="glass-panel p-5 sm:p-6 border-l-4 border-amber-500 relative overflow-hidden group hover:-translate-y-1 transition duration-300">
+                <div class="absolute -right-4 -bottom-4 text-amber-500/10 text-7xl font-black pointer-events-none group-hover:scale-110 transition-transform">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider font-semibold text-amber-300">Pending Approval</p>
+                        <h3 class="text-3xl sm:text-4xl font-extrabold text-white mt-1 font-mono tracking-tight">{{ inactive_users_count }}</h3>
+                        <p class="text-[11px] sm:text-xs text-gray-400 mt-1 flex items-center">
+                            <i class="fas fa-clock text-amber-400 mr-1.5"></i>Awaiting activation action
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-amber-600/25 border border-amber-400/40 flex items-center justify-center text-amber-300 text-xl shadow-inner">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Table Container (Frosted Liquid Glass Panel across Laptop, Computer, Tablet, Phone) -->
         <div class="glass-panel p-4 sm:p-6 lg:p-8 animate-slide-up">
             
@@ -208,7 +268,7 @@
                     </div>
                     <div>
                         <h2 class="text-base sm:text-lg font-bold text-white">Registered Users Directory</h2>
-                        <p class="text-xs text-gray-400">Total accounts currently synced with system</p>
+                        <p class="text-xs text-gray-400 flex items-center flex-wrap gap-2"><span>Total accounts currently synced with system</span><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">{{ total_users_count }} Users</span></p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2 text-xs text-gray-300 bg-gray-900/60 px-3.5 py-1.5 rounded-lg border border-white/10">
@@ -244,7 +304,7 @@
                             <td class="px-4 py-3.5 whitespace-nowrap text-gray-300">{{ user.mobile }}</td>
                             <!-- Profile Photo -->
                             <td class="px-4 py-3.5 whitespace-nowrap">
-                                <img src="{% if user.image_base64 %}{{ user.image_base64 }}{% elif user.image %}{{ user.image.url }}{% endif %}" alt="{{ user.name }}" class="w-10 h-10 rounded-full object-cover border border-white/20 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
+                                <img src="{% if user.image %}{{ user.image.url }}{% elif user.image_base64 %}{{ user.image_base64 }}{% endif %}" alt="{{ user.name }}" class="w-10 h-10 rounded-full object-cover border border-white/20 shadow" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user.name|urlencode }}&background=6366F1&color=fff&size=64&bold=true';">
                             </td>
                             <!-- Status Badge -->
                             <td class="px-4 py-3.5 whitespace-nowrap">
@@ -256,7 +316,7 @@
                             <!-- Actions -->
                             <td class="px-4 py-3.5 whitespace-nowrap text-center">
                                 <div class="flex items-center justify-center space-x-2 sm:space-x-2.5">
-                                    <button type="button" onclick="openEditModal('{{ user.id }}', '{{ user.name|escapejs }}', '{{ user.email|escapejs }}', '{{ user.mobile|escapejs }}', {{ user.is_active|yesno:'true,false' }}, '{% if user.image_base64 %}{{ user.image_base64 }}{% elif user.image %}{{ user.image.url }}{% endif %}')" class="btn-action inline-flex items-center text-indigo-300 hover:text-white font-medium text-xs bg-indigo-600/20 hover:bg-indigo-600/40 px-2.5 py-1.5 rounded-lg border border-indigo-500/40 shadow-sm cursor-pointer" title="Edit User">
+                                    <button type="button" onclick="openEditModal('{{ user.id }}', '{{ user.name|escapejs }}', '{{ user.email|escapejs }}', '{{ user.mobile|escapejs }}', {{ user.is_active|yesno:'true,false' }}, '{% if user.image %}{{ user.image.url }}{% elif user.image_base64 %}{{ user.image_base64 }}{% endif %}')" class="btn-action inline-flex items-center text-indigo-300 hover:text-white font-medium text-xs bg-indigo-600/20 hover:bg-indigo-600/40 px-2.5 py-1.5 rounded-lg border border-indigo-500/40 shadow-sm cursor-pointer" title="Edit User">
                                         <i class="fas fa-user-edit mr-1 text-indigo-400"></i> Edit
                                     </button>
                                     <span class="text-white/20">|</span>
