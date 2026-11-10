@@ -137,7 +137,7 @@ class IntroductionScreen extends StatelessWidget {
                             _ExampleItem(
                               isWarning: true,
                               label: "Example (Suspicious):",
-                              content: '"Hi team, please find attached the meeting notes from yesterday\'s sync."',
+                              content: '"Urgent: Please review the overdue vendor invoice and reply with your banking details before end of day to avoid payment disruption."',
                             ),
                             _ExampleItem(
                               isNegative: false,

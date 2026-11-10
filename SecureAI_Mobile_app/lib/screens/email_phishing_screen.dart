@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/audit_presentation.dart';
 import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
-import '../services/api_service.dart';
+import '../services/session_cache.dart';
 import '../widgets/secure_ai_app_bar.dart';
 
 class EmailPhishingScreen extends StatefulWidget {
@@ -14,10 +15,68 @@ class EmailPhishingScreen extends StatefulWidget {
 }
 
 class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
-  final _emailTextController = TextEditingController();
+  late final TextEditingController _emailTextController;
   bool _isLoading = false;
   Map<String, dynamic>? _result;
   String? _errorMessage;
+  String? _lastAnalyzedText;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailTextController = TextEditingController(text: SessionCache.emailInput ?? '');
+    _isLoading = SessionCache.emailLoading;
+    if (SessionCache.emailResult != null) {
+      if (SessionCache.emailResult!['success'] == true) {
+        _result = SessionCache.emailResult;
+        _errorMessage = null;
+      } else {
+        _result = null;
+        _errorMessage = SessionCache.emailResult!['message']?.toString() ?? "Phishing analysis failed.";
+      }
+    }
+    _lastAnalyzedText = SessionCache.emailInput;
+
+    // If an analysis was initiated and running in background, reattach to its completion:
+    if (SessionCache.emailFuture != null && (_result == null || SessionCache.emailLoading)) {
+      SessionCache.emailFuture!.then((res) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            if (res['success'] == true) {
+              _result = res;
+              _errorMessage = null;
+            } else {
+              _result = null;
+              _errorMessage = res['message']?.toString() ?? "Phishing analysis failed.";
+            }
+          });
+        }
+      });
+    }
+
+    _emailTextController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    final text = _emailTextController.text;
+    SessionCache.emailInput = text;
+    // Dismiss and clear result only as soon as user changes or edits input away from analyzed text
+    if ((_result != null || _errorMessage != null) && text.trim() != (_lastAnalyzedText ?? '').trim()) {
+      setState(() {
+        _result = null;
+        _errorMessage = null;
+      });
+      SessionCache.emailResult = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailTextController.removeListener(_onInputChanged);
+    _emailTextController.dispose();
+    super.dispose();
+  }
 
   Future<void> _analyzeEmail() async {
     final text = _emailTextController.text.trim();
@@ -32,19 +91,29 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
       _isLoading = true;
       _errorMessage = null;
       _result = null;
+      _lastAnalyzedText = text;
     });
 
-    final res = await ApiService.analyzeEmailPhishing(text);
+    final future = SessionCache.startEmailAnalysis(text);
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      if (res['success'] == true) {
-        _result = res;
-      } else {
-        _errorMessage = res['message']?.toString() ?? "Phishing analysis failed.";
-      }
-    });
+    try {
+      final res = await future;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (res['success'] == true) {
+          _result = res;
+        } else {
+          _errorMessage = res['message']?.toString() ?? "Phishing analysis failed.";
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Phishing analysis failed: $e";
+      });
+    }
   }
 
   String _cleanText(String text) {
@@ -66,18 +135,10 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
     final String explanation = _cleanText(_result?['body']?.toString() ??
         "Standard communication structure. No immediate social engineering red flags identified.");
 
-    final bool isPhishing = classification.toLowerCase().contains("phishing");
-    final bool isSuspicious = classification.toLowerCase().contains("suspicious");
-
-    Color statusColor = const Color(0xFF22C55E); // Green
-    IconData statusIcon = Icons.verified_user_rounded;
-    if (isPhishing) {
-      statusColor = const Color(0xFFEF4444); // Red
-      statusIcon = Icons.dangerous_rounded;
-    } else if (isSuspicious) {
-      statusColor = const Color(0xFFEAB308); // Yellow
-      statusIcon = Icons.warning_amber_rounded;
-    }
+    final presentation = AuditPresentation.computeEmailPresentation(_result);
+    final Color statusColor = presentation.statusColor;
+    final IconData statusIcon = presentation.statusIcon;
+    final String statusSubtitle = presentation.statusSubtitle;
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/email_phishing'),
@@ -194,30 +255,53 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
                         ),
                       ],
                     ),
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: _isLoading ? null : _analyzeEmail,
-                      icon: _isLoading
-                          ? const SizedBox.shrink()
-                          : const Icon(Icons.smart_toy_rounded, size: 20, color: Colors.white),
-                      label: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                            )
-                          : const Text(
-                              "Analyze Email",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
+                      child: _isLoading
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.2,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Scanning Email...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.smart_toy_rounded, size: 20, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Analyze Email",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
 
@@ -281,6 +365,18 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
                               ),
                             ],
                           ),
+                          if (statusSubtitle.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              statusSubtitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -356,6 +452,109 @@ class _EmailPhishingScreenState extends State<EmailPhishingScreen> {
       if (line.startsWith('* ') || line.startsWith('- ') || line.startsWith('• ')) {
         isBullet = true;
         line = line.substring(2).trim();
+      }
+
+      // Separate Link Verification into a dedicated prominent card
+      final isLink = RegExp(r'^Link Verification\s*:', caseSensitive: false).hasMatch(line);
+      if (isLink) {
+        final bodyText = line.replaceFirst(RegExp(r'^Link Verification\s*:\s*', caseSensitive: false), '').trim();
+        items.add(
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.link_rounded, color: Color(0xFF60A5FA), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      "LINK VERIFICATION",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                        color: Color(0xFF60A5FA),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  bodyText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFE5E7EB),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Check for Heading: Body pattern
+      final colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.toLowerCase().startsWith('http://') && !line.toLowerCase().startsWith('https://')) {
+        final heading = line.substring(0, colonIndex).replaceAll('*', '').trim();
+        final body = line.substring(colonIndex + 1).replaceAll('*', '').trim();
+
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6, right: 10),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF60A5FA),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF3B82F6),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      )
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFD1D5DB),
+                        height: 1.5,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: '$heading: ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        TextSpan(text: body),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
       }
 
       // Parse bold and emphasized highlight segments (**bold** or *word*) into TextSpans

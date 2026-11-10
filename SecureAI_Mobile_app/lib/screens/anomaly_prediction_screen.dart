@@ -3,7 +3,7 @@ import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
-import '../services/api_service.dart';
+import '../services/session_cache.dart';
 import '../widgets/secure_ai_app_bar.dart';
 
 class AnomalyPredictionScreen extends StatefulWidget {
@@ -14,24 +14,51 @@ class AnomalyPredictionScreen extends StatefulWidget {
 }
 
 class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
-  final _hourController = TextEditingController();
-  final _scoreController = TextEditingController();
+  late final TextEditingController _hourController;
+  late final TextEditingController _scoreController;
   bool _isLoading = false;
   Map<String, dynamic>? _predictionResult;
   String? _errorMessage;
 
   @override
-  void deactivate() {
-    // When navigating to next page or another screen, clear written text and response
-    _hourController.clear();
-    _scoreController.clear();
-    _predictionResult = null;
-    _errorMessage = null;
-    super.deactivate();
+  void initState() {
+    super.initState();
+    _hourController = TextEditingController(text: SessionCache.anomalyHour ?? '');
+    _scoreController = TextEditingController(text: SessionCache.anomalyScore ?? '');
+    _predictionResult = SessionCache.anomalyResult;
+    _errorMessage = SessionCache.anomalyErrorMessage;
+    _isLoading = SessionCache.anomalyLoading;
+
+    if (SessionCache.anomalyFuture != null && (_predictionResult == null || SessionCache.anomalyLoading)) {
+      SessionCache.anomalyFuture!.then((res) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            if (res['success'] == true) {
+              _predictionResult = res;
+              _errorMessage = null;
+            } else {
+              _predictionResult = null;
+              _errorMessage = res['message']?.toString() ?? "Prediction failed.";
+            }
+          });
+        }
+      });
+    }
+
+    _hourController.addListener(_onInputChanged);
+    _scoreController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    SessionCache.anomalyHour = _hourController.text;
+    SessionCache.anomalyScore = _scoreController.text;
   }
 
   @override
   void dispose() {
+    _hourController.removeListener(_onInputChanged);
+    _scoreController.removeListener(_onInputChanged);
     _hourController.dispose();
     _scoreController.dispose();
     super.dispose();
@@ -70,17 +97,26 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
       _predictionResult = null;
     });
 
-    final res = await ApiService.predictAnomaly(hour, score);
+    final future = SessionCache.startAnomalyPrediction(hour, score);
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      if (res['success'] == true) {
-        _predictionResult = res;
-      } else {
-        _errorMessage = res['message']?.toString() ?? "Prediction failed.";
-      }
-    });
+    try {
+      final res = await future;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (res['success'] == true) {
+          _predictionResult = res;
+        } else {
+          _errorMessage = res['message']?.toString() ?? "Prediction failed.";
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Prediction failed: $e";
+      });
+    }
   }
 
   @override
@@ -241,10 +277,21 @@ class _AnomalyPredictionScreenState extends State<AnomalyPredictionScreen> {
                         elevation: 4,
                       ),
                       child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Predicting...",
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ],
                             )
                           : const Text(
                               "Predict",

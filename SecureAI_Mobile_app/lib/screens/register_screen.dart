@@ -47,6 +47,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
         imageQuality: 85,
       );
       if (picked != null) {
+        final name = picked.name.toLowerCase();
+        final ext = name.contains('.') ? name.split('.').last : '';
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
+
+        if (!allowedExtensions.contains(ext)) {
+          setState(() {
+            _imageFile = null;
+            _selectedFileName = null;
+            _message = "Only image files (JPG, JPEG, PNG, WEBP) are allowed. Documents like PDF or PPT cannot be uploaded.";
+            _isSuccess = false;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Only image files (JPG, JPEG, PNG, WEBP) are allowed. Documents like PDF or PPT cannot be uploaded."),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
         setState(() {
           _imageFile = picked;
           _selectedFileName = picked.name;
@@ -69,6 +91,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() {
         _isSuccess = false;
         _message = "Please choose a profile image to complete registration.";
+      });
+      return;
+    }
+
+    final name = _selectedFileName?.toLowerCase() ?? '';
+    final ext = name.contains('.') ? name.split('.').last : '';
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
+    if (!allowedExtensions.contains(ext)) {
+      setState(() {
+        _isSuccess = false;
+        _message = "Invalid file type. Only image files (JPG, JPEG, PNG, WEBP) are allowed.";
       });
       return;
     }
@@ -255,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     SizedBox(width: 6),
                                     Text(
-                                      "Profile Image",
+                                      "Profile Image (JPG, PNG only)",
                                       style: TextStyle(
                                         color: Color(0xFFD1D5DB),
                                         fontSize: 13,

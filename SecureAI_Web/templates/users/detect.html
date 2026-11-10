@@ -11,32 +11,238 @@
       <p class="text-xs sm:text-sm text-gray-200 mt-1">Detect if a message is spam using our Gemini-powered model.</p>
     </div>
 
-    <form method="POST" class="space-y-4">
+    <form id="sms-form" method="POST" class="space-y-4">
       {% csrf_token %}
       <div>
         <label for="message" class="block mb-2 text-xs sm:text-sm font-semibold text-white">Enter Message:</label>
-        <textarea name="message" rows="4" placeholder="Type your SMS here..." required
+        <textarea name="message" id="message" rows="4" placeholder="Type your SMS here..." required
           class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">{{ message }}</textarea>
       </div>
       <div class="text-center">
-        <button type="submit"
-          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md">
-          Check
+        <button type="submit" id="check-btn"
+          class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md inline-flex items-center justify-center space-x-2">
+          <span>Check</span>
         </button>
       </div>
     </form>
 
     {% if error %}
-    <div class="mt-6 bg-red-500 bg-opacity-20 p-4 rounded-xl text-white border border-red-500/40 text-xs sm:text-sm">
+    <div id="error-box" class="mt-6 bg-red-500 bg-opacity-20 p-4 rounded-xl text-white border border-red-500/40 text-xs sm:text-sm">
       <h3 class="text-lg font-semibold flex items-center"><i class="fas fa-exclamation-triangle mr-2 text-red-400"></i> Error</h3>
       <p class="mt-2 text-red-200">{{ error }}</p>
     </div>
     {% elif result %}
-    <div class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border border-gray-700 shadow-lg text-xs sm:text-sm">
-      <h3 class="text-base sm:text-xl font-semibold">📌 Result: <span class="text-yellow-300 font-bold">{{ result }}</span></h3>
-      <p class="mt-2 text-gray-300 leading-relaxed"><strong>Explanation:</strong> {{ explanation }}</p>
+    <div id="result-box-container">
+    <div id="result-box" class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border-2 {% if result|lower == 'spam' %}border-red-500 shadow-red-500/20{% else %}border-teal-400 shadow-teal-400/20{% endif %} shadow-lg text-xs sm:text-sm animate-fade-in">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-700/60 mb-3">
+        <h3 class="text-base sm:text-xl font-semibold flex items-center">
+          <span class="mr-2">📌</span> Result: 
+          <span class="ml-2 {% if result|lower == 'spam' %}text-red-400{% else %}text-teal-300{% endif %} font-bold">{{ result }}</span>
+        </h3>
+      </div>
+      <div class="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Findings & Explanation:</div>
+      <div id="formatted-sms-explanation" class="space-y-2.5"></div>
+      <div id="raw-sms-explanation" class="hidden">{{ explanation }}</div>
     </div>
+    </div>
+    {% else %}
+    <div id="result-box-container"></div>
     {% endif %}
+
+    <script>
+      (function() {
+        const msgInput = document.getElementById('message');
+        const form = document.getElementById('sms-form');
+        const btn = document.getElementById('check-btn');
+        const container = document.getElementById('result-box-container');
+
+        function formatSmsMarkdown(text) {
+          if (!text) return '';
+          let formatted = text.replace(/`([^`]+)`/g, '<code class="bg-gray-950/80 text-teal-300 px-1.5 py-0.5 rounded text-xs font-mono break-all border border-gray-700/60">$1</code>');
+          formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
+          formatted = formatted.replace(/\*([^\*\s][^\*]*?[^\*\s]|[^\*\s])\*/g, '<strong class="text-white font-bold">$1</strong>');
+          return formatted;
+        }
+
+        function renderSmsExplanationHtml(rawText) {
+          if (!rawText) return '<p class="text-gray-300 text-xs sm:text-sm">No detailed explanation is available.</p>';
+          const lines = rawText.split('\n');
+          let outputHtml = '';
+          for (let line of lines) {
+            let trimmed = line.trim();
+            if (!trimmed) continue;
+
+            // Separate Link Verification into a distinct dedicated card/point
+            const isLinkLine = /^[\*\-•]?\s*Link Verification\s*:/i.test(trimmed);
+            if (isLinkLine) {
+              const bodyText = trimmed.replace(/^[\*\-•]?\s*Link Verification\s*:\s*/i, '').trim();
+              const formattedBody = formatSmsMarkdown(bodyText);
+              outputHtml += `
+                <div class="mb-3.5 p-3 sm:p-3.5 rounded-xl bg-teal-950/40 border border-teal-500/50 shadow-sm flex items-start space-x-3">
+                  <i class="fas fa-link text-teal-400 mt-1 text-sm sm:text-base shrink-0"></i>
+                  <div class="flex-1 min-w-0">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-teal-300 mb-0.5">Link Verification</span>
+                    <p class="text-xs sm:text-sm text-gray-200 leading-relaxed break-words">${formattedBody}</p>
+                  </div>
+                </div>
+              `;
+              continue;
+            }
+
+            // Other bullet points or heading:body items
+            let bulletMatch = trimmed.match(/^[\*\-•]?\s*([^:]+)\s*:\s*(.+)$/);
+            if (trimmed.toLowerCase().startsWith('http://') || trimmed.toLowerCase().startsWith('https://')) {
+              bulletMatch = null;
+            }
+
+            if (bulletMatch) {
+              const heading = bulletMatch[1].replace(/[:\*]/g, '').trim();
+              let body = formatSmsMarkdown(bulletMatch[2].trim());
+              outputHtml += `
+                <div class="flex items-start space-x-2.5 p-2.5 sm:p-3 rounded-lg bg-gray-800/60 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition">
+                  <span class="w-2 h-2 rounded-full bg-teal-400 mt-1.5 shrink-0 shadow-sm shadow-teal-400/50"></span>
+                  <div class="flex-1 min-w-0 text-gray-300 text-xs sm:text-sm leading-relaxed break-words">
+                    <strong class="text-white font-bold tracking-wide">${heading}:</strong> ${body}
+                  </div>
+                </div>
+              `;
+            } else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
+              let cleanText = trimmed.replace(/^[\*\-•]\s*/, '').trim();
+              cleanText = formatSmsMarkdown(cleanText);
+              outputHtml += `
+                <div class="flex items-start space-x-2.5 p-2.5 rounded-lg bg-gray-800/40 border border-gray-700/40">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 shrink-0"></span>
+                  <div class="flex-1 min-w-0 text-gray-300 text-xs sm:text-sm leading-relaxed break-words">${cleanText}</div>
+                </div>
+              `;
+            } else {
+              let cleanText = formatSmsMarkdown(trimmed);
+              outputHtml += `<p class="text-gray-300 text-xs sm:text-sm leading-relaxed break-words">${cleanText}</p>`;
+            }
+          }
+          return outputHtml;
+        }
+
+        function renderSmsResult(res) {
+          const cls = res.result || res.classification || 'Ham';
+          const isSpam = cls.toLowerCase() === 'spam';
+          const borderColor = isSpam ? 'border-red-500 shadow-red-500/20' : 'border-teal-400 shadow-teal-400/20';
+          const textColor = isSpam ? 'text-red-400' : 'text-teal-300';
+          const exp = res.explanation || res.body || 'No malicious indicators detected.';
+          const expHtml = renderSmsExplanationHtml(exp);
+
+          const errBox = document.getElementById('sms-error-box');
+          if (errBox) errBox.remove();
+
+          if (container) {
+            container.innerHTML = `
+              <div id="result-box" class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border-2 ${borderColor} shadow-lg text-xs sm:text-sm animate-fade-in">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-700/60 mb-3">
+                  <h3 class="text-base sm:text-xl font-semibold flex items-center">
+                    <span class="mr-2">📌</span> Result: 
+                    <span class="ml-2 ${textColor} font-bold">${cls}</span>
+                  </h3>
+                </div>
+                <div class="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Findings & Explanation:</div>
+                <div class="space-y-2.5">
+                  ${expHtml}
+                </div>
+              </div>
+            `;
+            sessionStorage.setItem('sms_result_html', container.innerHTML);
+          }
+        }
+
+        function renderSmsError(errMsg) {
+          if (container) container.innerHTML = '';
+          const existingErr = document.getElementById('sms-error-box');
+          if (existingErr) existingErr.remove();
+
+          const errBox = document.createElement('div');
+          errBox.id = 'sms-error-box';
+          errBox.className = 'mb-6 p-4 bg-red-600 bg-opacity-80 rounded-xl text-white text-center shadow-md animate-fade-in text-xs sm:text-sm';
+          errBox.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i><span>${errMsg}</span>`;
+          form.insertAdjacentElement('beforebegin', errBox);
+        }
+
+        // Hydrate server-rendered explanation if present
+        const rawSmsElem = document.getElementById('raw-sms-explanation');
+        const targetSmsElem = document.getElementById('formatted-sms-explanation');
+        if (rawSmsElem && targetSmsElem && rawSmsElem.textContent.trim()) {
+          targetSmsElem.innerHTML = renderSmsExplanationHtml(rawSmsElem.textContent.trim());
+        }
+
+        // Restore input
+        if (msgInput) {
+          const savedInput = sessionStorage.getItem('sms_input');
+          if (savedInput && !msgInput.value) {
+            msgInput.value = savedInput;
+          }
+          msgInput.addEventListener('input', function() {
+            sessionStorage.setItem('sms_input', this.value);
+          });
+        }
+
+        // Restore result or reattach to in-flight loading task
+        const currentStatus = sessionStorage.getItem('secureai_sms_status');
+        if (currentStatus === 'loading') {
+          if (btn) {
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin text-sm sm:text-base"></i><span>Checking SMS...</span>`;
+          }
+        } else {
+          const savedResult = sessionStorage.getItem('sms_result_html');
+          if (savedResult && container && !container.innerHTML.trim()) {
+            container.innerHTML = savedResult;
+          }
+        }
+
+        // Listen for background completion event from SecureAIBgRunner
+        window.addEventListener('secureai_task_complete', function(e) {
+          if (e.detail && e.detail.key === 'sms') {
+            if (btn) {
+              btn.disabled = false;
+              btn.classList.remove('opacity-80', 'cursor-not-allowed');
+              btn.innerHTML = `<span>Check</span>`;
+            }
+            if (e.detail.err) {
+              renderSmsError(e.detail.err);
+            } else if (e.detail.res) {
+              renderSmsResult(e.detail.res);
+            }
+          }
+        });
+
+        // Form submission with background execution
+        form?.addEventListener('submit', function(e) {
+          e.preventDefault();
+          const text = msgInput.value.trim();
+          if (!text) return;
+
+          sessionStorage.setItem('sms_input', text);
+          if (btn) {
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin text-sm sm:text-base"></i><span>Checking SMS...</span>`;
+          }
+
+          const fd = new FormData(form);
+          window.SecureAIBgRunner.dispatch('sms', form.action || window.location.pathname, fd, function(err, json) {
+            if (btn) {
+              btn.disabled = false;
+              btn.classList.remove('opacity-80', 'cursor-not-allowed');
+              btn.innerHTML = `<span>Check</span>`;
+            }
+            if (err) {
+              renderSmsError(err);
+            } else if (json) {
+              renderSmsResult(json);
+            }
+          });
+        });
+      })();
+    </script>
   </div>
 </div>
 {% endblock %}

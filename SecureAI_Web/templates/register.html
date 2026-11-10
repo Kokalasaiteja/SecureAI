@@ -58,11 +58,14 @@
                 </div>
                 <!-- Image Field -->
                 <div class="form-row space-y-1.5">
-                    <label for="image" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">Profile Image</label>
+                    <label for="image" class="block text-xs sm:text-sm font-medium text-gray-300 ml-9">
+                        Profile Image <span class="text-xs text-gray-400 font-normal">(JPG, JPEG, PNG, WEBP only)</span>
+                    </label>
                     <div class="flex items-center space-x-3">
                         <i class="field-icon fas fa-image text-purple-400 text-lg sm:text-xl shrink-0 w-6 text-center transition-colors"></i>
-                        <input type="file" name="image" id="image" class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300">
+                        <input type="file" name="image" id="image" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" class="w-full p-2.5 text-xs sm:text-sm rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-indigo-400 transition-all duration-300" required>
                     </div>
+                    <p id="image-error" class="text-xs text-red-400 ml-9 hidden font-medium"></p>
                 </div>
                 <!-- Submit Button -->
                 <div class="text-center pt-2">
@@ -101,10 +104,10 @@
     }
 </style>
 
-<!-- JavaScript for form input animations -->
+<!-- JavaScript for form input animations & image validation -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const inputs = document.querySelectorAll('input');
+        const inputs = document.querySelectorAll('input:not([type="file"])');
         inputs.forEach(input => {
             input.addEventListener('focus', () => {
                 const icon = input.closest('.form-row')?.querySelector('.field-icon');
@@ -120,6 +123,52 @@
                     icon.classList.remove('text-indigo-400');
                 }
             });
+        });
+
+        // Strict Image File Validation (Allows only images like JPG, JPEG, PNG, WEBP; blocks PDF, PPT, etc.)
+        const imageInput = document.getElementById('image');
+        const imageError = document.getElementById('image-error');
+        const form = document.querySelector('form');
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
+
+        function validateImageFile(file) {
+            if (!file) return false;
+            const name = file.name || '';
+            const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+            const isImageMime = file.type ? file.type.startsWith('image/') : true;
+            return allowedExtensions.includes(ext) && isImageMime;
+        }
+
+        imageInput?.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (!validateImageFile(file)) {
+                    this.value = '';
+                    if (imageError) {
+                        imageError.textContent = "Only image files (JPG, JPEG, PNG, WEBP) are allowed. Documents like PDF or PPT cannot be uploaded.";
+                        imageError.classList.remove('hidden');
+                    }
+                } else {
+                    if (imageError) {
+                        imageError.textContent = '';
+                        imageError.classList.add('hidden');
+                    }
+                }
+            }
+        });
+
+        form?.addEventListener('submit', function(e) {
+            if (imageInput && imageInput.files && imageInput.files[0]) {
+                const file = imageInput.files[0];
+                if (!validateImageFile(file)) {
+                    e.preventDefault();
+                    imageInput.value = '';
+                    if (imageError) {
+                        imageError.textContent = "Only image files (JPG, JPEG, PNG, WEBP) are allowed. Documents like PDF or PPT cannot be uploaded.";
+                        imageError.classList.remove('hidden');
+                    }
+                }
+            }
         });
     });
 </script>

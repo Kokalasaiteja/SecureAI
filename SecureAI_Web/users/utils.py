@@ -1,4 +1,7 @@
 import os
+import re
+import json
+import urllib.parse
 import secrets
 import logging
 from django.conf import settings
@@ -349,4 +352,500 @@ def verify_all_links_in_content(content_text: str, classify_url_func=None) -> di
         'summary': summary,
         'details': details
     }
+
+
+def redact_url_query_and_fragment(url: str) -> str:
+    """
+    Redacts credentials, query parameters, and fragments from a URL before model prompt embedding.
+    Preserves scheme, host:port (with embedded username/password stripped and IPv6 brackets preserved), and path.
+    Appends '[credentials-redacted]' if credentials were present.
+    Appends '[query-redacted]' when query or fragment was present.
+    """
+    if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(str(url))
+        cleaned_path = parsed.path or "/"
+
+        # Redact any embedded userinfo/credentials (user:pass@)
+        had_credentials = bool(parsed.username or parsed.password or ('@' in parsed.netloc))
+        hostname = parsed.hostname or ""
+        # Preserve RFC 3986 square brackets for IPv6 host authorities
+        if ':' in hostname and not (hostname.startswith('[') and hostname.endswith(']')):
+            host_str = f"[{hostname}]"
+        else:
+            host_str = hostname
+        clean_netloc = f"{host_str}:{parsed.port}" if parsed.port else host_str
+        if not clean_netloc:
+            clean_netloc = parsed.netloc.split('@')[-1]
+
+        redacted = urllib.parse.urlunsplit((parsed.scheme, clean_netloc, cleaned_path, "", ""))
+        if had_credentials:
+            redacted += "[credentials-redacted]"
+        if parsed.query or parsed.fragment:
+            redacted += "[query-redacted]"
+        return redacted
+    except Exception:
+        return "[url-parse-error]"
+
+
+def classify_audit_batch_threat(audit_batch) -> dict:
+    """
+    Evaluates all URLs in an audit batch to derive differentiated verdict categories
+    with deterministic precedence:
+    1. is_confirmed_threat: Confirmed external threat intelligence match (MALICIOUS / PHISHING)
+    2. is_policy_blocked: Security policy / SSRF violation (BLOCKED_POLICY: loopback, private IP, metadata, prohibited ports)
+    3. is_suspicious: Heuristic suspicion or redirect anomaly (SUSPICIOUS: brand spoofing, redirect loops, unexpanded shorteners)
+    4. is_unverified: UNVERIFIED, UNVERIFIED_UGC, partial scan omissions, timeout, inconsistent counts, or unknown verdict types
+    5. is_clean: All detected links verified clean with zero omissions, timeouts, count mismatches, or policy violations
+    """
+    if audit_batch is None:
+        return {
+            'has_threat': False,
+            'is_confirmed_threat': False,
+            'is_policy_blocked': False,
+            'is_suspicious': False,
+            'is_unverified': True,
+            'is_clean': False,
+            'primary_verdict_type': 'UNVERIFIED',
+            'primary_url': None,
+            'primary_reason': 'URL security audit unavailable (inspection failed to execute)',
+            'confirmed_threat_count': 0,
+            'policy_blocked_count': 0,
+            'suspicious_count': 0,
+            'unverified_count': 1,
+            'clean_count': 0,
+            'total_audits_evaluated': 0,
+        }
+
+    if not getattr(audit_batch, 'has_links', False):
+        raw_tot = getattr(audit_batch, 'total_detected_links', 0)
+        raw_scn = getattr(audit_batch, 'scanned_links_count', 0)
+        raw_omt = getattr(audit_batch, 'omitted_links_count', 0)
+        raw_auds = getattr(audit_batch, 'url_audits', [])
+        timed_out = bool(getattr(audit_batch, 'url_audit_timeout', False))
+        is_unsafe = bool(getattr(audit_batch, 'is_unsafe', False))
+        threat_cat = getattr(audit_batch, 'threat_verdict_category', 'NONE')
+
+        # Valid zero-links state strictly requires exact 0 integers for all counts, empty audits, no timeout, not unsafe, and threat_cat NONE
+        is_valid_zero_links = (
+            raw_tot == 0 and type(raw_tot) is int
+            and raw_scn == 0 and type(raw_scn) is int
+            and raw_omt == 0 and type(raw_omt) is int
+            and isinstance(raw_auds, (list, tuple)) and len(raw_auds) == 0
+            and not timed_out
+            and not is_unsafe
+            and (threat_cat is None or threat_cat == 'NONE')
+        )
+        if not is_valid_zero_links:
+            return {
+                'has_threat': is_unsafe,
+                'is_confirmed_threat': False,
+                'is_policy_blocked': False,
+                'is_suspicious': is_unsafe,
+                'is_unverified': True,
+                'is_clean': False,
+                'primary_verdict_type': 'UNVERIFIED',
+                'primary_url': None,
+                'primary_reason': 'Contradictory telemetry: has_links is false but non-zero counts, audits, timeouts, or threat signals are present.',
+                'confirmed_threat_count': 0,
+                'policy_blocked_count': 0,
+                'suspicious_count': 1 if is_unsafe else 0,
+                'unverified_count': 1,
+                'clean_count': 0,
+                'total_audits_evaluated': len(raw_auds) if isinstance(raw_auds, (list, tuple)) else 0,
+            }
+        return {
+            'has_threat': False,
+            'is_confirmed_threat': False,
+            'is_policy_blocked': False,
+            'is_suspicious': False,
+            'is_unverified': False,
+            'is_clean': False,
+            'primary_verdict_type': None,
+            'primary_url': None,
+            'primary_reason': None,
+            'confirmed_threat_count': 0,
+            'policy_blocked_count': 0,
+            'suspicious_count': 0,
+            'unverified_count': 0,
+            'clean_count': 0,
+            'total_audits_evaluated': 0,
+        }
+
+    raw_total = getattr(audit_batch, 'total_detected_links', 0)
+    raw_scanned = getattr(audit_batch, 'scanned_links_count', 0)
+    raw_omitted = getattr(audit_batch, 'omitted_links_count', 0)
+    try:
+        total_detected = int(raw_total)
+    except (TypeError, ValueError):
+        total_detected = -1
+    try:
+        scanned_count = int(raw_scanned)
+    except (TypeError, ValueError):
+        scanned_count = -1
+    try:
+        omitted_count = int(raw_omitted)
+    except (TypeError, ValueError):
+        omitted_count = -1
+
+    timed_out = bool(getattr(audit_batch, 'url_audit_timeout', False))
+    raw_audits = getattr(audit_batch, 'url_audits', None)
+    if isinstance(raw_audits, (list, tuple)):
+        audits_list = list(raw_audits)
+    else:
+        audits_list = []
+    audited_count = len(audits_list)
+
+    confirmed_threat_audits = []
+    policy_blocked_audits = []
+    suspicious_audits = []
+    unverified_audits = []
+    clean_audits = []
+
+    for audit in audits_list:
+        vtype = getattr(audit, 'verdict_type', '')
+        if vtype in ('MALICIOUS', 'PHISHING'):
+            confirmed_threat_audits.append(audit)
+        elif vtype == 'BLOCKED_POLICY' or getattr(audit, 'is_ssrf_blocked', False):
+            policy_blocked_audits.append(audit)
+        elif vtype == 'SUSPICIOUS':
+            suspicious_audits.append(audit)
+        elif vtype in ('UNVERIFIED', 'UNVERIFIED_UGC'):
+            unverified_audits.append(audit)
+        elif vtype in ('SAFE_THREAT_INTEL', 'SAFE_HEURISTIC'):
+            clean_audits.append(audit)
+        else:
+            # Unrecognized verdict types fail safe to UNVERIFIED (never silently ignored)
+            unverified_audits.append(audit)
+
+    # Inconsistent telemetry detection:
+    # 1. Total detected count <= 0 when has_links is True
+    # 2. Impossible negative counts
+    # 3. Scanned count + omitted count does not balance total detected links
+    # 4. Audit objects count does not equal scanned count
+    # 5. Missing audit records (audited_count == 0)
+    has_inconsistent_counts = (
+        total_detected <= 0
+        or scanned_count < 0
+        or omitted_count < 0
+        or (scanned_count + omitted_count != total_detected)
+        or audited_count != scanned_count
+        or scanned_count > total_detected
+        or audited_count == 0
+    )
+
+    # Fallback to batch-level fields if url_audits list is empty
+    if not audits_list:
+        fallback_is_unverified = (
+            timed_out
+            or (omitted_count > 0)
+            or has_inconsistent_counts
+        )
+        if omitted_count > 0:
+            fallback_unv_count = omitted_count
+        elif fallback_is_unverified:
+            fallback_unv_count = 1
+        else:
+            fallback_unv_count = 0
+
+        if getattr(audit_batch, 'is_unsafe', False):
+            first_url = getattr(audit_batch, 'first_unsafe_url', None)
+            reason = getattr(audit_batch, 'first_unsafe_reason', None) or 'Unspecified security violation'
+            batch_cat = getattr(audit_batch, 'threat_verdict_category', None)
+            is_ssrf = getattr(audit_batch, 'is_ssrf_blocked', False) is True
+
+            reason_str = str(reason).lower()
+            is_policy_kw = any(k in reason_str for k in ('ssrf', 'private ip', 'rfc 1918', 'loopback', 'metadata', 'prohibited port', 'prohibited destination'))
+            has_explicit_threat_intel_match = any(sig in reason_str for sig in (
+                'safe browsing match',
+                'safe browsing confirmed match',
+                'safe browsing malware',
+                'safe browsing phishing',
+                'threat intelligence match:',
+                'social engineering signature confirmed',
+                'malware or social engineering signature'
+            ))
+
+            # Strictly prioritize explicit category or verified match:
+            # threat_intel_checked alone only indicates the service was queried, NOT that a threat was confirmed!
+            if batch_cat == 'CONFIRMED_THREAT' or has_explicit_threat_intel_match:
+                vtype = 'PHISHING'
+                is_conf = True
+                is_pol = False
+                is_susp = False
+            elif batch_cat == 'SUSPICIOUS':
+                vtype = 'SUSPICIOUS'
+                is_conf = False
+                is_pol = False
+                is_susp = True
+            elif batch_cat == 'POLICY_BLOCKED' or is_ssrf or is_policy_kw:
+                vtype = 'BLOCKED_POLICY'
+                is_conf = False
+                is_pol = True
+                is_susp = False
+            else:
+                # Ambiguous unsafe results without explicit positive threat-intel match
+                # conservatively remain SUSPICIOUS (even if threat_intel_checked is True)
+                vtype = 'SUSPICIOUS'
+                is_conf = False
+                is_pol = False
+                is_susp = True
+
+            return {
+                'has_threat': True,
+                'is_confirmed_threat': is_conf,
+                'is_policy_blocked': is_pol,
+                'is_suspicious': is_susp,
+                'is_unverified': fallback_is_unverified,
+                'is_clean': False,
+                'primary_verdict_type': vtype,
+                'primary_url': first_url,
+                'primary_reason': reason,
+                'confirmed_threat_count': 1 if is_conf else 0,
+                'policy_blocked_count': 1 if is_pol else 0,
+                'suspicious_count': 1 if is_susp else 0,
+                'unverified_count': fallback_unv_count,
+                'clean_count': 0,
+                'total_audits_evaluated': 0,
+            }
+        else:
+            return {
+                'has_threat': False,
+                'is_confirmed_threat': False,
+                'is_policy_blocked': False,
+                'is_suspicious': False,
+                'is_unverified': True,
+                'is_clean': False,
+                'primary_verdict_type': 'UNVERIFIED',
+                'primary_url': None,
+                'primary_reason': 'URL security audit records missing for detected links.',
+                'confirmed_threat_count': 0,
+                'policy_blocked_count': 0,
+                'suspicious_count': 0,
+                'unverified_count': fallback_unv_count if fallback_unv_count > 0 else 1,
+                'clean_count': 0,
+                'total_audits_evaluated': 0,
+            }
+
+    has_unver = (
+        len(unverified_audits) > 0
+        or timed_out
+        or omitted_count > 0
+        or has_inconsistent_counts
+    )
+
+    actual_unv_urls = len(unverified_audits) + max(0, omitted_count)
+    if has_unver and actual_unv_urls == 0:
+        normal_unv_count = 1
+    else:
+        normal_unv_count = actual_unv_urls if has_unver else 0
+
+    # Deterministic Precedence 1: Confirmed Threat Intel (MALWARE / PHISHING)
+    if confirmed_threat_audits:
+        first = confirmed_threat_audits[0]
+        return {
+            'has_threat': True,
+            'is_confirmed_threat': True,
+            'is_policy_blocked': False,
+            'is_suspicious': False,
+            'is_unverified': has_unver,
+            'is_clean': False,
+            'primary_verdict_type': first.verdict_type,
+            'primary_url': first.original_url,
+            'primary_reason': first.reasons[0] if first.reasons else first.verdict,
+            'confirmed_threat_count': len(confirmed_threat_audits),
+            'policy_blocked_count': len(policy_blocked_audits),
+            'suspicious_count': len(suspicious_audits),
+            'unverified_count': normal_unv_count,
+            'clean_count': len(clean_audits),
+            'total_audits_evaluated': audited_count,
+        }
+    # Deterministic Precedence 2: Security Policy / SSRF Block (BLOCKED_POLICY)
+    elif policy_blocked_audits:
+        first = policy_blocked_audits[0]
+        return {
+            'has_threat': True,
+            'is_confirmed_threat': False,
+            'is_policy_blocked': True,
+            'is_suspicious': False,
+            'is_unverified': has_unver,
+            'is_clean': False,
+            'primary_verdict_type': 'BLOCKED_POLICY',
+            'primary_url': first.original_url,
+            'primary_reason': first.reasons[0] if first.reasons else first.verdict,
+            'confirmed_threat_count': 0,
+            'policy_blocked_count': len(policy_blocked_audits),
+            'suspicious_count': len(suspicious_audits),
+            'unverified_count': normal_unv_count,
+            'clean_count': len(clean_audits),
+            'total_audits_evaluated': audited_count,
+        }
+    # Deterministic Precedence 3: Heuristic Suspicious (SUSPICIOUS)
+    elif suspicious_audits:
+        first = suspicious_audits[0]
+        return {
+            'has_threat': True,
+            'is_confirmed_threat': False,
+            'is_policy_blocked': False,
+            'is_suspicious': True,
+            'is_unverified': has_unver,
+            'is_clean': False,
+            'primary_verdict_type': 'SUSPICIOUS',
+            'primary_url': first.original_url,
+            'primary_reason': first.reasons[0] if first.reasons else first.verdict,
+            'confirmed_threat_count': 0,
+            'policy_blocked_count': 0,
+            'suspicious_count': len(suspicious_audits),
+            'unverified_count': normal_unv_count,
+            'clean_count': len(clean_audits),
+            'total_audits_evaluated': audited_count,
+        }
+
+    # Zero threats detected: Strict Clean verification
+    # Requires:
+    # 1. No timeouts, no omitted links.
+    # 2. total_detected > 0 and scanned_count == total_detected.
+    # 3. Every detected link has a corresponding audit (audited_count == total_detected).
+    # 4. Every single audit has an explicitly accepted clean verdict (len(clean_audits) == total_detected).
+    # 5. Zero unverified or unknown verdict audits.
+    is_fully_clean = (
+        not has_unver
+        and not timed_out
+        and omitted_count == 0
+        and total_detected > 0
+        and scanned_count == total_detected
+        and audited_count == total_detected
+        and len(clean_audits) == total_detected
+        and len(unverified_audits) == 0
+    )
+
+    if not is_fully_clean:
+        has_unver = True
+
+    primary_reason = None
+    if has_unver:
+        if timed_out:
+            primary_reason = f"Audit budget exceeded 5.0s ({scanned_count}/{total_detected} scanned, {omitted_count} omitted)."
+        elif omitted_count > 0:
+            primary_reason = f"{omitted_count} link(s) omitted due to audit limits."
+        elif audited_count != scanned_count:
+            primary_reason = f"Telemetry mismatch: audit record count ({audited_count}) does not match scanned link count ({scanned_count})."
+        elif scanned_count != total_detected:
+            primary_reason = f"Telemetry mismatch: scanned link count ({scanned_count}) does not match detected count ({total_detected})."
+        elif total_detected < 0 or scanned_count < 0:
+            primary_reason = "Telemetry mismatch: invalid negative link counts detected."
+        elif unverified_audits:
+            first_unv = unverified_audits[0]
+            primary_reason = getattr(first_unv, 'reasons_summary', None) or (first_unv.reasons[0] if getattr(first_unv, 'reasons', None) else 'Unverified link destination')
+        else:
+            primary_reason = "One or more detected links could not be verified clean."
+
+    return {
+        'has_threat': False,
+        'is_confirmed_threat': False,
+        'is_policy_blocked': False,
+        'is_suspicious': False,
+        'is_unverified': has_unver,
+        'is_clean': is_fully_clean,
+        'primary_verdict_type': 'CLEAN' if is_fully_clean else 'UNVERIFIED',
+        'primary_url': getattr(clean_audits[0], 'original_url', None) if is_fully_clean and clean_audits else None,
+        'primary_reason': primary_reason,
+        'confirmed_threat_count': 0,
+        'policy_blocked_count': 0,
+        'suspicious_count': 0,
+        'unverified_count': normal_unv_count,
+        'clean_count': len(clean_audits),
+        'total_audits_evaluated': audited_count,
+    }
+
+
+def format_url_evidence_for_gemini(audit_batch) -> str:
+    """
+    Formats URL threat findings into a neutral, passive data block for LLM prompt ingestion.
+    Treats all URLs, queries, and reasons strictly as passive extracted data rather than trusted instructions.
+
+    Hardening:
+    - Neutralizes angle brackets: replaces '<' with '\\u003c' and '>' with '\\u003e' in JSON fields,
+      and '&lt;' / '&gt;' in text fields, preventing delimiter escape or tag forgery.
+    - Strips query parameters and fragments from flagged URLs before prompt embedding.
+    - Accurately conveys timeout, error, completed, or absence of links.
+    """
+    if audit_batch is None:
+        return "[System Link Audit Data: UNAVAILABLE. Security inspection failed to execute; presence and safety of links are unverified.]"
+
+    # Timeout state must take precedence over the no-links branch
+    if getattr(audit_batch, 'url_audit_timeout', False):
+        if getattr(audit_batch, 'has_links', False):
+            scanned = getattr(audit_batch, 'scanned_links_count', 0)
+            total = getattr(audit_batch, 'total_detected_links', 0)
+            omitted = getattr(audit_batch, 'omitted_links_count', 0)
+            safe_summary = str(getattr(audit_batch, 'summary', '')).replace('<', '&lt;').replace('>', '&gt;')
+            parts = [
+                f"[System Link Audit Data: TIMEOUT. Inspection halted due to 5.0s budget ({scanned}/{total} links scanned, {omitted} omitted). Remaining links unverified.]",
+                f"[Scan Summary: {safe_summary}]"
+            ]
+            threat_eval = classify_audit_batch_threat(audit_batch)
+            if threat_eval['has_threat'] or getattr(audit_batch, 'is_unsafe', False):
+                raw_url = threat_eval['primary_url'] or getattr(audit_batch, 'first_unsafe_url', None) or 'Unspecified URL'
+                raw_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Security policy violation'
+                clean_url = redact_url_query_and_fragment(str(raw_url))
+                json_url = json.dumps(clean_url, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
+                json_reason = json.dumps(str(raw_reason), ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
+                parts.append(f"[Flagged Destination Data: url={json_url} | reason={json_reason}]")
+            return "\n".join(parts)
+        else:
+            return "[System Link Audit Data: TIMEOUT. Link inspection halted due to 5.0s budget before link analysis could complete. Link presence and safety remain unverified.]"
+
+    # Completed audit states
+    if getattr(audit_batch, 'has_links', False):
+        safe_summary = str(getattr(audit_batch, 'summary', '')).replace('<', '&lt;').replace('>', '&gt;')
+        parts = [f"[System Link Audit Data: {safe_summary}]"]
+        threat_eval = classify_audit_batch_threat(audit_batch)
+        if threat_eval['has_threat'] or getattr(audit_batch, 'is_unsafe', False):
+            raw_url = threat_eval['primary_url'] or getattr(audit_batch, 'first_unsafe_url', None) or 'Unspecified URL'
+            raw_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Security policy violation'
+            clean_url = redact_url_query_and_fragment(str(raw_url))
+            json_url = json.dumps(clean_url, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
+            json_reason = json.dumps(str(raw_reason), ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
+            parts.append(f"[Flagged Destination Data: url={json_url} | reason={json_reason}]")
+        return "\n".join(parts)
+
+    return "[System Link Audit Data: COMPLETED. No external links detected in message.]"
+
+
+def serialize_untrusted_input(text: str, tag_name: str = "untrusted_payload") -> str:
+    """
+    Serializes and encodes untrusted user-supplied content before prompt embedding.
+
+    Capabilities:
+    1. Delimiter tag neutralization: Replaces opening, closing, and self-closing delimiter tags
+       matching tag_name (<tag>, </tag>, <tag/>, <tag attr="val"/>) with escaped entity
+       representations (&lt;tag&gt;, &lt;/tag&gt;, &lt;tag/&gt;). This reduces delimiter-breakout
+       attacks and prompt-structure confusion.
+    2. Structured JSON serialization: Encapsulates user content inside a JSON dictionary literal
+       via json.dumps, encoding newlines, quotes, and backslashes as JSON string data.
+
+    Security Limitation:
+    JSON serialization and tag escaping provide structural input hardening. They do NOT guarantee
+    complete immunity against semantic prompt injection or adversarial LLM manipulation within the
+    untrusted message text.
+    """
+    if text is None:
+        text = ""
+
+    # 1. Neutralize opening, closing, and self-closing delimiter tags, including attributes and whitespace
+    sanitized = re.sub(
+        rf"<\s*/?\s*{re.escape(tag_name)}(?:\s+[^>]*)?\s*/?>",
+        lambda m: m.group(0).replace('<', '&lt;').replace('>', '&gt;'),
+        str(text),
+        flags=re.IGNORECASE
+    )
+
+    # 2. Strict JSON serialization as an unambiguous structured dictionary
+    payload = {
+        "content_type": f"untrusted_user_input_{tag_name}",
+        "raw_text": sanitized
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 

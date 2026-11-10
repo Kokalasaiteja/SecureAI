@@ -96,10 +96,16 @@
 
         <div id="upload-preview-container" class="hidden text-center">
           <img id="upload-preview-img" class="w-40 h-40 object-contain mx-auto rounded-xl border border-white/20 bg-black/40 p-2 shadow-md" alt="Preview">
+          <div class="mt-2" id="upload-retake-wrapper">
+            <button type="button" id="upload-retake-btn" onclick="resetUpload()" class="inline-flex items-center space-x-1.5 text-xs text-red-400 hover:text-red-300 font-semibold py-1.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition">
+              <i class="fas fa-redo text-xs"></i>
+              <span>Retake</span>
+            </button>
+          </div>
         </div>
 
         <div class="text-center pt-2">
-          <button type="submit" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold text-sm sm:text-base shadow-lg flex items-center justify-center space-x-2 mx-auto">
+          <button type="submit" id="scan-qr-btn" class="btn-3d w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3.5 rounded-xl font-semibold text-sm sm:text-base shadow-lg flex items-center justify-center space-x-2 mx-auto">
             <i class="fas fa-search"></i>
             <span>Scan & Classify</span>
           </button>
@@ -213,8 +219,13 @@
     preview.classList.remove('hidden');
     video.classList.add('hidden');
     reticle.classList.add('hidden');
-    snapBtn.classList.add('hidden');
-    retakeBtn.classList.remove('hidden');
+
+    // Hide retake button during loading so user cannot click it while request is processing
+    retakeBtn.classList.add('hidden');
+    snapBtn.classList.remove('hidden');
+    snapBtn.disabled = true;
+    snapBtn.classList.add('opacity-80', 'cursor-not-allowed');
+    snapBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-1.5"></i><span>Scanning & Classifying QR Code...</span>`;
 
     // Convert canvas to Blob and submit
     canvas.toBlob(blob => {
@@ -224,8 +235,6 @@
       const hiddenInput = document.getElementById('camera-hidden-file');
       hiddenInput.files = container.files;
 
-      // Auto submit camera form with visual feedback
-      snapBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>Analyzing...</span>`;
       document.getElementById('camera-submit-form').submit();
     }, 'image/png');
   }
@@ -241,6 +250,9 @@
     video.classList.remove('hidden');
     reticle.classList.remove('hidden');
     snapBtn.classList.remove('hidden');
+    snapBtn.disabled = false;
+    snapBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+    snapBtn.innerHTML = `<i class="fas fa-camera"></i><span>Capture & Scan</span>`;
     retakeBtn.classList.add('hidden');
   }
 
@@ -250,6 +262,7 @@
       const display = document.getElementById('file-name-display');
       const container = document.getElementById('upload-preview-container');
       const img = document.getElementById('upload-preview-img');
+      const retakeWrapper = document.getElementById('upload-retake-wrapper');
 
       display.textContent = "Selected: " + input.files[0].name;
       display.classList.remove('hidden');
@@ -257,10 +270,39 @@
       reader.onload = e => {
         img.src = e.target.result;
         container.classList.remove('hidden');
+        if (retakeWrapper) retakeWrapper.classList.remove('hidden');
       };
       reader.readAsDataURL(input.files[0]);
     }
   }
+
+  function resetUpload() {
+    const fileInput = document.getElementById('qr-file-input');
+    const display = document.getElementById('file-name-display');
+    const container = document.getElementById('upload-preview-container');
+    const img = document.getElementById('upload-preview-img');
+    if (fileInput) fileInput.value = '';
+    if (display) {
+      display.textContent = '';
+      display.classList.add('hidden');
+    }
+    if (img) img.src = '';
+    if (container) container.classList.add('hidden');
+  }
+
+  // Handle upload form submission loading state
+  document.getElementById('qr-form')?.addEventListener('submit', function() {
+    const btn = document.getElementById('scan-qr-btn');
+    const retakeWrapper = document.getElementById('upload-retake-wrapper');
+    if (retakeWrapper) {
+      retakeWrapper.classList.add('hidden'); // Retake button hidden during loading
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      btn.innerHTML = `<i class="fas fa-circle-notch fa-spin text-sm sm:text-base mr-1.5"></i><span>Scanning & Classifying QR Code...</span>`;
+    }
+  });
 
   // Cleanup camera stream when navigating away
   window.addEventListener('beforeunload', stopCamera);

@@ -3,7 +3,7 @@ import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
-import '../services/api_service.dart';
+import '../services/session_cache.dart';
 import '../widgets/secure_ai_app_bar.dart';
 import '../widgets/http_error_widget.dart';
 
@@ -15,12 +15,67 @@ class PasswordAnalyzerScreen extends StatefulWidget {
 }
 
 class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
-  final _passwordController = TextEditingController();
+  late final TextEditingController _passwordController;
   bool _obscureText = true;
   bool _isLoading = false;
   Map<String, dynamic>? _result;
   String? _errorMessage;
   int? _errorStatusCode;
+  String? _lastAnalyzedPassword;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController = TextEditingController(text: SessionCache.passwordInput ?? '');
+    _result = SessionCache.passwordResult;
+    _errorMessage = SessionCache.passwordErrorMessage;
+    _errorStatusCode = SessionCache.passwordErrorStatusCode;
+    _isLoading = SessionCache.passwordLoading;
+    _lastAnalyzedPassword = SessionCache.passwordInput;
+
+    if (SessionCache.passwordFuture != null && (_result == null || SessionCache.passwordLoading)) {
+      SessionCache.passwordFuture!.then((res) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            if (res['success'] == true) {
+              _result = res;
+              _errorMessage = null;
+              _errorStatusCode = null;
+            } else {
+              _result = null;
+              _errorMessage = res['message']?.toString() ?? "Analysis failed.";
+              _errorStatusCode = res['statusCode'] as int? ?? 500;
+            }
+          });
+        }
+      });
+    }
+
+    _passwordController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    final text = _passwordController.text;
+    SessionCache.passwordInput = text;
+    if ((_result != null || _errorMessage != null) && text != _lastAnalyzedPassword) {
+      setState(() {
+        _result = null;
+        _errorMessage = null;
+        _errorStatusCode = null;
+      });
+      SessionCache.passwordResult = null;
+      SessionCache.passwordErrorMessage = null;
+      SessionCache.passwordErrorStatusCode = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _passwordController.removeListener(_onInputChanged);
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _analyze() async {
     final pwd = _passwordController.text;
@@ -37,22 +92,33 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
       _errorMessage = null;
       _errorStatusCode = null;
       _result = null;
+      _lastAnalyzedPassword = pwd;
     });
 
-    final res = await ApiService.analyzePassword(pwd);
+    final future = SessionCache.startPasswordAnalysis(pwd);
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      if (res['success'] == true) {
-        _result = res;
-        _errorMessage = null;
-        _errorStatusCode = null;
-      } else {
-        _errorMessage = res['message']?.toString() ?? "Analysis failed.";
-        _errorStatusCode = res['statusCode'] as int? ?? 500;
-      }
-    });
+    try {
+      final res = await future;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (res['success'] == true) {
+          _result = res;
+          _errorMessage = null;
+          _errorStatusCode = null;
+        } else {
+          _errorMessage = res['message']?.toString() ?? "Analysis failed.";
+          _errorStatusCode = res['statusCode'] as int? ?? 500;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Analysis failed: $e";
+        _errorStatusCode = 500;
+      });
+    }
   }
 
   @override
@@ -173,29 +239,46 @@ class _PasswordAnalyzerScreenState extends State<PasswordAnalyzerScreen> {
                       // Button: Analyze Password
                       Center(
                         child: SizedBox(
-                          width: 220,
                           height: 48,
-                          child: ElevatedButton.icon(
+                          child: ElevatedButton(
                             onPressed: _isLoading ? null : _analyze,
-                            icon: _isLoading
-                                ? const SizedBox.shrink()
-                                : const Icon(Icons.search_rounded, size: 20),
-                            label: _isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                                  )
-                                : const Text(
-                                    "Analyze Password",
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
                             style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(220, 48),
                               backgroundColor: const Color(0xFFCA8A04), // bg-yellow-600 (color as before)
                               foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 4,
                             ),
+                            child: _isLoading
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                      ),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        "Analyzing Password...",
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.search_rounded, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Analyze Password",
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ),
                       ),

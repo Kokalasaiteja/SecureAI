@@ -14,6 +14,10 @@ venv310/
 
 # Environment configurations
 .env
+.env.*
+!.env.example
+*.env
+SecureAI_Web/.env
 
 # Django Run Assets & Output Visualizations
 db.sqlite3
@@ -38,6 +42,7 @@ SecureAI_Web/staticfiles/
 # Workspace Preferences
 .vscode/
 .idea/
+scratch/
 *.suo
 *.ntvs*
 .DS_Store

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../models/audit_presentation.dart';
 import '../widgets/copyright_footer.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
 import '../services/api_service.dart';
+import '../services/session_cache.dart';
 import '../widgets/secure_ai_app_bar.dart';
 
 class SpamDetectorScreen extends StatefulWidget {
@@ -14,9 +16,52 @@ class SpamDetectorScreen extends StatefulWidget {
 }
 
 class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
-  final _messageController = TextEditingController();
+  late final TextEditingController _messageController;
   bool _isLoading = false;
   Map<String, dynamic>? _result;
+  String? _lastAnalyzedText;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController = TextEditingController(text: SessionCache.smsInput ?? '');
+    _result = SessionCache.smsResult;
+    _isLoading = SessionCache.smsLoading;
+    _lastAnalyzedText = SessionCache.smsInput;
+
+    // If an analysis was initiated and running in background, reattach to its completion:
+    if (SessionCache.smsFuture != null && (_result == null || SessionCache.smsLoading)) {
+      SessionCache.smsFuture!.then((res) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _result = res;
+          });
+        }
+      });
+    }
+
+    _messageController.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    final text = _messageController.text;
+    SessionCache.smsInput = text;
+    // Dismiss and clear result only as soon as user changes or edits input away from analyzed text
+    if (_result != null && text.trim() != (_lastAnalyzedText ?? '').trim()) {
+      setState(() {
+        _result = null;
+      });
+      SessionCache.smsResult = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.removeListener(_onInputChanged);
+    _messageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _analyzeMessage() async {
     final msg = _messageController.text.trim();
@@ -25,15 +70,24 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
     setState(() {
       _isLoading = true;
       _result = null;
+      _lastAnalyzedText = msg;
     });
 
-    final res = await ApiService.detectSpam(msg);
+    final future = SessionCache.startSmsAnalysis(msg);
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _result = res;
-    });
+    try {
+      final res = await future;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _result = res;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -46,6 +100,12 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
       RegExp(r'^(?:(?:classification|result|verdict|status)\s*[:\-\—]\s*)?(?:ham|spam)\s*[:\-\—\.\,]\s*(?:explanation\s*[:\-\—]\s*)?|^(?:explanation\s*[:\-\—]\s*)', caseSensitive: false),
       '',
     ).trim();
+
+    final presentation = AuditPresentation.computeSmsPresentation(_result);
+    final bool isSpam = presentation.isPhishingOrSpam;
+    final Color statusColor = presentation.statusColor;
+    final IconData statusIcon = presentation.statusIcon;
+    final String statusSubtitle = presentation.statusSubtitle;
 
     return Scaffold(
       drawer: const AppDrawer(currentRoute: '/detect_spam'),
@@ -149,10 +209,28 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
                         elevation: 4,
                       ),
                       child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.2,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  "Checking SMS...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             )
                           : const Text(
                               "Check",
@@ -204,10 +282,10 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xF0111827), // bg-gray-900 bg-opacity-90
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF374151)), // border-gray-700
+                        border: Border.all(color: statusColor, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
+                            color: statusColor.withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -216,37 +294,53 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(fontSize: 16, color: Colors.white),
-                              children: [
-                                const TextSpan(
-                                  text: "📌 Result: ",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              Icon(statusIcon, color: statusColor, size: 22),
+                              const SizedBox(width: 8),
+                              RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                                  children: [
+                                    const TextSpan(
+                                      text: "📌 Result: ",
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    TextSpan(
+                                      text: resultText,
+                                      style: TextStyle(
+                                        color: isSpam ? const Color(0xFFEF4444) : const Color(0xFFFDE047),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                TextSpan(
-                                  text: resultText,
-                                  style: const TextStyle(
-                                    color: Color(0xFFFDE047), // text-yellow-300
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          if (statusSubtitle.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              statusSubtitle,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Findings & Explanation:",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.8,
+                              color: Color(0xFF9CA3AF),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(fontSize: 13, color: Color(0xFFD1D5DB), height: 1.5),
-                              children: [
-                                const TextSpan(
-                                  text: "Explanation: ",
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                                TextSpan(text: explanationText),
-                              ],
-                            ),
-                          ),
+                          const SizedBox(height: 8),
+                          _buildSmsExplanation(explanationText),
                         ],
                       ),
                     ),
@@ -261,5 +355,154 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
     ),
   ),
 );
+  }
+
+  Widget _buildSmsExplanation(String rawText) {
+    if (rawText.trim().isEmpty) {
+      return const Text(
+        "No detailed explanation is available.",
+        style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+      );
+    }
+
+    final rawLines = rawText.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final List<Widget> items = [];
+
+    for (final rawLine in rawLines) {
+      String line = rawLine;
+      if (line.startsWith('* ') || line.startsWith('- ') || line.startsWith('• ')) {
+        line = line.substring(2).trim();
+      }
+
+      // Separate Link Verification into its own dedicated prominent card
+      final isLink = RegExp(r'^Link Verification\s*:', caseSensitive: false).hasMatch(line);
+      if (isLink) {
+        final bodyText = line.replaceFirst(RegExp(r'^Link Verification\s*:\s*', caseSensitive: false), '').trim();
+        items.add(
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F2922),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF14B8A6), width: 1.2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.link_rounded, color: Color(0xFF2DD4BF), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      "LINK VERIFICATION",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                        color: Color(0xFF2DD4BF),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  bodyText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFE5E7EB),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Handle other findings / bullet points with Heading: Body
+      final colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.toLowerCase().startsWith('http://') && !line.toLowerCase().startsWith('https://')) {
+        final heading = line.substring(0, colonIndex).replaceAll('*', '').trim();
+        final body = line.substring(colonIndex + 1).replaceAll('*', '').trim();
+
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6, right: 8),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF10B981),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF10B981),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      )
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, color: Color(0xFFD1D5DB), height: 1.45),
+                      children: [
+                        TextSpan(
+                          text: '$heading: ',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        TextSpan(text: body),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6, right: 8),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    line.replaceAll('**', '').replaceAll('*', ''),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFD1D5DB),
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items,
+    );
   }
 }

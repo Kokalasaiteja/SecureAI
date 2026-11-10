@@ -247,7 +247,7 @@
         <i class="fab fa-android w-5 text-center text-teal-400"></i> <span>Download Android App</span>
       </a>
       <!-- User Logout (Mobile App Drawer Style matching Image 3) -->
-      <a href="{% url 'user_logout' %}" class="flex items-center space-x-3 text-base font-semibold text-red-400 hover:text-red-300 p-3 rounded-xl transition-all duration-300 mt-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.25)]">
+      <a href="{% url 'user_logout' %}" onclick="sessionStorage.clear()" class="flex items-center space-x-3 text-base font-semibold text-red-400 hover:text-red-300 p-3 rounded-xl transition-all duration-300 mt-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.25)]">
         <i class="fas fa-sign-out-alt w-5 text-center text-red-400 text-lg"></i>
         <span>Logout</span>
       </a>
@@ -317,6 +317,87 @@
             "retina_detect": true
           });
       }
+    });
+
+    // Cross-tab Background Task Manager
+    window.SecureAIBgRunner = {
+      dispatch: async function(featureKey, endpoint, formData, onComplete) {
+        sessionStorage.setItem('secureai_' + featureKey + '_status', 'loading');
+
+        const payloadObj = {};
+        for (const [k, v] of formData.entries()) {
+          if (typeof v === 'string') payloadObj[k] = v;
+        }
+        sessionStorage.setItem('secureai_pending_' + featureKey, JSON.stringify({
+          featureKey: featureKey,
+          endpoint: endpoint,
+          data: payloadObj,
+          timestamp: Date.now()
+        }));
+
+        try {
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': formData.get('csrfmiddlewaretoken') || ''
+            },
+            body: formData
+          });
+
+          const json = await resp.json();
+          sessionStorage.removeItem('secureai_pending_' + featureKey);
+
+          if (resp.ok && json.success !== false) {
+            sessionStorage.setItem('secureai_' + featureKey + '_status', 'done');
+            sessionStorage.setItem('secureai_' + featureKey + '_result_json', JSON.stringify(json));
+            sessionStorage.removeItem('secureai_' + featureKey + '_error');
+            window.dispatchEvent(new CustomEvent('secureai_task_complete', { detail: { key: featureKey, err: null, res: json } }));
+            if (onComplete) onComplete(null, json);
+          } else {
+            sessionStorage.setItem('secureai_' + featureKey + '_status', 'error');
+            const errMsg = json.message || json.error || 'Analysis failed.';
+            sessionStorage.setItem('secureai_' + featureKey + '_error', errMsg);
+            sessionStorage.removeItem('secureai_' + featureKey + '_result_json');
+            window.dispatchEvent(new CustomEvent('secureai_task_complete', { detail: { key: featureKey, err: errMsg, res: null } }));
+            if (onComplete) onComplete(errMsg, null);
+          }
+        } catch (err) {
+          sessionStorage.removeItem('secureai_pending_' + featureKey);
+          sessionStorage.setItem('secureai_' + featureKey + '_status', 'error');
+          const safeErr = "AI security service request interrupted or timed out. Please retry.";
+          sessionStorage.setItem('secureai_' + featureKey + '_error', safeErr);
+          window.dispatchEvent(new CustomEvent('secureai_task_complete', { detail: { key: featureKey, err: safeErr, res: null } }));
+          if (onComplete) onComplete(safeErr, null);
+        }
+      },
+
+      resumePendingTasks: function() {
+        ['sms', 'email', 'password', 'anomaly', 'qr'].forEach(function(key) {
+          const raw = sessionStorage.getItem('secureai_pending_' + key);
+          if (!raw) return;
+          try {
+            const task = JSON.parse(raw);
+            if (Date.now() - task.timestamp > 120000) {
+              sessionStorage.removeItem('secureai_pending_' + key);
+              sessionStorage.removeItem('secureai_' + key + '_status');
+              return;
+            }
+            const fd = new FormData();
+            for (const [k, v] of Object.entries(task.data)) {
+              fd.append(k, v);
+            }
+            window.SecureAIBgRunner.dispatch(task.featureKey, task.endpoint, fd);
+          } catch (_) {
+            sessionStorage.removeItem('secureai_pending_' + key);
+          }
+        });
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      window.SecureAIBgRunner.resumePendingTasks();
     });
   </script>
 {% include 'apk_download_modal.html' %}

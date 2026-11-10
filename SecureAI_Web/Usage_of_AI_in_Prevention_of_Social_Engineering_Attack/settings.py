@@ -30,21 +30,17 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 env_allowed_hosts = os.environ.get('ALLOWED_HOSTS')
 if env_allowed_hosts:
     ALLOWED_HOSTS = [h.strip() for h in env_allowed_hosts.split(',') if h.strip()]
-    for _dh in ['localhost', '127.0.0.1', '.onrender.com', 'secureai-7wgj.onrender.com']:
+    for _dh in ['.onrender.com', 'secureai-7wgj.onrender.com']:
         if _dh not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(_dh)
 else:
     ALLOWED_HOSTS = [
         '*',
-        'localhost',
-        '127.0.0.1',
         '.onrender.com',
         'secureai-7wgj.onrender.com',
     ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
     'https://*.onrender.com',
     'https://secureai-7wgj.onrender.com',
 ]
@@ -121,6 +117,23 @@ DATABASES = {
         default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
     )
 }
+
+# Graceful local fallback if PostgreSQL driver (psycopg2/psycopg) is not installed in local environment
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+    try:
+        import psycopg2  # noqa: F401
+    except ImportError:
+        try:
+            import psycopg  # noqa: F401
+        except ImportError:
+            import warnings
+            warnings.warn(
+                "Neither psycopg2 nor psycopg is installed locally. Falling back to SQLite for local development."
+            )
+            DATABASES['default'] = {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
 
 
 # Password validation

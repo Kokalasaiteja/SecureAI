@@ -22,7 +22,7 @@
         </div>
         {% endif %}
 
-        <form method="post" class="space-y-4 sm:space-y-6">
+        <form id="email-form" method="post" class="space-y-4 sm:space-y-6">
             {% csrf_token %}
             <div>
                 <label for="email_text" class="block text-xs sm:text-sm font-medium text-gray-300 mb-2">Suspicious Email Content</label>
@@ -32,15 +32,16 @@
             </div>
 
             <div class="text-center">
-                <button type="submit" class="btn-3d bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg inline-flex items-center justify-center space-x-2 shadow-lg transform hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+                <button type="submit" id="analyze-email-btn" class="btn-3d bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base sm:text-lg inline-flex items-center justify-center space-x-2 shadow-lg transform hover:scale-105 transition-all duration-300 w-full sm:w-auto">
                     <i class="fas fa-robot text-lg sm:text-xl"></i>
                     <span>Analyze Email</span>
                 </button>
             </div>
         </form>
 
+        <div id="email-report-wrapper">
         {% if result %}
-        <div class="mt-8 sm:mt-12 animate-fade-in border-t border-gray-700 pt-6 sm:pt-8">
+        <div id="email-report-container" class="mt-8 sm:mt-12 animate-fade-in border-t border-gray-700 pt-6 sm:pt-8">
             <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">AI Analysis Report</h3>
             
             <div class="bg-gray-900 rounded-xl p-5 sm:p-8 mb-6 sm:mb-8 text-center shadow-2xl border-4 
@@ -69,75 +70,221 @@
                 </div>
                 <div id="raw-explanation" class="hidden">{{ explanation }}</div>
             </div>
+        </div>
+        {% endif %}
+        </div>
 
-            <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const rawElem = document.getElementById('raw-explanation');
-                const targetElem = document.getElementById('formatted-explanation');
-                if (!rawElem || !targetElem) return;
-
-                const rawText = rawElem.textContent.trim();
-                if (!rawText) return;
+        <script>
+            (function() {
+                const emailInput = document.getElementById('email_text');
+                const form = document.getElementById('email-form');
+                const btn = document.getElementById('analyze-email-btn');
+                const wrapper = document.getElementById('email-report-wrapper');
 
                 function formatMarkdown(text) {
                     if (!text) return '';
-                    // 1. Format code blocks or inline backticks `code`
                     let formatted = text.replace(/`([^`]+)`/g, '<code class="bg-gray-950/80 text-teal-300 px-1.5 py-0.5 rounded text-xs sm:text-sm font-mono break-all border border-gray-700/60">$1</code>');
-                    // 2. Format double-asterisks **bold** as bold highlighted text
                     formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
-                    // 3. Format single-asterisk *word* as bold highlighted text (fixes *never* issue)
                     formatted = formatted.replace(/\*([^\*\s][^\*]*?[^\*\s]|[^\*\s])\*/g, '<strong class="text-white font-bold">$1</strong>');
                     return formatted;
                 }
 
-                const lines = rawText.split('\n');
-                let outputHtml = '';
+                function renderExplanationHtml(rawText) {
+                    if (!rawText) return '<p class="text-gray-300">No explanation provided.</p>';
+                    const lines = rawText.split('\n');
+                    let outputHtml = '';
+                    for (let line of lines) {
+                        let trimmed = line.trim();
+                        if (!trimmed) continue;
 
-                for (let line of lines) {
-                    let trimmed = line.trim();
-                    if (!trimmed) continue;
+                        // Separate Link Verification into a dedicated prominent point/card
+                        const isLinkLine = /^[\*\-•]?\s*Link Verification\s*:/i.test(trimmed);
+                        if (isLinkLine) {
+                            const bodyText = trimmed.replace(/^[\*\-•]?\s*Link Verification\s*:\s*/i, '').trim();
+                            let body = formatMarkdown(bodyText);
+                            outputHtml += `
+                                <div class="mb-4 p-4 rounded-xl bg-blue-950/40 border-2 border-blue-500/50 shadow-md shadow-blue-950/40 flex items-start space-x-3.5 transform hover:border-blue-400 transition-all">
+                                    <div class="p-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 shrink-0 mt-0.5">
+                                        <i class="fas fa-link text-base sm:text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-2 mb-1">
+                                            <span class="text-xs font-extrabold uppercase tracking-wider text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-400/30">Link Verification</span>
+                                        </div>
+                                        <p class="text-sm sm:text-base text-gray-200 leading-relaxed break-words [overflow-wrap:anywhere]">${body}</p>
+                                    </div>
+                                </div>
+                            `;
+                            continue;
+                        }
 
-                    // Match bullet point with bold prefix: "* **Heading:** text" or "**Heading:** text" or "* Heading: text"
-                    let bulletMatch = trimmed.match(/^[\*\-•]?\s*\*\*([^\*]+)\*\*\s*:?\s*(.*)$/);
-                    if (!bulletMatch) {
-                        bulletMatch = trimmed.match(/^[\*\-•]\s+([^:]+):\s*(.*)$/);
+                        let bulletMatch = trimmed.match(/^[\*\-•]?\s*([^:]+)\s*:\s*(.+)$/);
+                        if (trimmed.toLowerCase().startsWith('http://') || trimmed.toLowerCase().startsWith('https://')) {
+                            bulletMatch = null;
+                        }
+                        if (bulletMatch) {
+                            const heading = bulletMatch[1].replace(/[:\*]/g, '').trim();
+                            let body = formatMarkdown(bulletMatch[2].trim());
+                            outputHtml += `
+                                <div class="flex items-start space-x-3 p-3.5 rounded-lg bg-gray-800/60 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition overflow-hidden">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/50"></span>
+                                    <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">
+                                        <strong class="text-white font-bold tracking-wide text-sm sm:text-base">${heading}:</strong> ${body}
+                                    </div>
+                                </div>
+                            `;
+                        } else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
+                            let cleanText = trimmed.replace(/^[\*\-•]\s*/, '').trim();
+                            cleanText = formatMarkdown(cleanText);
+                            outputHtml += `
+                                <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/40 border border-gray-700/40 overflow-hidden">
+                                    <span class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></span>
+                                    <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</div>
+                                </div>
+                            `;
+                        } else {
+                            let cleanText = formatMarkdown(trimmed);
+                            outputHtml += `<p class="text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</p>`;
+                        }
+                    }
+                    return outputHtml;
+                }
+
+                function renderEmailResult(res) {
+                    const cls = res.result || res.classification || 'Safe';
+                    const lower = cls.toLowerCase();
+                    let borderColor = 'border-green-500 shadow-green-500/20';
+                    let textColor = 'text-green-500';
+                    let icon = 'fas fa-shield-check';
+
+                    if (lower.includes('phish')) {
+                        borderColor = 'border-red-500 shadow-red-500/20';
+                        textColor = 'text-red-500';
+                        icon = 'fas fa-skull-crossbones';
+                    } else if (lower.includes('suspicious')) {
+                        borderColor = 'border-yellow-500 shadow-yellow-500/20';
+                        textColor = 'text-yellow-500';
+                        icon = 'fas fa-exclamation-triangle';
                     }
 
-                    if (bulletMatch) {
-                        const heading = bulletMatch[1].replace(/[:\*]/g, '').trim();
-                        let body = formatMarkdown(bulletMatch[2].trim());
+                    const expHtml = renderExplanationHtml(res.explanation || res.body || '');
 
-                        outputHtml += `
-                            <div class="flex items-start space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/60 shadow-sm hover:bg-gray-800/80 transition overflow-hidden">
-                                <span class="w-2.5 h-2.5 rounded-full bg-blue-400 mt-1.5 shrink-0 shadow-sm shadow-blue-400/50"></span>
-                                <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">
-                                    <strong class="text-white font-bold tracking-wide">${heading}:</strong> ${body}
+                    const errBox = document.getElementById('email-error-box');
+                    if (errBox) errBox.remove();
+
+                    if (wrapper) {
+                        wrapper.innerHTML = `
+                            <div id="email-report-container" class="mt-8 sm:mt-12 animate-fade-in border-t border-gray-700 pt-6 sm:pt-8">
+                                <h3 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">AI Analysis Report</h3>
+                                <div class="bg-gray-900 rounded-xl p-5 sm:p-8 mb-6 sm:mb-8 text-center shadow-2xl border-4 ${borderColor} transform hover:-translate-y-1 transition-all duration-300">
+                                    <h4 class="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-3 uppercase tracking-wider font-semibold">Classification</h4>
+                                    <p class="text-3xl sm:text-5xl font-extrabold tracking-tight flex items-center justify-center flex-wrap gap-2 ${textColor}">
+                                        <i class="${icon}"></i>
+                                        <span>${cls}</span>
+                                    </p>
+                                </div>
+                                <div class="bg-gray-900 rounded-xl p-5 sm:p-8 shadow-xl border-l-4 border-blue-500 transform hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                                    <h4 class="text-lg sm:text-xl font-bold text-blue-400 mb-4 flex items-center">
+                                        <i class="fas fa-shield-alt mr-2 sm:mr-3 text-xl sm:text-2xl"></i> Explanation & Red Flags
+                                    </h4>
+                                    <div id="formatted-explanation" class="space-y-3.5">${expHtml}</div>
                                 </div>
                             </div>
                         `;
-                    } else if (trimmed.startsWith('*') || trimmed.startsWith('-') || trimmed.startsWith('•')) {
-                        let cleanText = trimmed.replace(/^[\*\-•]\s*/, '').trim();
-                        cleanText = formatMarkdown(cleanText);
-
-                        outputHtml += `
-                            <div class="flex items-start space-x-3 p-2.5 rounded-lg bg-gray-800/30 border border-gray-700/40 overflow-hidden">
-                                <span class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></span>
-                                <div class="flex-1 min-w-0 text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</div>
-                            </div>
-                        `;
-                    } else {
-                        let cleanText = formatMarkdown(trimmed);
-                        outputHtml += `
-                            <p class="text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</p>
-                        `;
+                        sessionStorage.setItem('email_result_html', wrapper.innerHTML);
                     }
                 }
 
-                targetElem.innerHTML = outputHtml;
-            });
-            </script>
-        </div>
-        {% endif %}
+                function renderEmailError(errMsg) {
+                    if (wrapper) wrapper.innerHTML = '';
+                    const existingErr = document.getElementById('email-error-box');
+                    if (existingErr) existingErr.remove();
+
+                    const errBox = document.createElement('div');
+                    errBox.id = 'email-error-box';
+                    errBox.className = 'mb-6 p-4 bg-red-600 bg-opacity-80 rounded-xl text-white text-center shadow-md animate-fade-in text-xs sm:text-sm';
+                    errBox.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i><span>${errMsg}</span>`;
+                    form.insertAdjacentElement('beforebegin', errBox);
+                }
+
+                // Restore input
+                if (emailInput) {
+                    const savedInput = sessionStorage.getItem('email_input');
+                    if (savedInput && !emailInput.value) {
+                        emailInput.value = savedInput;
+                    }
+                    emailInput.addEventListener('input', function() {
+                        sessionStorage.setItem('email_input', this.value);
+                    });
+                }
+
+                // Restore result or reattach to in-flight loading task
+                const currentStatus = sessionStorage.getItem('secureai_email_status');
+                if (currentStatus === 'loading') {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-80', 'cursor-not-allowed');
+                        btn.innerHTML = `<i class="fas fa-circle-notch fa-spin text-base sm:text-lg"></i><span>Scanning Email...</span>`;
+                    }
+                } else {
+                    const savedResult = sessionStorage.getItem('email_result_html');
+                    if (savedResult && wrapper && !wrapper.innerHTML.trim()) {
+                        wrapper.innerHTML = savedResult;
+                    } else {
+                        // Format server-rendered raw explanation if present
+                        const rawElem = document.getElementById('raw-explanation');
+                        const targetElem = document.getElementById('formatted-explanation');
+                        if (rawElem && targetElem && rawElem.textContent.trim()) {
+                            targetElem.innerHTML = renderExplanationHtml(rawElem.textContent.trim());
+                        }
+                    }
+                }
+
+                // Listen for background completion event from SecureAIBgRunner
+                window.addEventListener('secureai_task_complete', function(e) {
+                    if (e.detail && e.detail.key === 'email') {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                            btn.innerHTML = `<i class="fas fa-robot text-lg sm:text-xl"></i><span>Analyze Email</span>`;
+                        }
+                        if (e.detail.err) {
+                            renderEmailError(e.detail.err);
+                        } else if (e.detail.res) {
+                            renderEmailResult(e.detail.res);
+                        }
+                    }
+                });
+
+                // Form submission with background execution
+                form?.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const text = emailInput.value.trim();
+                    if (!text) return;
+
+                    sessionStorage.setItem('email_input', text);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-80', 'cursor-not-allowed');
+                        btn.innerHTML = `<i class="fas fa-circle-notch fa-spin text-base sm:text-lg"></i><span>Scanning Email...</span>`;
+                    }
+
+                    const fd = new FormData(form);
+                    window.SecureAIBgRunner.dispatch('email', form.action || window.location.pathname, fd, function(err, json) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                            btn.innerHTML = `<i class="fas fa-robot text-lg sm:text-xl"></i><span>Analyze Email</span>`;
+                        }
+                        if (err) {
+                            renderEmailError(err);
+                        } else if (json) {
+                            renderEmailResult(json);
+                        }
+                    });
+                });
+            })();
+        </script>
     </section>
 </div>
 {% endblock %}

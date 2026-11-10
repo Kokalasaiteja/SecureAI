@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'session_cache.dart';
 
 class ServerWakeStatus {
   final bool isWaking;
@@ -12,10 +13,8 @@ class ServerWakeStatus {
 }
 
 class ApiService {
-  // Primary production API endpoint deployed on Render
+  // Production API endpoint deployed on Render
   static const String liveBaseUrl = "https://secureai-7wgj.onrender.com";
-  // Secondary local development endpoint for Android emulator (10.0.2.2 maps to host 127.0.0.1)
-  static const String localBaseUrl = "http://10.0.2.2:8000";
 
   static String _activeBaseUrl = liveBaseUrl;
   static final Map<String, String> _cookies = {};
@@ -188,23 +187,11 @@ class ApiService {
     if (savedUrl != null && savedUrl.isNotEmpty) {
       _activeBaseUrl = savedUrl;
     } else {
-      // Intelligently probe local emulator bridge first; if live, use local for lightning performance
-      try {
-        final probe = await http.get(Uri.parse('$localBaseUrl/')).timeout(const Duration(milliseconds: 700));
-        if (probe.statusCode == 200 || probe.statusCode == 302) {
-          _activeBaseUrl = localBaseUrl;
-        } else {
-          _activeBaseUrl = liveBaseUrl;
-        }
-      } catch (_) {
-        _activeBaseUrl = liveBaseUrl;
-      }
+      _activeBaseUrl = liveBaseUrl;
     }
 
-    // Early background wake probe if pointing to Render
-    if (_activeBaseUrl == liveBaseUrl) {
-      unawaited(http.head(Uri.parse('$_activeBaseUrl/')).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('', 503)));
-    }
+    // Early background wake probe to Render
+    unawaited(http.head(Uri.parse('$_activeBaseUrl/')).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('', 503)));
   }
 
   static void _extractCookies(http.Response response) {
@@ -559,6 +546,7 @@ class ApiService {
     _cookies.clear();
     _csrfToken = null;
     _currentUser = null;
+    SessionCache.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session_id');
     await prefs.remove('session_cookie');

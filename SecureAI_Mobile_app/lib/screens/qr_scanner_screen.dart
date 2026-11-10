@@ -8,7 +8,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/constellation_background.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/secure_ai_app_bar.dart';
-import '../services/api_service.dart';
+import '../services/session_cache.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -29,7 +29,41 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   void initState() {
     super.initState();
+    _restoreFromSession();
     _retrieveLostData();
+  }
+
+  void _restoreFromSession() {
+    if (SessionCache.qrBytes != null) {
+      _selectedBytes = Uint8List.fromList(SessionCache.qrBytes!);
+      _selectedFileName = SessionCache.qrFileName;
+      if (SessionCache.qrFilePath != null) {
+        _selectedFile = File(SessionCache.qrFilePath!);
+      }
+    }
+    _scanResult = SessionCache.qrResult;
+    _errorMessage = SessionCache.qrErrorMessage;
+    _isScanning = SessionCache.qrLoading;
+
+    if (SessionCache.qrFuture != null && (_scanResult == null || SessionCache.qrLoading)) {
+      SessionCache.qrFuture!.then((res) {
+        if (mounted) {
+          setState(() {
+            _isScanning = false;
+            if (res['success'] == true) {
+              _scanResult = {
+                'url': res['url']?.toString() ?? 'None',
+                'classification': res['classification']?.toString() ?? '❌ QR Code not detected.',
+              };
+              _errorMessage = null;
+            } else {
+              _scanResult = null;
+              _errorMessage = res['message']?.toString() ?? "QR scanning failed. Please try a clearer QR image.";
+            }
+          });
+        }
+      });
+    }
   }
 
   Future<void> _retrieveLostData() async {
@@ -74,7 +108,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           _selectedBytes = bytes;
           _selectedFileName = picked.name;
           _errorMessage = null;
+          _scanResult = null;
         });
+        SessionCache.qrBytes = bytes;
+        SessionCache.qrFileName = picked.name;
+        SessionCache.qrFilePath = picked.path;
+        SessionCache.qrResult = null;
+        SessionCache.qrErrorMessage = null;
       }
     } catch (e) {
       final prefs = await SharedPreferences.getInstance();
@@ -103,34 +143,46 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       _scanResult = null;
     });
 
-    final res = await ApiService.scanQrImage(
+    final future = SessionCache.startQrScan(
       filePath: _selectedFile?.path,
       fileBytes: _selectedBytes,
       fileName: _selectedFileName ?? 'qr_image.png',
     );
 
-    if (!mounted) return;
-
-    if (res['success'] == true) {
-      final String url = res['url']?.toString() ?? 'None';
-      final String classification = res['classification']?.toString() ?? '❌ QR Code not detected.';
-
+    try {
+      final res = await future;
+      if (!mounted) return;
       setState(() {
         _isScanning = false;
-        _scanResult = {
-          'url': url,
-          'classification': classification,
-        };
+        if (res['success'] == true) {
+          final String url = res['url']?.toString() ?? 'None';
+          final String classification = res['classification']?.toString() ?? '❌ QR Code not detected.';
+          _scanResult = {
+            'url': url,
+            'classification': classification,
+          };
+        } else {
+          _errorMessage = res['message']?.toString() ?? "QR scanning failed. Please try a clearer QR image.";
+        }
       });
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isScanning = false;
-        _errorMessage = res['message']?.toString() ?? "QR scanning failed. Please try a clearer QR image.";
+        _errorMessage = "QR scanning failed: $e";
       });
     }
   }
 
   void _resetScanner() {
+    SessionCache.qrBytes = null;
+    SessionCache.qrFileName = null;
+    SessionCache.qrFilePath = null;
+    SessionCache.qrResult = null;
+    SessionCache.qrErrorMessage = null;
+    SessionCache.qrLoading = false;
+    SessionCache.qrFuture = null;
+
     setState(() {
       _scanResult = null;
       _selectedFile = null;
@@ -246,7 +298,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _pickImage(ImageSource.camera),
+                    onTap: _isScanning ? null : () => _pickImage(ImageSource.camera),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
@@ -288,7 +340,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _pickImage(ImageSource.gallery),
+                    onTap: _isScanning ? null : () => _pickImage(ImageSource.gallery),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
@@ -352,14 +404,15 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      TextButton.icon(
-                        onPressed: _resetScanner,
-                        icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFFF87171)),
-                        label: const Text(
-                          "Remove",
-                          style: TextStyle(color: Color(0xFFF87171), fontSize: 12),
+                      if (!_isScanning)
+                        TextButton.icon(
+                          onPressed: _resetScanner,
+                          icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFFF87171)),
+                          label: const Text(
+                            "Retake",
+                            style: TextStyle(color: Color(0xFFF87171), fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -397,10 +450,29 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 elevation: 4,
               ),
               child: _isScanning
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.2,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          "Scanning & Classifying QR Code...",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     )
                   : const Text(
                       "Scan & Classify",

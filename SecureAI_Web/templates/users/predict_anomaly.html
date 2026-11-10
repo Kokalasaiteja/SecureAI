@@ -9,12 +9,12 @@
       <p class="text-xs sm:text-sm text-gray-200 mt-1">Use AI to detect suspicious login patterns.</p>
     </div>
 
-    <form method="POST" class="space-y-4 sm:space-y-5">
+    <form method="POST" id="predict-form" class="space-y-4 sm:space-y-5">
       {% csrf_token %}
 
       <div>
         <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">Login Hour (0 - 23):</label>
-        <input type="number" name="login_hour" required min="0" max="23"
+        <input type="number" name="login_hour" id="login_hour" required min="0" max="23"
           value="{{ login_hour|default:'' }}"
           placeholder="e.g. 14"
           class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">
@@ -22,25 +22,121 @@
 
       <div>
         <label class="block mb-1 text-xs sm:text-sm font-semibold text-white">IP Score (0.0 - 1.0):</label>
-        <input type="text" name="ip_score" required pattern="^0(\.\d+)?|1(\.0+)?$"
+        <input type="text" name="ip_score" id="ip_score" required pattern="^0(\.\d+)?|1(\.0+)?$"
           value="{{ ip_score|default:'' }}"
           placeholder="e.g. 0.85"
           class="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white text-sm sm:text-base focus:outline-none focus:border-teal-400">
       </div>
 
       <div class="text-center pt-2">
-        <button type="submit"
-          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold transition duration-300 shadow-md">
-          Predict
+        <button type="submit" id="predict-btn"
+          class="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-xl font-semibold inline-flex items-center justify-center space-x-2 transition duration-300 shadow-md">
+          <i class="fas fa-brain"></i>
+          <span>Predict</span>
         </button>
       </div>
     </form>
 
+    <div id="anomaly-prediction-container">
     {% if prediction %}
-    <div class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border border-gray-700 shadow-lg text-xs sm:text-sm">
+    <div class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border border-gray-700 shadow-lg text-xs sm:text-sm animate-fade-in">
       <h3 class="text-base sm:text-xl font-semibold">🔍 Predicted Behavior: <span class="text-yellow-300 font-bold">{{ prediction }}</span></h3>
     </div>
     {% endif %}
+    </div>
   </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const hourInput = document.getElementById('login_hour');
+        const scoreInput = document.getElementById('ip_score');
+        const predContainer = document.getElementById('anomaly-prediction-container');
+        const form = document.getElementById('predict-form');
+        const btn = document.getElementById('predict-btn');
+
+        function renderAnomalyResult(res) {
+            if (!predContainer) return;
+            const pred = res.prediction || 'Normal';
+            predContainer.innerHTML = `
+                <div class="mt-6 bg-gray-900 bg-opacity-90 p-4 sm:p-5 rounded-xl text-white border border-gray-700 shadow-lg text-xs sm:text-sm animate-fade-in">
+                    <h3 class="text-base sm:text-xl font-semibold">🔍 Predicted Behavior: <span class="text-yellow-300 font-bold">${pred}</span></h3>
+                </div>
+            `;
+            sessionStorage.setItem('secureai_anomaly_prediction', predContainer.innerHTML);
+        }
+
+        if (hourInput) {
+            const savedHour = sessionStorage.getItem('secureai_anomaly_hour');
+            if (savedHour && !hourInput.value) {
+                hourInput.value = savedHour;
+            }
+            hourInput.addEventListener('input', function() {
+                sessionStorage.setItem('secureai_anomaly_hour', this.value);
+            });
+        }
+
+        if (scoreInput) {
+            const savedScore = sessionStorage.getItem('secureai_anomaly_score');
+            if (savedScore && !scoreInput.value) {
+                scoreInput.value = savedScore;
+            }
+            scoreInput.addEventListener('input', function() {
+                sessionStorage.setItem('secureai_anomaly_score', this.value);
+            });
+        }
+
+        const currentStatus = sessionStorage.getItem('secureai_anomaly_status');
+        if (currentStatus === 'loading') {
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-sm sm:text-base mr-2"></i><span>Predicting...</span>';
+            }
+        } else {
+            const cachedPred = sessionStorage.getItem('secureai_anomaly_prediction');
+            if (cachedPred && predContainer && !predContainer.innerHTML.trim()) {
+                predContainer.innerHTML = cachedPred;
+            }
+        }
+
+        window.addEventListener('secureai_task_complete', function(e) {
+            if (e.detail && e.detail.key === 'anomaly') {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = '<i class="fas fa-brain"></i><span>Predict</span>';
+                }
+                if (e.detail.res && e.detail.res.prediction) {
+                    renderAnomalyResult(e.detail.res);
+                }
+            }
+        });
+
+        if (form && btn) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const h = hourInput.value;
+                const s = scoreInput.value;
+                if (!h || !s) return;
+
+                sessionStorage.setItem('secureai_anomaly_hour', h);
+                sessionStorage.setItem('secureai_anomaly_score', s);
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-sm sm:text-base mr-2"></i><span>Predicting...</span>';
+
+                const fd = new FormData(form);
+                window.SecureAIBgRunner.dispatch('anomaly', form.action || window.location.pathname, fd, function(err, json) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = '<i class="fas fa-brain"></i><span>Predict</span>';
+                    if (json && json.prediction) {
+                        renderAnomalyResult(json);
+                    }
+                });
+            });
+        }
+    });
+</script>
 {% endblock %}
