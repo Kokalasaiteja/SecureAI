@@ -856,11 +856,12 @@ def get_env_value(key: str):
     return None
 
 
-def get_google_llm(**kwargs):
+def get_google_llm(model=None, **kwargs):
     api_key = get_env_value("GOOGLE_API_KEY")
     if not api_key:
         raise EnvironmentError("GOOGLE_API_KEY environment variable is missing")
-    return ChatGoogleGenerativeAI(model="models/gemini-2.5-flash", max_retries=1, timeout=10.0, **kwargs)
+    selected_model = model or os.environ.get("GEMINI_MODEL", "models/gemini-1.5-flash")
+    return ChatGoogleGenerativeAI(model=selected_model, max_retries=2, timeout=10.0, **kwargs)
 
 
 def get_spam_chain():
@@ -980,7 +981,7 @@ def parse_spam_response(response_text: str):
 
 def sanitize_ai_error(exc_or_str) -> str:
     err_str = str(exc_or_str or '')
-    if 'Google GenAI Rate limit' in err_str:
+    if any(k in err_str for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
         return err_str
     if 'RESOURCE_EXHAUSTED' in err_str or '429' in err_str or 'quota' in err_str.lower():
         return "AI analysis service is temporarily busy (API quota reached). Please wait a moment and try again."
@@ -1032,6 +1033,10 @@ def detect_spam(request):
             }
         else:
             try:
+                # Decouple bracketed URLs like {https://forms.gle/xyz} so closing brackets aren't swallowed
+                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, analyze_sms_heuristics
+                message = sanitize_bracketed_urls(message)
+
                 # 1. URL Threat Audit under 5.0s monotonic deadline (Zero 500 errors)
                 try:
                     audit_batch = audit_all_urls(message, deadline_seconds=5.0)
@@ -1094,20 +1099,33 @@ def detect_spam(request):
                         result = cls or "Unknown"
                         explanation = exp
                         error = parse_err or "Ambiguous analysis response."
-                except EnvironmentError as exc:
-                    error = sanitize_ai_error(exc)
-                    result = None
                 except Exception as exc:
-                    error = sanitize_ai_error(exc)
-                    result = None
+                    err_msg = sanitize_ai_error(exc)
+                    h_cls, h_exp = analyze_sms_heuristics(message, audit_batch=audit_batch)
+                    if audit_batch is None or getattr(audit_batch, 'url_audit_timeout', False):
+                        error = err_msg
+                        result = 'Unknown'
+                        explanation = h_exp
+                    elif any(k in err_msg for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
+                        error = err_msg
+                        result = h_cls
+                        explanation = h_exp
+                    else:
+                        error = None
+                        result = h_cls
+                        explanation = h_exp
 
                 # 4. Enforce deterministic security policy: Differentiated URL verdict handling
                 threat_eval = classify_audit_batch_threat(audit_batch)
                 if threat_eval['has_threat']:
                     unsafe_url = threat_eval['primary_url'] or getattr(audit_batch, 'first_unsafe_url', None) or 'Unspecified URL'
-                    unsafe_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Active threat policy violation'
+                    raw_unsafe_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Active threat policy violation'
+                    unsafe_reason = clean_technical_error(raw_unsafe_reason)
                     result = 'Spam'
-                    prior_context = explanation or (f"Content analysis failed: {error}" if error else "No model explanation available.")
+                    if error and any(k in error for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
+                        prior_context = f"{explanation} Content analysis failed: {error}"
+                    else:
+                        prior_context = explanation or "High-risk spam signatures confirmed."
                     error = None
                     if threat_eval['is_confirmed_threat']:
                         explanation = (
@@ -1650,6 +1668,10 @@ def email_phishing_analyzer(request):
             }
         else:
             try:
+                # Decouple bracketed URLs like {https://forms.gle/xyz} so closing brackets aren't swallowed
+                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, analyze_email_heuristics
+                email_text = sanitize_bracketed_urls(email_text)
+
                 # 1. URL Threat Audit under 5.0s monotonic deadline (Zero 500 errors)
                 try:
                     audit_batch = audit_all_urls(email_text, deadline_seconds=5.0)
@@ -1791,16 +1813,34 @@ CRITICAL SECURITY INSTRUCTIONS:
                         is_phishing = False
                         error = f"Ambiguous classification from analysis model: '{classification}'" if classification else "Empty or unparseable response from analysis model."
                 except Exception as exc:
-                    error = sanitize_ai_error(exc)
-                    result = None
-                    is_phishing = False
+                    err_msg = sanitize_ai_error(exc)
+                    h_cls, h_exp = analyze_email_heuristics(email_text, audit_batch=audit_batch)
+                    if audit_batch is None or getattr(audit_batch, 'url_audit_timeout', False):
+                        error = err_msg
+                        result = 'Unknown'
+                        is_phishing = False
+                        explanation = h_exp
+                    elif any(k in err_msg for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
+                        error = err_msg
+                        result = h_cls
+                        is_phishing = (h_cls == "Phishing")
+                        explanation = h_exp
+                    else:
+                        error = None
+                        result = h_cls
+                        is_phishing = (h_cls == "Phishing")
+                        explanation = h_exp
 
                 # 4. Enforce deterministic security policy: Differentiated URL verdict handling
                 threat_eval = classify_audit_batch_threat(audit_batch)
                 if threat_eval['has_threat']:
                     unsafe_url = threat_eval['primary_url'] or getattr(audit_batch, 'first_unsafe_url', None) or 'Unspecified URL'
-                    unsafe_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Active threat policy violation'
-                    prior_context = explanation or (f"Content analysis failed: {error}" if error else "No model explanation available.")
+                    raw_unsafe_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Active threat policy violation'
+                    unsafe_reason = clean_technical_error(raw_unsafe_reason)
+                    if error and any(k in error for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
+                        prior_context = f"{explanation}\n[AI Model Notice: {error}]"
+                    else:
+                        prior_context = explanation or "High-risk social engineering or phishing signatures detected."
                     error = None
 
                     if threat_eval['is_confirmed_threat']:
