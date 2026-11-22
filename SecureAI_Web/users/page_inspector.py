@@ -46,8 +46,11 @@ KNOWN_BRAND_DOMAINS: Dict[str, List[str]] = {
     'ups': ['ups.com'],
     'dhl': ['dhl.com'],
     'paypal': ['paypal.com', 'paypal.me'],
-    'microsoft': ['microsoft.com', 'live.com', 'office.com', 'office365.com', 'outlook.com', 'sharepoint.com'],
-    'google': ['google.com', 'gmail.com', 'google.co.in', 'google.co.uk'],
+    'microsoft': ['microsoft.com', 'live.com', 'office.com', 'office365.com', 'outlook.com', 'sharepoint.com', 'msn.com', 'microsoftonline.com'],
+    'google': ['google.com', 'gmail.com', 'google.co.in', 'google.co.uk', 'forms.gle', 'goo.gl', 'googleapis.com', 'googleusercontent.com', 'withgoogle.com', 'google.dev'],
+    'ibm': ['ibm.com'],
+    'meta': ['meta.com', 'facebook.com', 'instagram.com'],
+    'adobe': ['adobe.com'],
     'apple': ['apple.com', 'icloud.com'],
     'netflix': ['netflix.com'],
     'amazon': ['amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.in'],
@@ -191,23 +194,26 @@ class PageInspectionResult:
     error: Optional[str] = None
 
     def get_summary_line(self) -> str:
-        """Returns a concise summary line for link verification cards, or empty string if uninformative."""
+        """Returns concise summary lines for link verification cards, or empty string if uninformative."""
         if not self.inspected or self.status_code >= 400:
             return ""
 
         title_display = f'"{self.page_title}"' if self.page_title and self.page_title not in ("Unavailable", "Untitled Page") else ""
+        lines: List[str] = []
+        if title_display:
+            lines.append(f"Destination Page: {title_display}")
+        elif self.has_forms:
+            lines.append("Destination Page: Interactive web form detected")
+
         if self.red_flags:
             flags_summary = "; ".join(self.red_flags[:2])
-            prefix = f"Destination Page: {title_display}. " if title_display else "Destination Page: "
-            return f"{prefix}Security Alert: {flags_summary}"
+            lines.append(f"Security Alert: {flags_summary}")
         elif self.has_forms:
-            if title_display:
-                return f"Destination Page: {title_display} (interactive form detected)"
-            return "Destination Page: Interactive web form detected"
+            lines.append("Form Details: Interactive form detected; no immediate credential theft signatures confirmed")
         elif title_display:
-            return f"Destination Page: {title_display} (standard content verified)"
-        else:
-            return ""
+            lines.append("Content Status: Standard webpage content verified")
+
+        return "\n".join(lines)
 
 
 def is_safe_for_inspection(url: str) -> bool:

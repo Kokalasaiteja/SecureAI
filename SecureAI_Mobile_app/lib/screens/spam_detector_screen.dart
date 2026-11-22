@@ -378,6 +378,80 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
       final isLink = RegExp(r'^Link Verification\s*:', caseSensitive: false).hasMatch(line);
       if (isLink) {
         final bodyText = line.replaceFirst(RegExp(r'^Link Verification\s*:\s*', caseSensitive: false), '').trim();
+        final subParts = <String>[];
+        for (final rp in bodyText.split('\n')) {
+          final t = rp.trim().replaceFirst(RegExp(r'^[\*\-•]\s*'), '');
+          if (t.isEmpty) continue;
+          final splits = t.split(RegExp(r'(?=\bDestination Page:\s*|\bSecurity Alert:\s*|\bForm Details:\s*|\bForm Analysis:\s*|\bContent Status:\s*)', caseSensitive: false));
+          for (final sp in splits) {
+            if (sp.trim().isNotEmpty) subParts.add(sp.trim());
+          }
+        }
+
+        final subWidgets = <Widget>[];
+        for (int i = 0; i < subParts.length; i++) {
+          final part = subParts[i];
+          final colonIdx = part.indexOf(':');
+          if (colonIdx > 0 && !part.toLowerCase().startsWith('http')) {
+            final heading = part.substring(0, colonIdx).trim();
+            final detail = part.substring(colonIdx + 1).trim();
+            final isAlert = heading.toLowerCase().contains('alert') || heading.toLowerCase().contains('warning');
+            subWidgets.add(
+              Padding(
+                padding: EdgeInsets.only(top: i > 0 ? 6.0 : 0.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 5, right: 6),
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: isAlert ? const Color(0xFFFBBF24) : const Color(0xFF2DD4BF),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "$heading: ",
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                            ),
+                            TextSpan(
+                              text: detail,
+                              style: TextStyle(
+                                color: isAlert ? const Color(0xFFFDE68A) : const Color(0xFFE5E7EB),
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else {
+            subWidgets.add(
+              Padding(
+                padding: EdgeInsets.only(top: i > 0 ? 4.0 : 0.0),
+                child: Text(
+                  part,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFE5E7EB),
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            );
+          }
+        }
+
         items.add(
           Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -405,15 +479,8 @@ class _SpamDetectorScreenState extends State<SpamDetectorScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  bodyText,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFFE5E7EB),
-                    height: 1.45,
-                  ),
-                ),
+                const SizedBox(height: 8),
+                ...subWidgets,
               ],
             ),
           ),

@@ -68,25 +68,76 @@
           if (!rawText) return '<p class="text-gray-300 text-xs sm:text-sm">No detailed explanation is available.</p>';
           const lines = rawText.split('\n');
           let outputHtml = '';
-          for (let line of lines) {
-            let trimmed = line.trim();
+          let inLinkBlock = false;
+          let linkSubItems = [];
+
+          function renderLinkBlock() {
+            if (!linkSubItems.length) return '';
+            let itemsHtml = '';
+            for (let i = 0; i < linkSubItems.length; i++) {
+              let item = linkSubItems[i].replace(/^[\*\-•]\s*/, '').trim();
+              if (!item) continue;
+
+              let subMatch = item.match(/^([^:]+)\s*:\s*(.+)$/);
+              if (subMatch && !item.toLowerCase().startsWith('http')) {
+                let sideHeading = subMatch[1].trim();
+                let detail = formatSmsMarkdown(subMatch[2].trim());
+                let isAlert = sideHeading.toLowerCase().includes('alert') || sideHeading.toLowerCase().includes('warning');
+                itemsHtml += `
+                  <div class="${i > 0 ? 'mt-2 pt-1.5 border-t border-teal-500/20' : ''} flex items-start space-x-2 text-xs sm:text-sm">
+                    <span class="w-1.5 h-1.5 rounded-full ${isAlert ? 'bg-amber-400 shadow-sm shadow-amber-400/50' : 'bg-teal-400 shadow-sm shadow-teal-400/50'} mt-1.5 shrink-0"></span>
+                    <div class="flex-1 min-w-0">
+                      <strong class="text-white font-bold tracking-wide">${sideHeading}:</strong> <span class="${isAlert ? 'text-amber-200' : 'text-gray-200'} leading-relaxed break-words">${detail}</span>
+                    </div>
+                  </div>
+                `;
+              } else {
+                itemsHtml += `
+                  <div class="${i > 0 ? 'mt-2 pt-1.5 border-t border-teal-500/20' : ''} text-xs sm:text-sm text-gray-200 leading-relaxed break-words">
+                    ${formatSmsMarkdown(item)}
+                  </div>
+                `;
+              }
+            }
+
+            return `
+              <div class="mb-3.5 p-3 sm:p-3.5 rounded-xl bg-teal-950/40 border border-teal-500/50 shadow-sm flex items-start space-x-3">
+                <i class="fas fa-link text-teal-400 mt-1 text-sm sm:text-base shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                  <span class="block text-xs font-bold uppercase tracking-wider text-teal-300 mb-1.5">Link Verification</span>
+                  <div class="space-y-1">
+                    ${itemsHtml}
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
+          for (let i = 0; i < lines.length; i++) {
+            let trimmed = lines[i].trim();
             if (!trimmed) continue;
 
             // Separate Link Verification into a distinct dedicated card/point
             const isLinkLine = /^[\*\-•]?\s*Link Verification\s*:/i.test(trimmed);
             if (isLinkLine) {
+              inLinkBlock = true;
               const bodyText = trimmed.replace(/^[\*\-•]?\s*Link Verification\s*:\s*/i, '').trim();
-              const formattedBody = formatSmsMarkdown(bodyText);
-              outputHtml += `
-                <div class="mb-3.5 p-3 sm:p-3.5 rounded-xl bg-teal-950/40 border border-teal-500/50 shadow-sm flex items-start space-x-3">
-                  <i class="fas fa-link text-teal-400 mt-1 text-sm sm:text-base shrink-0"></i>
-                  <div class="flex-1 min-w-0">
-                    <span class="block text-xs font-bold uppercase tracking-wider text-teal-300 mb-0.5">Link Verification</span>
-                    <p class="text-xs sm:text-sm text-gray-200 leading-relaxed break-words">${formattedBody}</p>
-                  </div>
-                </div>
-              `;
+              let splitParts = bodyText.split(/(?=\bDestination Page:\s*|\bSecurity Alert:\s*|\bForm Details:\s*|\bContent Status:\s*)/i);
+              for (let sp of splitParts) {
+                if (sp.trim()) linkSubItems.push(sp.trim());
+              }
               continue;
+            }
+
+            if (inLinkBlock && (
+              /^[\*\-•]?\s*(Destination Page|Security Alert|Form Details|Form Analysis|Content Status)\s*:/i.test(trimmed) ||
+              lines[i].startsWith('  •') || lines[i].startsWith('  -') || lines[i].startsWith('    ')
+            )) {
+              linkSubItems.push(trimmed);
+              continue;
+            } else if (inLinkBlock) {
+              outputHtml += renderLinkBlock();
+              inLinkBlock = false;
             }
 
             // Other bullet points or heading:body items
@@ -119,6 +170,9 @@
               let cleanText = formatSmsMarkdown(trimmed);
               outputHtml += `<p class="text-gray-300 text-xs sm:text-sm leading-relaxed break-words">${cleanText}</p>`;
             }
+          }
+          if (inLinkBlock) {
+            outputHtml += renderLinkBlock();
           }
           return outputHtml;
         }

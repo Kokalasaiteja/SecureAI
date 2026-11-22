@@ -1167,7 +1167,11 @@ def detect_spam(request):
                                     page_summaries.append(summary_line)
                     clean_sum = clean_link_summary(audit_batch.summary)
                     if page_summaries:
-                        combined_summary = f"{clean_sum} {' '.join(page_summaries)}"
+                        all_summary_items = [clean_sum]
+                        for ps in page_summaries:
+                            if ps:
+                                all_summary_items.extend([line.strip() for line in ps.split('\n') if line.strip()])
+                        combined_summary = "\n  • ".join(all_summary_items)
                         link_point = f"• Link Verification: {combined_summary}"
                     else:
                         link_point = f"• Link Verification: {clean_sum}"
@@ -1898,7 +1902,11 @@ CRITICAL SECURITY INSTRUCTIONS:
                                     page_summaries.append(summary_line)
                     clean_sum = clean_link_summary(audit_batch.summary)
                     if page_summaries:
-                        combined_summary = f"{clean_sum} {' '.join(page_summaries)}"
+                        all_summary_items = [clean_sum]
+                        for ps in page_summaries:
+                            if ps:
+                                all_summary_items.extend([line.strip() for line in ps.split('\n') if line.strip()])
+                        combined_summary = "\n  • ".join(all_summary_items)
                         explanation = f"• Link Verification: {combined_summary}\n{explanation}"
                     else:
                         explanation = f"• Link Verification: {clean_sum}\n{explanation}"

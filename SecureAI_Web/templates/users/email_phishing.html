@@ -93,29 +93,80 @@
                     if (!rawText) return '<p class="text-gray-300">No explanation provided.</p>';
                     const lines = rawText.split('\n');
                     let outputHtml = '';
-                    for (let line of lines) {
-                        let trimmed = line.trim();
+                    let inLinkBlock = false;
+                    let linkSubItems = [];
+
+                    function renderLinkBlock() {
+                        if (!linkSubItems.length) return '';
+                        let itemsHtml = '';
+                        for (let i = 0; i < linkSubItems.length; i++) {
+                            let item = linkSubItems[i].replace(/^[\*\-•]\s*/, '').trim();
+                            if (!item) continue;
+
+                            let subMatch = item.match(/^([^:]+)\s*:\s*(.+)$/);
+                            if (subMatch && !item.toLowerCase().startsWith('http')) {
+                                let sideHeading = subMatch[1].trim();
+                                let detail = formatMarkdown(subMatch[2].trim());
+                                let isAlert = sideHeading.toLowerCase().includes('alert') || sideHeading.toLowerCase().includes('warning');
+                                itemsHtml += `
+                                    <div class="${i > 0 ? 'mt-2.5 pt-2 border-t border-blue-500/20' : ''} flex items-start space-x-2 text-xs sm:text-sm">
+                                        <span class="w-1.5 h-1.5 rounded-full ${isAlert ? 'bg-amber-400 shadow-sm shadow-amber-400/50' : 'bg-blue-400 shadow-sm shadow-blue-400/50'} mt-1.5 shrink-0"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <strong class="text-white font-bold tracking-wide">${sideHeading}:</strong> <span class="${isAlert ? 'text-amber-200' : 'text-gray-200'} leading-relaxed break-words">${detail}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                itemsHtml += `
+                                    <div class="${i > 0 ? 'mt-2.5 pt-2 border-t border-blue-500/20' : ''} text-xs sm:text-sm text-gray-200 leading-relaxed break-words">
+                                        ${formatMarkdown(item)}
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        return `
+                            <div class="mb-4 p-4 rounded-xl bg-blue-950/40 border-2 border-blue-500/50 shadow-md shadow-blue-950/40 flex items-start space-x-3.5 transform hover:border-blue-400 transition-all">
+                                <div class="p-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 shrink-0 mt-0.5">
+                                    <i class="fas fa-link text-base sm:text-lg"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="text-xs font-extrabold uppercase tracking-wider text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-400/30">Link Verification</span>
+                                    </div>
+                                    <div class="space-y-1">
+                                        ${itemsHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let trimmed = lines[i].trim();
                         if (!trimmed) continue;
 
                         // Separate Link Verification into a dedicated prominent point/card
                         const isLinkLine = /^[\*\-•]?\s*Link Verification\s*:/i.test(trimmed);
                         if (isLinkLine) {
+                            inLinkBlock = true;
                             const bodyText = trimmed.replace(/^[\*\-•]?\s*Link Verification\s*:\s*/i, '').trim();
-                            let body = formatMarkdown(bodyText);
-                            outputHtml += `
-                                <div class="mb-4 p-4 rounded-xl bg-blue-950/40 border-2 border-blue-500/50 shadow-md shadow-blue-950/40 flex items-start space-x-3.5 transform hover:border-blue-400 transition-all">
-                                    <div class="p-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 shrink-0 mt-0.5">
-                                        <i class="fas fa-link text-base sm:text-lg"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center space-x-2 mb-1">
-                                            <span class="text-xs font-extrabold uppercase tracking-wider text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded border border-blue-400/30">Link Verification</span>
-                                        </div>
-                                        <p class="text-sm sm:text-base text-gray-200 leading-relaxed break-words [overflow-wrap:anywhere]">${body}</p>
-                                    </div>
-                                </div>
-                            `;
+                            let splitParts = bodyText.split(/(?=\bDestination Page:\s*|\bSecurity Alert:\s*|\bForm Details:\s*|\bContent Status:\s*)/i);
+                            for (let sp of splitParts) {
+                                if (sp.trim()) linkSubItems.push(sp.trim());
+                            }
                             continue;
+                        }
+
+                        if (inLinkBlock && (
+                            /^[\*\-•]?\s*(Destination Page|Security Alert|Form Details|Form Analysis|Content Status)\s*:/i.test(trimmed) ||
+                            lines[i].startsWith('  •') || lines[i].startsWith('  -') || lines[i].startsWith('    ')
+                        )) {
+                            linkSubItems.push(trimmed);
+                            continue;
+                        } else if (inLinkBlock) {
+                            outputHtml += renderLinkBlock();
+                            inLinkBlock = false;
                         }
 
                         let bulletMatch = trimmed.match(/^[\*\-•]?\s*([^:]+)\s*:\s*(.+)$/);
@@ -146,6 +197,9 @@
                             let cleanText = formatMarkdown(trimmed);
                             outputHtml += `<p class="text-gray-300 text-sm sm:text-base leading-relaxed break-words [overflow-wrap:anywhere]">${cleanText}</p>`;
                         }
+                    }
+                    if (inLinkBlock) {
+                        outputHtml += renderLinkBlock();
                     }
                     return outputHtml;
                 }
