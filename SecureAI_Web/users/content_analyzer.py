@@ -13,12 +13,15 @@ from urllib.parse import urlparse
 
 def sanitize_bracketed_urls(text: str) -> str:
     """
-    Separates URLs enclosed in braces or brackets so trailing delimiters
-    (such as '}' in '{https://forms.gle/xyz}') are not swallowed as part of the URL path.
+    Separates URLs enclosed in braces or brackets so delimiters
+    (such as '{' or '}' in '{https://forms.gle/xyz}') are not swallowed as part of the URL path.
     """
     if not text:
         return ""
-    cleaned = re.sub(r'(https?://[^\s{}]+)[}]', r'\1 }', text)
+    cleaned = re.sub(r'[{](https?://)', r'{ \1', text)
+    cleaned = re.sub(r'[\[](https?://)', r'[ \1', cleaned)
+    cleaned = re.sub(r'[<](https?://)', r'< \1', cleaned)
+    cleaned = re.sub(r'(https?://[^\s{}]+)[}]', r'\1 }', cleaned)
     cleaned = re.sub(r'(https?://[^\s\[\]]+)[\]]', r'\1 ]', cleaned)
     cleaned = re.sub(r'(https?://[^\s<>]+)[>]', r'\1 >', cleaned)
     return cleaned
@@ -32,23 +35,51 @@ def clean_technical_error(raw_reason: str) -> str:
         return "Unspecified security anomaly"
     
     r_lower = raw_reason.lower()
-    if 'ssl' in r_lower or 'certificate_verify_failed' in r_lower or 'tls verification failed' in r_lower:
+    if 'ssl' in r_lower or 'certificate_verify_failed' in r_lower or 'tls verification failed' in r_lower or 'self-signed' in r_lower:
         return "The destination server presented an invalid or self-signed SSL certificate."
-    if 'max retries exceeded' in r_lower or 'connection failed' in r_lower:
+    if 'getaddrinfo failed' in r_lower or 'nameresolutionerror' in r_lower or 'failed to resolve' in r_lower:
+        return "The destination domain could not be resolved (unreachable host)."
+    if 'max retries exceeded' in r_lower or 'connection failed' in r_lower or 'failed to establish a new connection' in r_lower or 'connectionrefused' in r_lower:
         return "Connection to destination host failed or was refused by remote server."
-    if 'timeout' in r_lower or 'deadline' in r_lower:
+    if 'timeout' in r_lower or 'deadline' in r_lower or 'timed out' in r_lower:
         return "Connection timed out before destination server responded."
-    if 'redirect chain exceeded' in r_lower:
+    if 'redirect chain exceeded' in r_lower or 'too many redirects' in r_lower:
         return "Destination used excessive redirect hops (evasion tactic)."
-    if 'redirect cycle' in r_lower:
+    if 'redirect cycle' in r_lower or 'redirect loop' in r_lower:
         return "Redirect loop detected between destinations."
-    if 'loopback' in r_lower or 'private ip' in r_lower:
+    if 'loopback' in r_lower or 'private ip' in r_lower or 'disallowed destination' in r_lower:
         return "Internal network or loopback address blocked by security policy."
     
     # Strip any remaining python class names or socket descriptors
-    cleaned = re.sub(r'DeadlineHTTPSConnectionPool\([^)]+\):?\s*', '', raw_reason)
+    cleaned = re.sub(r'(?:Deadline)?HTTPS?ConnectionPool\([^)]+\):?\s*', '', raw_reason)
     cleaned = re.sub(r'\(Caused by [^)]+\)', '', cleaned)
-    return cleaned.strip() or raw_reason
+    cleaned = re.sub(r'SSLError\([^)]+\)', '', cleaned)
+    cleaned = re.sub(r'\[Errno \d+\]\s*', '', cleaned)
+    return cleaned.strip() or "Security verification encountered a connection failure"
+
+
+def clean_link_summary(summary_text: str) -> str:
+    """
+    Sanitizes full audit summary strings by replacing nested technical socket/SSL
+    tracebacks with clean, human-readable security notices.
+    """
+    if not summary_text:
+        return "No links audited."
+
+    # If the summary contains nested parenthesis with technical tracebacks
+    start_idx = summary_text.find('(')
+    end_idx = summary_text.rfind(')')
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        prefix = summary_text[:start_idx].strip()
+        raw_inside = summary_text[start_idx + 1:end_idx].strip()
+        if any(tech in raw_inside.lower() for tech in ('deadline', 'connectionpool', 'ssl', 'cert', 'errno', 'socket', 'max retries', 'caused by', 'traceback')):
+            cleaned_inside = clean_technical_error(raw_inside)
+            return f"{prefix} ({cleaned_inside})."
+
+    if any(tech in summary_text.lower() for tech in ('deadline', 'connectionpool', 'ssl', 'cert', 'errno', 'socket', 'max retries', 'caused by', 'traceback')):
+        return clean_technical_error(summary_text)
+
+    return summary_text
 
 
 def analyze_email_heuristics(email_text: str, audit_batch=None) -> Tuple[str, str]:
@@ -109,18 +140,19 @@ def analyze_email_heuristics(email_text: str, audit_batch=None) -> Tuple[str, st
         classification = "Suspicious" if has_internship_lure else "Phishing"
         formatted_flags = "\n".join([f"• {flag}" for flag in red_flags])
         explanation = (
-            f"Social Engineering Analysis:\n"
+            f"• Threat Assessment: Deceptive recruitment lure targeting job/internship seekers.\n"
             f"{formatted_flags}\n"
             f"• Recommendation: Do not share personal documents, payment card details, or credentials through unverified forms."
         )
         return classification, explanation
     elif len(red_flags) == 1:
-        return "Suspicious", f"Security Precaution:\n• {red_flags[0]}\n• Recommendation: Independently verify the sender's identity before responding."
+        return "Suspicious", f"• Threat Assessment: Suspicious communication requiring caution.\n• {red_flags[0]}\n• Recommendation: Independently verify the sender's identity before responding."
     else:
         # Benign check
         return "Safe", (
-            "• Routine Communication: The message content does not contain common phishing lures, credential prompts, or coercive language.\n"
-            "• Link Verification: Review any embedded links independently before providing personal data."
+            "• Threat Assessment: Low Risk — Routine workplace or personal communication.\n"
+            "• Content Analysis: The message content does not contain common phishing lures, credential prompts, or coercive language.\n"
+            "• Recommendation: Review any embedded links independently before providing personal data."
         )
 
 
@@ -150,7 +182,7 @@ def analyze_sms_heuristics(sms_text: str, audit_batch=None) -> Tuple[str, str]:
 
     if red_flags:
         formatted_flags = "\n".join([f"• {flag}" for flag in red_flags])
-        explanation = f"Message Threat Indicators:\n{formatted_flags}\n• Recommendation: Avoid clicking links or replying with personal information."
+        explanation = f"• Threat Assessment: High-risk deceptive smishing indicators detected.\n{formatted_flags}\n• Recommendation: Avoid clicking links or replying with personal information."
         return "Spam", explanation
     else:
-        return "Ham", "• Routine Message: The text does not exhibit standard spam keywords, coercive deadlines, or suspicious lures."
+        return "Ham", "• Threat Assessment: Low Risk — Routine message.\n• Message Analysis: The text does not exhibit standard spam keywords, coercive deadlines, or suspicious lures."

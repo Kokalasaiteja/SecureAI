@@ -1034,7 +1034,7 @@ def detect_spam(request):
         else:
             try:
                 # Decouple bracketed URLs like {https://forms.gle/xyz} so closing brackets aren't swallowed
-                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, analyze_sms_heuristics
+                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, clean_link_summary, analyze_sms_heuristics
                 message = sanitize_bracketed_urls(message)
 
                 # 1. URL Threat Audit under 5.0s monotonic deadline (Zero 500 errors)
@@ -1050,18 +1050,19 @@ def detect_spam(request):
                         from .page_inspector import inspect_webpage_content
                         for audit in audit_batch.url_audits:
                             if not getattr(audit, 'is_ssrf_blocked', False) and getattr(audit, 'final_url', None):
-                                hops_count = len(getattr(audit, 'hops', []))
-                                insp = inspect_webpage_content(audit.final_url, redirect_hops_count=hops_count, timeout=2.0)
-                                audit.page_inspection = insp
-                                if insp.is_suspicious_page and not getattr(audit, 'is_unsafe', False):
-                                    audit.is_unsafe = True
-                                    audit.verdict = f"Suspicious ({'; '.join(insp.red_flags[:1])})"
-                                    if hasattr(audit, 'reasons'):
-                                        audit.reasons.extend(insp.red_flags)
-                                    if not getattr(audit_batch, 'first_unsafe_url', None):
-                                        audit_batch.first_unsafe_url = audit.final_url
-                                        audit_batch.first_unsafe_reason = insp.red_flags[0] if insp.red_flags else "Hostile page signature"
-                                        audit_batch.is_unsafe = True
+                                if not getattr(audit, 'is_unsafe', False) or getattr(audit, 'verdict', '').startswith('Suspicious'):
+                                    hops_count = len(getattr(audit, 'hops', []))
+                                    insp = inspect_webpage_content(audit.final_url, redirect_hops_count=hops_count, timeout=2.0)
+                                    audit.page_inspection = insp
+                                    if insp.is_suspicious_page and not getattr(audit, 'is_unsafe', False):
+                                        audit.is_unsafe = True
+                                        audit.verdict = f"Suspicious ({'; '.join(insp.red_flags[:1])})"
+                                        if hasattr(audit, 'reasons'):
+                                            audit.reasons.extend(insp.red_flags)
+                                        if not getattr(audit_batch, 'first_unsafe_url', None):
+                                            audit_batch.first_unsafe_url = audit.final_url
+                                            audit_batch.first_unsafe_reason = insp.red_flags[0] if insp.red_flags else "Hostile page signature"
+                                            audit_batch.is_unsafe = True
                     except Exception as insp_err:
                         logger.debug("SMS page inspection error: %s", insp_err)
 
@@ -1123,9 +1124,9 @@ def detect_spam(request):
                     unsafe_reason = clean_technical_error(raw_unsafe_reason)
                     result = 'Spam'
                     if error and any(k in error for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
-                        prior_context = f"{explanation} Content analysis failed: {error}"
+                        prior_context = f"{explanation}\n• AI Model Notice: {error}"
                     else:
-                        prior_context = explanation or "High-risk spam signatures confirmed."
+                        prior_context = explanation or "• Threat Assessment: High-risk spam signatures confirmed."
                     error = None
                     if threat_eval['is_confirmed_threat']:
                         explanation = (
@@ -1139,7 +1140,7 @@ def detect_spam(request):
                         )
                     else:
                         explanation = (
-                            f"Security Policy Enforcement: A suspicious link anomaly was detected ({unsafe_url}: {unsafe_reason}). "
+                            f"Security Policy Notice: A suspicious link anomaly was detected ({unsafe_url}: {unsafe_reason}). "
                             f"Classified as Spam due to high-risk destination indicators. Content analysis: {prior_context}"
                         )
 
@@ -1151,7 +1152,8 @@ def detect_spam(request):
                     link_point = "• Link Verification: UNAVAILABLE. Link inspection failed; link safety is unverified."
                 elif audit_batch.url_audit_timeout:
                     if audit_batch.has_links:
-                        link_point = f"• Link Verification: TIMEOUT. Partial scan: {audit_batch.summary}. Remaining {audit_batch.omitted_links_count} links unverified."
+                        clean_sum = clean_link_summary(audit_batch.summary)
+                        link_point = f"• Link Verification: TIMEOUT. Partial scan: {clean_sum}. Remaining {audit_batch.omitted_links_count} links unverified."
                     else:
                         link_point = "• Link Verification: TIMEOUT. Scan halted due to 5.0s deadline before link verification could complete; link presence and safety remain unverified."
                 elif audit_batch.has_links:
@@ -1160,12 +1162,15 @@ def detect_spam(request):
                         for a in audit_batch.url_audits:
                             p_insp = getattr(a, 'page_inspection', None)
                             if p_insp:
-                                page_summaries.append(p_insp.get_summary_line())
+                                summary_line = p_insp.get_summary_line()
+                                if summary_line:
+                                    page_summaries.append(summary_line)
+                    clean_sum = clean_link_summary(audit_batch.summary)
                     if page_summaries:
-                        combined_summary = f"{audit_batch.summary} {' '.join(page_summaries)}"
+                        combined_summary = f"{clean_sum} {' '.join(page_summaries)}"
                         link_point = f"• Link Verification: {combined_summary}"
                     else:
-                        link_point = f"• Link Verification: {audit_batch.summary}"
+                        link_point = f"• Link Verification: {clean_sum}"
                 else:
                     link_point = "• Link Verification: No external links detected in message."
 
@@ -1669,7 +1674,7 @@ def email_phishing_analyzer(request):
         else:
             try:
                 # Decouple bracketed URLs like {https://forms.gle/xyz} so closing brackets aren't swallowed
-                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, analyze_email_heuristics
+                from .content_analyzer import sanitize_bracketed_urls, clean_technical_error, clean_link_summary, analyze_email_heuristics
                 email_text = sanitize_bracketed_urls(email_text)
 
                 # 1. URL Threat Audit under 5.0s monotonic deadline (Zero 500 errors)
@@ -1685,18 +1690,19 @@ def email_phishing_analyzer(request):
                         from .page_inspector import inspect_webpage_content
                         for audit in audit_batch.url_audits:
                             if not getattr(audit, 'is_ssrf_blocked', False) and getattr(audit, 'final_url', None):
-                                hops_count = len(getattr(audit, 'hops', []))
-                                insp = inspect_webpage_content(audit.final_url, redirect_hops_count=hops_count, timeout=2.0)
-                                audit.page_inspection = insp
-                                if insp.is_suspicious_page and not getattr(audit, 'is_unsafe', False):
-                                    audit.is_unsafe = True
-                                    audit.verdict = f"Suspicious ({'; '.join(insp.red_flags[:1])})"
-                                    if hasattr(audit, 'reasons'):
-                                        audit.reasons.extend(insp.red_flags)
-                                    if not getattr(audit_batch, 'first_unsafe_url', None):
-                                        audit_batch.first_unsafe_url = audit.final_url
-                                        audit_batch.first_unsafe_reason = insp.red_flags[0] if insp.red_flags else "Hostile page signature"
-                                        audit_batch.is_unsafe = True
+                                if not getattr(audit, 'is_unsafe', False) or getattr(audit, 'verdict', '').startswith('Suspicious'):
+                                    hops_count = len(getattr(audit, 'hops', []))
+                                    insp = inspect_webpage_content(audit.final_url, redirect_hops_count=hops_count, timeout=2.0)
+                                    audit.page_inspection = insp
+                                    if insp.is_suspicious_page and not getattr(audit, 'is_unsafe', False):
+                                        audit.is_unsafe = True
+                                        audit.verdict = f"Suspicious ({'; '.join(insp.red_flags[:1])})"
+                                        if hasattr(audit, 'reasons'):
+                                            audit.reasons.extend(insp.red_flags)
+                                        if not getattr(audit_batch, 'first_unsafe_url', None):
+                                            audit_batch.first_unsafe_url = audit.final_url
+                                            audit_batch.first_unsafe_reason = insp.red_flags[0] if insp.red_flags else "Hostile page signature"
+                                            audit_batch.is_unsafe = True
                     except Exception as insp_err:
                         logger.debug("Email page inspection error: %s", insp_err)
 
@@ -1838,9 +1844,9 @@ CRITICAL SECURITY INSTRUCTIONS:
                     raw_unsafe_reason = threat_eval['primary_reason'] or getattr(audit_batch, 'first_unsafe_reason', None) or 'Active threat policy violation'
                     unsafe_reason = clean_technical_error(raw_unsafe_reason)
                     if error and any(k in error for k in ('Google GenAI Rate limit', 'Google Gemini API', 'Gemini connection timed out', 'Gemini quota exhausted', 'Gemini unreachable')):
-                        prior_context = f"{explanation}\n[AI Model Notice: {error}]"
+                        prior_context = f"{explanation}\n• AI Model Notice: {error}"
                     else:
-                        prior_context = explanation or "High-risk social engineering or phishing signatures detected."
+                        prior_context = explanation or "• Threat Assessment: High-risk social engineering or phishing signatures detected."
                     error = None
 
                     if threat_eval['is_confirmed_threat']:
@@ -1877,7 +1883,8 @@ CRITICAL SECURITY INSTRUCTIONS:
                     explanation = f"• Link Verification: UNAVAILABLE. Security inspection encountered an internal error; embedded link presence and safety remain unverified.\n{explanation}"
                 elif audit_batch.url_audit_timeout:
                     if audit_batch.has_links:
-                        explanation = f"• Link Verification: TIMEOUT. Partial scan: {audit_batch.summary}. Remaining {audit_batch.omitted_links_count} links unverified.\n{explanation}"
+                        clean_sum = clean_link_summary(audit_batch.summary)
+                        explanation = f"• Link Verification: TIMEOUT. Partial scan: {clean_sum}. Remaining {audit_batch.omitted_links_count} links unverified.\n{explanation}"
                     else:
                         explanation = f"• Link Verification: TIMEOUT. Scan halted due to 5.0s deadline before link verification could complete; link presence and safety remain unverified.\n{explanation}"
                 elif audit_batch.has_links:
@@ -1886,12 +1893,15 @@ CRITICAL SECURITY INSTRUCTIONS:
                         for a in audit_batch.url_audits:
                             p_insp = getattr(a, 'page_inspection', None)
                             if p_insp:
-                                page_summaries.append(p_insp.get_summary_line())
+                                summary_line = p_insp.get_summary_line()
+                                if summary_line:
+                                    page_summaries.append(summary_line)
+                    clean_sum = clean_link_summary(audit_batch.summary)
                     if page_summaries:
-                        combined_summary = f"{audit_batch.summary} {' '.join(page_summaries)}"
+                        combined_summary = f"{clean_sum} {' '.join(page_summaries)}"
                         explanation = f"• Link Verification: {combined_summary}\n{explanation}"
                     else:
-                        explanation = f"• Link Verification: {audit_batch.summary}\n{explanation}"
+                        explanation = f"• Link Verification: {clean_sum}\n{explanation}"
                 else:
                     explanation = f"• Link Verification: No external links detected in email body.\n{explanation}"
             except Exception as outer_exc:

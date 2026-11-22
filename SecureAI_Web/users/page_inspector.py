@@ -178,6 +178,7 @@ class PageInspectionResult:
     url: str
     inspected: bool
     page_title: str = "Unavailable"
+    status_code: int = 0
     detected_brands: List[str] = field(default_factory=list)
     red_flags: List[str] = field(default_factory=list)
     is_suspicious_page: bool = False
@@ -190,18 +191,23 @@ class PageInspectionResult:
     error: Optional[str] = None
 
     def get_summary_line(self) -> str:
-        """Returns a concise summary line for link verification cards."""
-        if not self.inspected:
-            return f"Page inspection skipped ({self.error or 'Unreachable'})"
+        """Returns a concise summary line for link verification cards, or empty string if uninformative."""
+        if not self.inspected or self.status_code >= 400:
+            return ""
 
-        title_display = f'"{self.page_title}"' if self.page_title and self.page_title != "Unavailable" else "Destination Page"
+        title_display = f'"{self.page_title}"' if self.page_title and self.page_title not in ("Unavailable", "Untitled Page") else ""
         if self.red_flags:
             flags_summary = "; ".join(self.red_flags[:2])
-            return f"Destination Page: {title_display}. Alert: {flags_summary}"
+            prefix = f"Destination Page: {title_display}. " if title_display else "Destination Page: "
+            return f"{prefix}Security Alert: {flags_summary}"
         elif self.has_forms:
-            return f"Destination Page: {title_display} (interactive form detected; no immediate credential theft patterns confirmed)"
+            if title_display:
+                return f"Destination Page: {title_display} (interactive form detected)"
+            return "Destination Page: Interactive web form detected"
+        elif title_display:
+            return f"Destination Page: {title_display} (standard content verified)"
         else:
-            return f"Destination Page: {title_display} (standard content; no malicious form signatures confirmed)"
+            return ""
 
 
 def is_safe_for_inspection(url: str) -> bool:
@@ -246,15 +252,53 @@ def inspect_webpage_content(
             "Accept-Language": "en-US,en;q=0.5",
         })
 
-        # Stream request and clamp to MAX_INSPECTION_BYTES
-        resp = session.get(url, timeout=timeout, stream=True, allow_redirects=False)
+        # Safely follow up to 3 redirects, verifying SSRF safety on every hop
+        curr_url = url
+        resp = None
+        for hop in range(3):
+            if not is_safe_for_inspection(curr_url):
+                return PageInspectionResult(
+                    url=curr_url,
+                    inspected=False,
+                    error="Redirect destination disallowed by security policy"
+                )
+            r = session.get(curr_url, timeout=timeout, stream=True, allow_redirects=False)
+            r_status = getattr(r, 'status_code', None)
+            if isinstance(r_status, int) and r_status in (301, 302, 303, 307, 308) and hasattr(r, 'headers') and 'Location' in r.headers:
+                from urllib.parse import urljoin
+                next_loc = r.headers['Location']
+                curr_url = urljoin(curr_url, next_loc)
+                r.close()
+                continue
+            resp = r
+            break
+
+        if resp is None:
+            session.close()
+            return PageInspectionResult(url=url, inspected=False, error="No response received from destination")
+
+        raw_status = getattr(resp, 'status_code', None)
+        status_code = raw_status if isinstance(raw_status, int) else 200
+        if status_code >= 400:
+            resp.close()
+            session.close()
+            return PageInspectionResult(
+                url=curr_url,
+                inspected=False,
+                status_code=status_code,
+                error=f"Destination returned HTTP {status_code}"
+            )
+
         content_type = resp.headers.get('Content-Type', '').lower()
 
         # If binary or download file
         if any(b in content_type for b in ('application/octet-stream', 'application/x-msdownload', 'application/zip')):
+            resp.close()
+            session.close()
             return PageInspectionResult(
-                url=url,
+                url=curr_url,
                 inspected=True,
+                status_code=status_code,
                 page_title="Binary Executable / Archive File",
                 red_flags=["Direct Binary Download: Destination serves a binary/executable payload"],
                 is_suspicious_page=True
@@ -361,6 +405,7 @@ def inspect_webpage_content(
             url=url,
             inspected=True,
             page_title=clean_title,
+            status_code=status_code,
             detected_brands=detected_brands,
             red_flags=red_flags,
             is_suspicious_page=len(red_flags) > 0,
