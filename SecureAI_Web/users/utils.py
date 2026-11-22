@@ -809,6 +809,24 @@ def format_url_evidence_for_gemini(audit_batch) -> str:
             json_url = json.dumps(clean_url, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
             json_reason = json.dumps(str(raw_reason), ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
             parts.append(f"[Flagged Destination Data: url={json_url} | reason={json_reason}]")
+
+        # Ingest deep page inspection findings if present
+        if hasattr(audit_batch, 'url_audits') and audit_batch.url_audits:
+            for audit in audit_batch.url_audits:
+                page_insp = getattr(audit, 'page_inspection', None)
+                if page_insp and getattr(page_insp, 'inspected', False):
+                    title_clean = str(getattr(page_insp, 'page_title', '')).replace('<', '&lt;').replace('>', '&gt;')
+                    insp_flags = getattr(page_insp, 'red_flags', [])
+                    flags_str = "; ".join(insp_flags).replace('<', '&lt;').replace('>', '&gt;') if insp_flags else "None confirmed"
+                    brands_str = ", ".join(getattr(page_insp, 'detected_brands', [])).replace('<', '&lt;').replace('>', '&gt;') or "None"
+                    has_forms = "Yes" if getattr(page_insp, 'has_forms', False) else "No"
+                    dest_url = redact_url_query_and_fragment(getattr(audit, 'final_url', audit.original_url))
+                    parts.append(
+                        f"[Destination Page Findings for {dest_url}: "
+                        f"Title='{title_clean}' | Detected Brands={brands_str} | Interactive Forms={has_forms} | "
+                        f"Security Red Flags={flags_str}]"
+                    )
+
         return "\n".join(parts)
 
     return "[System Link Audit Data: COMPLETED. No external links detected in message.]"

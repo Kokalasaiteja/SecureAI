@@ -3207,3 +3207,120 @@ class MessageClassificationViewTests(TestCase):
                 self.assertIn("Email contains urgent account suspension threat", data['explanation'])
                 self.assertEqual(data['url_audit']['threat_verdict_category'], 'SUSPICIOUS')
 
+
+class PageInspectorTests(TestCase):
+    """
+    Test suite verifying Deep Webpage Content & Form Inspection.
+    Tests detection of Smishing package scams, CEO/invoice credential harvesting,
+    brand impersonation, evasive redirects, and SSRF prevention.
+    """
+
+    def test_page_inspector_detects_usps_package_smishing_form(self):
+        from users.page_inspector import _SafeDOMParser, inspect_webpage_content
+        sample_html = """
+        <html>
+        <head><title>USPS Delivery Tracking & Redelivery</title></head>
+        <body>
+            <h1>USPS Package On Hold</h1>
+            <img src="/logo.png" alt="United States Postal Service Logo">
+            <form action="https://phish-billing.top/collect" method="POST">
+                <input type="text" name="full_name" placeholder="Full Name">
+                <input type="text" name="card_number" placeholder="Credit Card Number">
+                <input type="password" name="cvv" placeholder="CVV">
+                <button type="submit">Pay $1.99 Redelivery Fee</button>
+            </form>
+        </body>
+        </html>
+        """
+        parser = _SafeDOMParser()
+        parser.feed(sample_html)
+
+        from users.page_inspector import KNOWN_BRAND_DOMAINS
+        with patch('requests.Session.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.headers = {'Content-Type': 'text/html'}
+            mock_resp.encoding = 'utf-8'
+            mock_resp.iter_content.return_value = [sample_html.encode('utf-8')]
+            mock_get.return_value = mock_resp
+
+            result = inspect_webpage_content("https://usps-redelivery-portal.xyz/track", redirect_hops_count=2)
+            self.assertTrue(result.inspected)
+            self.assertTrue(result.is_suspicious_page)
+            self.assertTrue(result.has_payment_capture)
+            self.assertTrue(result.has_credential_harvesting)
+            self.assertTrue(result.has_brand_impersonation)
+            self.assertIn("USPS", result.detected_brands)
+            self.assertTrue(any("Payment & Card Capture" in flag for flag in result.red_flags))
+            self.assertTrue(any("Brand Impersonation" in flag for flag in result.red_flags))
+            self.assertTrue(any("Evasive Redirection" in flag for flag in result.red_flags))
+
+    def test_page_inspector_detects_microsoft_credential_harvesting(self):
+        from users.page_inspector import inspect_webpage_content
+        sample_html = """
+        <html>
+        <head><title>Microsoft 365 - Invoice Portal Login</title></head>
+        <body>
+            <img src="/img/ms_logo.png" alt="Microsoft Office Logo">
+            <h2>Sign in to view attached company invoice</h2>
+            <form action="/login_post" method="POST">
+                <input type="email" name="user_email" placeholder="Email address">
+                <input type="password" name="user_password" placeholder="Password">
+                <button type="submit">Log in to view document</button>
+            </form>
+        </body>
+        </html>
+        """
+        with patch('requests.Session.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.headers = {'Content-Type': 'text/html'}
+            mock_resp.encoding = 'utf-8'
+            mock_resp.iter_content.return_value = [sample_html.encode('utf-8')]
+            mock_get.return_value = mock_resp
+
+            result = inspect_webpage_content("https://contractor-invoice-sharepoint.net/doc", redirect_hops_count=1)
+            self.assertTrue(result.inspected)
+            self.assertTrue(result.is_suspicious_page)
+            self.assertTrue(result.has_credential_harvesting)
+            self.assertTrue(result.has_brand_impersonation)
+            self.assertIn("MICROSOFT", result.detected_brands)
+
+    def test_page_inspector_blocks_ssrf_destinations(self):
+        from users.page_inspector import is_safe_for_inspection, inspect_webpage_content
+        # SSRF loopback and cloud metadata must be blocked
+        self.assertFalse(is_safe_for_inspection("http://127.0.0.1:8000/internal"))
+        self.assertFalse(is_safe_for_inspection("http://localhost/secret"))
+        self.assertFalse(is_safe_for_inspection("http://169.254.169.254/latest/meta-data"))
+        self.assertFalse(is_safe_for_inspection("http://10.0.0.1/admin"))
+        self.assertFalse(is_safe_for_inspection("file:///etc/passwd"))
+
+        result = inspect_webpage_content("http://127.0.0.1:8000/internal")
+        self.assertFalse(result.inspected)
+        self.assertIn("SSRF", result.error)
+
+    def test_page_inspector_safe_page_clean(self):
+        from users.page_inspector import inspect_webpage_content
+        sample_html = """
+        <html>
+        <head><title>Technical Documentation - SecureAI</title></head>
+        <body>
+            <h1>Welcome to Open Documentation</h1>
+            <p>This is a standard public documentation article explaining cybersecurity guidelines.</p>
+        </body>
+        </html>
+        """
+        with patch('requests.Session.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.headers = {'Content-Type': 'text/html'}
+            mock_resp.encoding = 'utf-8'
+            mock_resp.iter_content.return_value = [sample_html.encode('utf-8')]
+            mock_get.return_value = mock_resp
+
+            result = inspect_webpage_content("https://docs.secureai.org/guide", redirect_hops_count=0)
+            self.assertTrue(result.inspected)
+            self.assertFalse(result.is_suspicious_page)
+            self.assertFalse(result.has_credential_harvesting)
+            self.assertFalse(result.has_payment_capture)
+            self.assertEqual(len(result.red_flags), 0)
+            self.assertIn("Documentation", result.page_title)
+
+
