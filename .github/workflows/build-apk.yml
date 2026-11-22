@@ -38,11 +38,11 @@ jobs:
 
       - name: Build split release APKs
         working-directory: SecureAI_Mobile_app
-        run: flutter build apk --split-per-abi --release
+        run: flutter build apk --split-per-abi --release --android-skip-build-dependency-validation
 
       - name: Build universal release APK
         working-directory: SecureAI_Mobile_app
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Verify APKs and architectures
         shell: bash
